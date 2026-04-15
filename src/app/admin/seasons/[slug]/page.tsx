@@ -112,6 +112,10 @@ export default async function EditSeasonPage({
               <Link href={`/seasons/${season.slug}`} className="underline underline-offset-2">
                 /seasons/{season.slug}
               </Link>
+              {" · "}
+              <Link href={`/admin/seasons/${season.slug}/signups`} className="underline underline-offset-2">
+                Manage signups
+              </Link>
             </p>
           ) : null}
         </CardContent>

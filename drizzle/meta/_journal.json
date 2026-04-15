@@ -15,6 +15,13 @@
       "when": 1776253006004,
       "tag": "0001_seasons",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1776282896468,
+      "tag": "0002_rich_invisible_woman",
+      "breakpoints": true
     }
   ]
 }

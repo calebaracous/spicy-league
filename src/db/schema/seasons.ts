@@ -1,4 +1,4 @@
-import { index, pgEnum, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { index, integer, jsonb, pgEnum, pgTable, text, timestamp, unique } from "drizzle-orm/pg-core";
 
 import { users } from "./auth";
 
@@ -42,3 +42,49 @@ export type Season = typeof seasons.$inferSelect;
 export type NewSeason = typeof seasons.$inferInsert;
 export type SeasonState = Season["state"];
 export type Game = Season["game"];
+
+export const seasonSignups = pgTable(
+  "season_signups",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    seasonId: text("season_id")
+      .notNull()
+      .references(() => seasons.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    rolePrefs: jsonb("role_prefs"),
+    notes: text("notes"),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (table) => [
+    unique("season_signups_season_user_uniq").on(table.seasonId, table.userId),
+    index("season_signups_season_idx").on(table.seasonId),
+  ],
+);
+
+export const seasonCaptains = pgTable(
+  "season_captains",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    seasonId: text("season_id")
+      .notNull()
+      .references(() => seasons.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    captainOrder: integer("captain_order").notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (table) => [
+    unique("season_captains_season_user_uniq").on(table.seasonId, table.userId),
+    index("season_captains_season_idx").on(table.seasonId),
+  ],
+);
+
+export type SeasonSignup = typeof seasonSignups.$inferSelect;
+export type SeasonCaptain = typeof seasonCaptains.$inferSelect;

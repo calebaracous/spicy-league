@@ -3,7 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { db } from "@/db/client";
-import { seasons, type SeasonState } from "@/db/schema/seasons";
+import { seasons, seasonSignups, type SeasonState } from "@/db/schema/seasons";
+import { auth } from "@/auth";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,10 +13,19 @@ import { GAME_LABELS, SEASON_STATE_LABELS } from "@/lib/seasons";
 import { cn } from "@/lib/utils";
 
 type Params = Promise<{ slug: string }>;
+type SearchParams = Promise<{ "signed-up"?: string; error?: string }>;
 
 export const dynamic = "force-dynamic";
 
-function StatusPanel({ state, slug }: { state: SeasonState; slug: string }) {
+function StatusPanel({
+  state,
+  slug,
+  alreadySignedUp,
+}: {
+  state: SeasonState;
+  slug: string;
+  alreadySignedUp: boolean;
+}) {
   switch (state) {
     case "signups_open":
       return (
@@ -23,12 +34,20 @@ function StatusPanel({ state, slug }: { state: SeasonState; slug: string }) {
             <CardTitle>Signups are open</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-muted-foreground text-sm">
-              Grab a spot now — captains will pick from everyone who signs up.
-            </p>
-            <Link href={`/seasons/${slug}/signup`} className={cn(buttonVariants({ size: "lg" }))}>
-              Sign up
-            </Link>
+            {alreadySignedUp ? (
+              <p className="text-muted-foreground text-sm">
+                You&apos;re signed up. Captains will pick from the roster once signups close.
+              </p>
+            ) : (
+              <>
+                <p className="text-muted-foreground text-sm">
+                  Grab a spot now — captains will pick from everyone who signs up.
+                </p>
+                <Link href={`/seasons/${slug}/signup`} className={cn(buttonVariants({ size: "lg" }))}>
+                  Sign up
+                </Link>
+              </>
+            )}
           </CardContent>
         </Card>
       );
@@ -49,8 +68,16 @@ function StatusPanel({ state, slug }: { state: SeasonState; slug: string }) {
           <CardHeader>
             <CardTitle>Captains announced</CardTitle>
           </CardHeader>
-          <CardContent className="text-muted-foreground text-sm">
-            Draft order is being finalized. The live draft starts soon.
+          <CardContent className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-muted-foreground text-sm">
+              Draft order is being finalized. The live draft starts soon.
+            </p>
+            <Link
+              href={`/seasons/${slug}/captains`}
+              className={cn(buttonVariants({ variant: "outline" }))}
+            >
+              View captains
+            </Link>
           </CardContent>
         </Card>
       );
@@ -111,13 +138,30 @@ function formatDate(date: Date | null): string | null {
   });
 }
 
-export default async function SeasonDetailPage({ params }: { params: Params }) {
+export default async function SeasonDetailPage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
   const { slug } = await params;
+  const { "signed-up": signedUp } = await searchParams;
 
   const season = await db.query.seasons.findFirst({
     where: and(eq(seasons.slug, slug), ne(seasons.state, "draft")),
   });
   if (!season) notFound();
+
+  const session = await auth();
+  const alreadySignedUp = session?.user?.id
+    ? !!(await db.query.seasonSignups.findFirst({
+        where: and(
+          eq(seasonSignups.seasonId, season.id),
+          eq(seasonSignups.userId, session.user.id),
+        ),
+      }))
+    : false;
 
   const signupOpens = formatDate(season.signupOpensAt);
   const signupCloses = formatDate(season.signupClosesAt);
@@ -139,7 +183,15 @@ export default async function SeasonDetailPage({ params }: { params: Params }) {
         ) : null}
       </header>
 
-      <StatusPanel state={season.state} slug={season.slug} />
+      {signedUp ? (
+        <Alert>
+          <AlertDescription>
+            You&apos;re signed up for {season.name}. See you in the draft!
+          </AlertDescription>
+        </Alert>
+      ) : null}
+
+      <StatusPanel state={season.state} slug={season.slug} alreadySignedUp={alreadySignedUp} />
 
       {signupOpens || signupCloses || seasonStart ? (
         <section className="grid gap-3 sm:grid-cols-3">
