@@ -69,7 +69,7 @@ export default async function CaptainsPage({ params }: { params: Params }) {
               </span>
               <Link
                 href={`/u/${c.displayName}`}
-                className="font-medium hover:underline underline-offset-2"
+                className="font-medium underline-offset-2 hover:underline"
               >
                 {c.displayName}
               </Link>

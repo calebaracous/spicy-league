@@ -2,7 +2,7 @@ import { asc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { promoteCaptain, demoteCaptain } from "./actions";
+import { promoteCaptain, demoteCaptain, moveCaptain } from "./actions";
 import { db } from "@/db/client";
 import { seasons } from "@/db/schema/seasons";
 import { seasonSignups, seasonCaptains } from "@/db/schema/seasons";
@@ -103,20 +103,24 @@ export default async function AdminSignupsPage({
 
   const promoteWithSlug = promoteCaptain.bind(null, slug);
   const demoteWithSlug = demoteCaptain.bind(null, slug);
+  const moveWithSlug = moveCaptain.bind(null, slug);
 
   const lolRoles = ["top", "jungle", "mid", "adc", "support", "fill"];
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 space-y-6 px-6 py-12">
       <header className="space-y-1">
-        <Link href={`/admin/seasons/${slug}`} className="text-muted-foreground text-xs hover:underline">
+        <Link
+          href={`/admin/seasons/${slug}`}
+          className="text-muted-foreground text-xs hover:underline"
+        >
           ← Back to {season.name}
         </Link>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-3xl font-bold tracking-tight">Signups</h1>
           <a
             href={`/admin/seasons/${slug}/signups/export`}
-            className="text-muted-foreground text-sm underline underline-offset-2 hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground text-sm underline underline-offset-2"
           >
             Export CSV
           </a>
@@ -147,24 +151,59 @@ export default async function AdminSignupsPage({
         </CardHeader>
         <CardContent>
           {captainRows.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No captains yet. Promote players from the roster below.</p>
+            <p className="text-muted-foreground text-sm">
+              No captains yet. Promote players from the roster below.
+            </p>
           ) : (
             <div className="space-y-2">
-              {captainRows.map((c) => (
-                <div key={c.id} className="flex items-center justify-between gap-3 rounded-lg border px-4 py-2">
+              {captainRows.map((c, i) => (
+                <div
+                  key={c.id}
+                  className="flex items-center justify-between gap-3 rounded-lg border px-4 py-2"
+                >
                   <div className="flex items-center gap-3">
-                    <span className="text-muted-foreground w-5 text-right text-sm font-mono">
+                    <span className="text-muted-foreground w-5 text-right font-mono text-sm">
                       {c.captainOrder}.
                     </span>
                     <span className="text-sm font-medium">{c.displayName}</span>
                   </div>
-                  <form action={demoteWithSlug.bind(null, c.id)}>
-                    <Button type="submit" variant="ghost" size="sm" className="text-destructive hover:text-destructive">
-                      Remove
-                    </Button>
-                  </form>
+                  <div className="flex items-center gap-1">
+                    <form action={moveWithSlug.bind(null, c.id, "up")}>
+                      <Button type="submit" variant="ghost" size="sm" disabled={i === 0}>
+                        ↑
+                      </Button>
+                    </form>
+                    <form action={moveWithSlug.bind(null, c.id, "down")}>
+                      <Button
+                        type="submit"
+                        variant="ghost"
+                        size="sm"
+                        disabled={i === captainRows.length - 1}
+                      >
+                        ↓
+                      </Button>
+                    </form>
+                    <form action={demoteWithSlug.bind(null, c.id)}>
+                      <Button
+                        type="submit"
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                      >
+                        Remove
+                      </Button>
+                    </form>
+                  </div>
                 </div>
               ))}
+              <div className="pt-2">
+                <Link
+                  href={`/admin/seasons/${slug}/draft`}
+                  className="text-primary text-xs underline-offset-4 hover:underline"
+                >
+                  → Manage draft
+                </Link>
+              </div>
             </div>
           )}
         </CardContent>
@@ -210,12 +249,12 @@ export default async function AdminSignupsPage({
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-muted-foreground border-b text-left text-xs">
-                    <th className="pb-2 pr-4 font-medium">Player</th>
-                    <th className="pb-2 pr-4 font-medium">
+                    <th className="pr-4 pb-2 font-medium">Player</th>
+                    <th className="pr-4 pb-2 font-medium">
                       {season.game === "lol" ? "Roles" : "Maps"}
                     </th>
-                    <th className="pb-2 pr-4 font-medium">Notes</th>
-                    <th className="pb-2 pr-4 font-medium">Signed up</th>
+                    <th className="pr-4 pb-2 font-medium">Notes</th>
+                    <th className="pr-4 pb-2 font-medium">Signed up</th>
                     <th className="pb-2 font-medium"></th>
                   </tr>
                 </thead>
@@ -227,17 +266,21 @@ export default async function AdminSignupsPage({
                         <td className="py-2 pr-4">
                           <div className="flex items-center gap-2">
                             <span className="font-medium">{s.displayName}</span>
-                            {isCaptain ? <Badge variant="secondary" className="text-xs">Captain</Badge> : null}
+                            {isCaptain ? (
+                              <Badge variant="secondary" className="text-xs">
+                                Captain
+                              </Badge>
+                            ) : null}
                           </div>
                           <div className="text-muted-foreground text-xs">{s.email}</div>
                         </td>
                         <td className="py-2 pr-4 text-sm">
                           {formatPrefs(season.game, s.rolePrefs)}
                         </td>
-                        <td className="py-2 pr-4 max-w-xs text-xs text-muted-foreground">
+                        <td className="text-muted-foreground max-w-xs py-2 pr-4 text-xs">
                           {s.notes ?? "—"}
                         </td>
-                        <td className="py-2 pr-4 text-xs text-muted-foreground whitespace-nowrap">
+                        <td className="text-muted-foreground py-2 pr-4 text-xs whitespace-nowrap">
                           {s.createdAt.toLocaleDateString()}
                         </td>
                         <td className="py-2">

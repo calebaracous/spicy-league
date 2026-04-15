@@ -43,7 +43,10 @@ function StatusPanel({
                 <p className="text-muted-foreground text-sm">
                   Grab a spot now — captains will pick from everyone who signs up.
                 </p>
-                <Link href={`/seasons/${slug}/signup`} className={cn(buttonVariants({ size: "lg" }))}>
+                <Link
+                  href={`/seasons/${slug}/signup`}
+                  className={cn(buttonVariants({ size: "lg" }))}
+                >
                   Sign up
                 </Link>
               </>
@@ -87,8 +90,13 @@ function StatusPanel({
           <CardHeader>
             <CardTitle>Draft in progress</CardTitle>
           </CardHeader>
-          <CardContent className="text-muted-foreground text-sm">
-            Teams are being drafted live. Watch the board for your name.
+          <CardContent className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-muted-foreground text-sm">
+              Teams are being drafted live. Watch the board for your name.
+            </p>
+            <Link href={`/seasons/${slug}/draft`} className={cn(buttonVariants({ size: "lg" }))}>
+              Watch the draft
+            </Link>
           </CardContent>
         </Card>
       );

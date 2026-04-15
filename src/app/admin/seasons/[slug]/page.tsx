@@ -113,8 +113,18 @@ export default async function EditSeasonPage({
                 /seasons/{season.slug}
               </Link>
               {" · "}
-              <Link href={`/admin/seasons/${season.slug}/signups`} className="underline underline-offset-2">
+              <Link
+                href={`/admin/seasons/${season.slug}/signups`}
+                className="underline underline-offset-2"
+              >
                 Manage signups
+              </Link>
+              {" · "}
+              <Link
+                href={`/admin/seasons/${season.slug}/draft`}
+                className="underline underline-offset-2"
+              >
+                Manage draft
               </Link>
             </p>
           ) : null}

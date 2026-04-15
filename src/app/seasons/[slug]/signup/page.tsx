@@ -84,7 +84,10 @@ export default async function SignupPage({
         <Alert>
           <AlertDescription>
             You need to{" "}
-            <Link href={`/signin?callbackUrl=/seasons/${slug}/signup`} className="underline underline-offset-2">
+            <Link
+              href={`/signin?callbackUrl=/seasons/${slug}/signup`}
+              className="underline underline-offset-2"
+            >
               sign in
             </Link>{" "}
             before signing up.
@@ -100,7 +103,10 @@ export default async function SignupPage({
         <Alert>
           <AlertDescription>
             You need to{" "}
-            <Link href={`/onboarding?callbackUrl=/seasons/${slug}/signup`} className="underline underline-offset-2">
+            <Link
+              href={`/onboarding?callbackUrl=/seasons/${slug}/signup`}
+              className="underline underline-offset-2"
+            >
               finish setting up your profile
             </Link>{" "}
             before signing up.
@@ -112,14 +118,12 @@ export default async function SignupPage({
 
   if (alreadySignedUp) {
     return (
-      <main className="mx-auto w-full max-w-xl flex-1 px-6 py-12 space-y-4">
+      <main className="mx-auto w-full max-w-xl flex-1 space-y-4 px-6 py-12">
         <Link href={`/seasons/${slug}`} className="text-muted-foreground text-xs hover:underline">
           ← Back to season
         </Link>
         <Alert>
-          <AlertDescription>
-            You&apos;re already signed up for {season.name}.
-          </AlertDescription>
+          <AlertDescription>You&apos;re already signed up for {season.name}.</AlertDescription>
         </Alert>
       </main>
     );
@@ -127,7 +131,7 @@ export default async function SignupPage({
 
   if (!isOpen) {
     return (
-      <main className="mx-auto w-full max-w-xl flex-1 px-6 py-12 space-y-4">
+      <main className="mx-auto w-full max-w-xl flex-1 space-y-4 px-6 py-12">
         <Link href={`/seasons/${slug}`} className="text-muted-foreground text-xs hover:underline">
           ← Back to season
         </Link>
@@ -188,7 +192,9 @@ export default async function SignupPage({
             ) : (
               <div className="space-y-2">
                 <Label>Map preferences</Label>
-                <p className="text-muted-foreground text-xs">Select all maps you&apos;re comfortable playing.</p>
+                <p className="text-muted-foreground text-xs">
+                  Select all maps you&apos;re comfortable playing.
+                </p>
                 <div className="grid grid-cols-2 gap-2">
                   {CS2_MAPS.map((m) => (
                     <label key={m.value} className="flex items-center gap-2 text-sm">
@@ -201,7 +207,9 @@ export default async function SignupPage({
             )}
 
             <div className="space-y-1.5">
-              <Label htmlFor="notes">Notes <span className="text-muted-foreground">(optional)</span></Label>
+              <Label htmlFor="notes">
+                Notes <span className="text-muted-foreground">(optional)</span>
+              </Label>
               <Textarea
                 id="notes"
                 name="notes"
@@ -214,7 +222,7 @@ export default async function SignupPage({
             <div className="flex justify-end gap-2 pt-1">
               <Link
                 href={`/seasons/${slug}`}
-                className="text-muted-foreground text-sm hover:underline self-center"
+                className="text-muted-foreground self-center text-sm hover:underline"
               >
                 Cancel
               </Link>

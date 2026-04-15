@@ -42,10 +42,7 @@ export async function submitSignup(slug: string, formData: FormData) {
   }
 
   const existing = await db.query.seasonSignups.findFirst({
-    where: and(
-      eq(seasonSignups.seasonId, season.id),
-      eq(seasonSignups.userId, session.user.id),
-    ),
+    where: and(eq(seasonSignups.seasonId, season.id), eq(seasonSignups.userId, session.user.id)),
   });
   if (existing) {
     redirect(`/seasons/${slug}?error=already-signed-up`);

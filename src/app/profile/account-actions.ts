@@ -30,10 +30,7 @@ export async function linkRiotAccount(formData: FormData) {
 
   // Upsert the link
   const existing = await db.query.accountLinks.findFirst({
-    where: and(
-      eq(accountLinks.userId, session.user.id),
-      eq(accountLinks.provider, "riot"),
-    ),
+    where: and(eq(accountLinks.userId, session.user.id), eq(accountLinks.provider, "riot")),
   });
 
   if (existing) {
@@ -66,9 +63,7 @@ export async function unlinkRiotAccount() {
   const session = await requireOnboarded();
   await db
     .delete(accountLinks)
-    .where(
-      and(eq(accountLinks.userId, session.user.id), eq(accountLinks.provider, "riot")),
-    );
+    .where(and(eq(accountLinks.userId, session.user.id), eq(accountLinks.provider, "riot")));
   revalidatePath("/profile");
   revalidatePath(`/u/${session.user.displayName}`);
   redirect("/profile?saved=1");
@@ -121,10 +116,7 @@ export async function linkCs2Account(formData: FormData) {
   // Upsert Leetify link
   if (leetifyUrl) {
     const existingLeetify = await db.query.accountLinks.findFirst({
-      where: and(
-        eq(accountLinks.userId, session.user.id),
-        eq(accountLinks.provider, "leetify"),
-      ),
+      where: and(eq(accountLinks.userId, session.user.id), eq(accountLinks.provider, "leetify")),
     });
     if (existingLeetify) {
       await db
@@ -150,14 +142,10 @@ export async function unlinkCs2Account() {
   const session = await requireOnboarded();
   await db
     .delete(accountLinks)
-    .where(
-      and(eq(accountLinks.userId, session.user.id), eq(accountLinks.provider, "steam")),
-    );
+    .where(and(eq(accountLinks.userId, session.user.id), eq(accountLinks.provider, "steam")));
   await db
     .delete(accountLinks)
-    .where(
-      and(eq(accountLinks.userId, session.user.id), eq(accountLinks.provider, "leetify")),
-    );
+    .where(and(eq(accountLinks.userId, session.user.id), eq(accountLinks.provider, "leetify")));
   revalidatePath("/profile");
   revalidatePath(`/u/${session.user.displayName}`);
   redirect("/profile?saved=1");

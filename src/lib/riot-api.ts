@@ -71,10 +71,7 @@ export type ChampionMastery = {
   championPoints: number;
 };
 
-export async function getTopChampions(
-  puuid: string,
-  count = 3,
-): Promise<ChampionMastery[] | null> {
+export async function getTopChampions(puuid: string, count = 3): Promise<ChampionMastery[] | null> {
   return riotFetch<ChampionMastery[]>(
     `${NA1_HOST}/lol/champion-mastery/v4/champion-masteries/by-puuid/${encodeURIComponent(puuid)}/top?count=${count}`,
   );
@@ -95,10 +92,9 @@ export async function getChampionName(championId: number): Promise<string> {
       });
       const versions = (await versionsRes.json()) as string[];
       const latest = versions[0];
-      const champRes = await fetch(
-        `${DDRAGON_BASE}/cdn/${latest}/data/en_US/champion.json`,
-        { next: { revalidate: 86400 } },
-      );
+      const champRes = await fetch(`${DDRAGON_BASE}/cdn/${latest}/data/en_US/champion.json`, {
+        next: { revalidate: 86400 },
+      });
       const champData = (await champRes.json()) as DDragonChampionResponse;
       championMap = new Map(
         Object.values(champData.data).map((c) => [parseInt(c.key, 10), c.name]),

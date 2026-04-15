@@ -187,8 +187,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
                   <p className="text-sm font-medium">{riotLink.externalHandle}</p>
                   {soloSnap?.tier ? (
                     <p className="text-muted-foreground text-xs">
-                      {soloSnap.tier} {soloSnap.rankDivision} · {soloSnap.lp} LP ·{" "}
-                      {soloSnap.wins}W {soloSnap.losses}L
+                      {soloSnap.tier} {soloSnap.rankDivision} · {soloSnap.lp} LP · {soloSnap.wins}W{" "}
+                      {soloSnap.losses}L
                     </p>
                   ) : (
                     <p className="text-muted-foreground text-xs">Unranked</p>
@@ -222,12 +222,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
             <form action={linkRiotAccount} className="space-y-3">
               <div className="space-y-1.5">
                 <Label htmlFor="riotId">Riot ID</Label>
-                <Input
-                  id="riotId"
-                  name="riotId"
-                  placeholder="GameName#NA1"
-                  required
-                />
+                <Input id="riotId" name="riotId" placeholder="GameName#NA1" required />
                 <p className="text-muted-foreground text-xs">
                   Found in the client under your profile icon (top right).
                 </p>
@@ -239,7 +234,9 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
           <Separator />
 
           <div className="space-y-1.5">
-            <Label htmlFor="opggUrl">OP.GG URL <span className="text-muted-foreground">(optional)</span></Label>
+            <Label htmlFor="opggUrl">
+              OP.GG URL <span className="text-muted-foreground">(optional)</span>
+            </Label>
             <form action={saveProfile} className="flex gap-2">
               <Input
                 id="opggUrl"
@@ -320,8 +317,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
                     className="underline underline-offset-2"
                   >
                     steamid.io
-                  </Link>
-                  {" "}— use the steamID64 value.
+                  </Link>{" "}
+                  — use the steamID64 value.
                 </p>
               </div>
               <div className="space-y-1.5">
