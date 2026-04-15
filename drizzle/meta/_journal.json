@@ -22,6 +22,13 @@
       "when": 1776282896468,
       "tag": "0002_rich_invisible_woman",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1776284406582,
+      "tag": "0003_grey_weapon_omega",
+      "breakpoints": true
     }
   ]
 }
