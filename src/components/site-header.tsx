@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+
 export async function SiteHeader() {
   const session = await auth();
   const user = session?.user;
