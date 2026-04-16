@@ -106,8 +106,16 @@ function StatusPanel({
           <CardHeader>
             <CardTitle>Group stage</CardTitle>
           </CardHeader>
-          <CardContent className="text-muted-foreground text-sm">
-            Round-robin matches are being played. Standings update as results come in.
+          <CardContent className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-muted-foreground text-sm">
+              Round-robin matches are being played. Standings update as results come in.
+            </p>
+            <Link
+              href={`/seasons/${slug}/matches`}
+              className={cn(buttonVariants({ variant: "outline" }))}
+            >
+              Matches &amp; standings
+            </Link>
           </CardContent>
         </Card>
       );
@@ -117,8 +125,16 @@ function StatusPanel({
           <CardHeader>
             <CardTitle>Playoffs</CardTitle>
           </CardHeader>
-          <CardContent className="text-muted-foreground text-sm">
-            Top 4 teams advanced. Single-elimination bracket to crown the champion.
+          <CardContent className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-muted-foreground text-sm">
+              Top 4 teams advanced. Single-elimination bracket to crown the champion.
+            </p>
+            <Link
+              href={`/seasons/${slug}/matches`}
+              className={cn(buttonVariants({ variant: "outline" }))}
+            >
+              Matches &amp; standings
+            </Link>
           </CardContent>
         </Card>
       );
@@ -128,8 +144,14 @@ function StatusPanel({
           <CardHeader>
             <CardTitle>Season complete</CardTitle>
           </CardHeader>
-          <CardContent className="text-muted-foreground text-sm">
-            Congrats to the champion. Scroll for the final standings.
+          <CardContent className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-muted-foreground text-sm">Congrats to the champion.</p>
+            <Link
+              href={`/seasons/${slug}/matches`}
+              className={cn(buttonVariants({ variant: "outline" }))}
+            >
+              Final standings
+            </Link>
           </CardContent>
         </Card>
       );

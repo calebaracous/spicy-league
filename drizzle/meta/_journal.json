@@ -36,6 +36,13 @@
       "when": 1776291717040,
       "tag": "0004_hot_punisher",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1776292444915,
+      "tag": "0005_naive_starjammers",
+      "breakpoints": true
     }
   ]
 }

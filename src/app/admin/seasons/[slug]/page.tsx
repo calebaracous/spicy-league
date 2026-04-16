@@ -126,6 +126,13 @@ export default async function EditSeasonPage({
               >
                 Manage draft
               </Link>
+              {" · "}
+              <Link
+                href={`/admin/seasons/${season.slug}/matches`}
+                className="underline underline-offset-2"
+              >
+                Manage matches
+              </Link>
             </p>
           ) : null}
         </CardContent>
