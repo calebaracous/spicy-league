@@ -30,7 +30,20 @@
       "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_8o4mHNCbndQg@ep-bold-boat-am18lac9.c-5.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require\" npx drizzle-kit migrate)",
       "Bash(npx tsc *)",
       "Bash(npx next *)",
-      "Bash(npx eslint *)"
+      "Bash(npx eslint *)",
+      "Bash(node -e ' *)",
+      "Bash(npm uninstall *)",
+      "Bash(node -e \"const ba = require\\('better-auth'\\); console.log\\('OK', Object.keys\\(ba\\).slice\\(0,5\\)\\)\")",
+      "Bash(node -e \"const pkg = require\\('./node_modules/better-auth/package.json'\\); console.log\\(pkg.version\\)\")",
+      "Bash(node -e \"const a = require\\('better-auth/adapters/drizzle'\\); console.log\\(Object.keys\\(a\\)\\)\")",
+      "Bash(echo 'BETTER_AUTH_SECRET=\"+PzemKwreEi12dNrEdPlqX2Q2VhFCta3AipZrN3EUuk=\"')",
+      "Bash(echo 'BETTER_AUTH_URL=\"https://spicyleague.dev\"')",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_8o4mHNCbndQg@ep-bold-boat-am18lac9.c-5.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require\" npx drizzle-kit generate)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_8o4mHNCbndQg@ep-bold-boat-am18lac9.c-5.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require\" npx drizzle-kit push --force)",
+      "Bash(node -e \"const b = require\\('better-auth/next-js'\\); console.log\\(Object.keys\\(b\\)\\)\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\Caleeb\\Desktop\\dev\\indie\\spicy-league\\src\\app\\api\\auth\\[...nextauth]"
     ]
   }
 }

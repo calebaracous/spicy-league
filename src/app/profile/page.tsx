@@ -13,6 +13,7 @@ import { db } from "@/db/client";
 import { users } from "@/db/schema/auth";
 import { accountLinks, riotStatSnapshots } from "@/db/schema/stats";
 import { signOut } from "@/auth";
+import { cookies } from "next/headers";
 import { requireOnboarded } from "@/lib/auth-helpers";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -93,7 +94,10 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
 
   async function doSignOut() {
     "use server";
-    await signOut({ redirectTo: "/" });
+    await signOut();
+    const cookieStore = await cookies();
+    cookieStore.delete("sl.session_token");
+    redirect("/");
   }
 
   const errorMessage = error ? (ERROR_MESSAGES[error] ?? null) : null;

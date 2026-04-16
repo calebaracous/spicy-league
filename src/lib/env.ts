@@ -5,7 +5,8 @@ export const env = createEnv({
   server: {
     NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
     DATABASE_URL: z.url().optional(),
-    AUTH_SECRET: z.string().min(32).optional(),
+    BETTER_AUTH_SECRET: z.string().min(32).optional(),
+    BETTER_AUTH_URL: z.url().optional(),
     AUTH_RESEND_KEY: z.string().min(1).optional(),
     AUTH_EMAIL_FROM: z.email().optional(),
     RIOT_DEVELOPER_API_KEY: z.string().min(1).optional(),
@@ -21,7 +22,8 @@ export const env = createEnv({
   runtimeEnv: {
     NODE_ENV: process.env.NODE_ENV,
     DATABASE_URL: process.env.DATABASE_URL,
-    AUTH_SECRET: process.env.AUTH_SECRET,
+    BETTER_AUTH_SECRET: process.env.BETTER_AUTH_SECRET,
+    BETTER_AUTH_URL: process.env.BETTER_AUTH_URL,
     AUTH_RESEND_KEY: process.env.AUTH_RESEND_KEY,
     AUTH_EMAIL_FROM: process.env.AUTH_EMAIL_FROM,
     RIOT_DEVELOPER_API_KEY: process.env.RIOT_DEVELOPER_API_KEY,
