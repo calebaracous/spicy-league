@@ -66,10 +66,50 @@ export async function confirmMatch(slug: string, matchId: string) {
   await requireAdmin();
   const season = await getSeasonOrFail(slug);
 
+  // Fetch match before update so we know its stage
+  const match = await db.query.matches.findFirst({
+    where: and(eq(matches.id, matchId), eq(matches.seasonId, season.id)),
+  });
+  if (!match) redirect(`/admin/seasons/${slug}/matches?error=not-found`);
+
   await db
     .update(matches)
     .set({ state: "confirmed", confirmedAt: new Date() })
-    .where(and(eq(matches.id, matchId), eq(matches.seasonId, season.id)));
+    .where(eq(matches.id, matchId));
+
+  if (match.stage === "semis") {
+    // Check if both semis are now confirmed — if so, create the final
+    const allSemis = await db
+      .select()
+      .from(matches)
+      .where(and(eq(matches.seasonId, season.id), eq(matches.stage, "semis")));
+
+    const bothConfirmed =
+      allSemis.length === 2 && allSemis.every((m) => m.state === "confirmed" && m.winnerTeamId);
+
+    if (bothConfirmed) {
+      const existingFinal = await db.query.matches.findFirst({
+        where: and(eq(matches.seasonId, season.id), eq(matches.stage, "final")),
+      });
+      if (!existingFinal) {
+        const [s1, s2] = allSemis;
+        await db.insert(matches).values({
+          seasonId: season.id,
+          round: 201,
+          stage: "final",
+          homeTeamId: s1.winnerTeamId!,
+          awayTeamId: s2.winnerTeamId!,
+        });
+      }
+    }
+  } else if (match.stage === "final") {
+    // Final confirmed → season is complete
+    await db
+      .update(seasons)
+      .set({ state: "complete" })
+      .where(eq(seasons.id, season.id));
+    revalidatePath(`/seasons/${slug}`);
+  }
 
   revalidatePath(`/seasons/${slug}/matches/${matchId}`);
   revalidatePath(`/seasons/${slug}`);

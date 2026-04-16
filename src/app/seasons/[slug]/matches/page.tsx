@@ -34,6 +34,7 @@ export default async function MatchesPage({ params }: { params: Params }) {
     .select({
       id: matches.id,
       round: matches.round,
+      stage: matches.stage,
       state: matches.state,
       homeTeamId: matches.homeTeamId,
       awayTeamId: matches.awayTeamId,
@@ -52,7 +53,10 @@ export default async function MatchesPage({ params }: { params: Params }) {
     ? await computeStandings(season.id)
     : null;
 
-  const rounds = [...new Set(allMatches.map((m) => m.round))].sort((a, b) => a - b);
+  const groupMatches = allMatches.filter((m) => m.stage === "group");
+  const semis = allMatches.filter((m) => m.stage === "semis").sort((a, b) => a.round - b.round);
+  const finalMatch = allMatches.find((m) => m.stage === "final");
+  const rounds = [...new Set(groupMatches.map((m) => m.round))].sort((a, b) => a - b);
 
   return (
     <main className="mx-auto w-full max-w-3xl flex-1 space-y-8 px-6 py-12">
@@ -106,12 +110,69 @@ export default async function MatchesPage({ params }: { params: Params }) {
         </section>
       ) : null}
 
+      {semis.length > 0 ? (
+        <section className="space-y-4">
+          <h2 className="text-muted-foreground text-sm font-medium tracking-wide uppercase">
+            Playoffs
+          </h2>
+          {(
+            [
+              { label: "Semifinals", stageMatches: semis },
+              { label: "Final", stageMatches: finalMatch ? [finalMatch] : [] },
+            ] as const
+          ).map(({ label, stageMatches }) => {
+            if (stageMatches.length === 0) return null;
+            return (
+              <div key={label} className="space-y-1.5">
+                <p className="text-muted-foreground text-xs font-medium">{label}</p>
+                <div className="space-y-1">
+                  {stageMatches.map((m) => {
+                    const sb = STATE_BADGE[m.state] ?? STATE_BADGE.scheduled;
+                    const homeName = teamName.get(m.homeTeamId) ?? "?";
+                    const awayName = teamName.get(m.awayTeamId) ?? "?";
+                    const hasScore = m.homeScore !== null && m.awayScore !== null;
+                    return (
+                      <Link
+                        key={m.id}
+                        href={`/seasons/${slug}/matches/${m.id}`}
+                        className="hover:bg-muted/50 flex items-center justify-between gap-3 rounded-lg border px-4 py-3"
+                      >
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className={m.winnerTeamId === m.homeTeamId ? "font-bold" : ""}>
+                            {homeName}
+                          </span>
+                          <span className="text-muted-foreground text-xs">vs</span>
+                          <span className={m.winnerTeamId === m.awayTeamId ? "font-bold" : ""}>
+                            {awayName}
+                          </span>
+                          {hasScore ? (
+                            <span className="text-muted-foreground font-mono text-xs">
+                              {m.homeScore}–{m.awayScore}
+                            </span>
+                          ) : null}
+                        </div>
+                        <Badge variant={sb.variant}>{sb.label}</Badge>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
+        </section>
+      ) : null}
+
       {allMatches.length === 0 ? (
         <p className="text-muted-foreground text-sm">Schedule not yet generated.</p>
-      ) : (
+      ) : rounds.length > 0 ? (
         <section className="space-y-6">
+          {semis.length > 0 ? (
+            <h2 className="text-muted-foreground text-sm font-medium tracking-wide uppercase">
+              Group stage
+            </h2>
+          ) : null}
           {rounds.map((round) => {
-            const roundMatches = allMatches.filter((m) => m.round === round);
+            const roundMatches = groupMatches.filter((m) => m.round === round);
             return (
               <div key={round} className="space-y-2">
                 <h2 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
@@ -152,7 +213,7 @@ export default async function MatchesPage({ params }: { params: Params }) {
             );
           })}
         </section>
-      )}
+      ) : null}
     </main>
   );
 }

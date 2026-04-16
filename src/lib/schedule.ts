@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { teams, teamMembers } from "@/db/schema/drafts";
@@ -154,6 +154,39 @@ export async function computeStandings(seasonId: string): Promise<StandingRow[]>
   });
 
   return rows;
+}
+
+export async function seedPlayoffs(seasonId: string): Promise<number> {
+  // Guard: bail if playoff matches already exist
+  const existing = await db.query.matches.findFirst({
+    where: and(eq(matches.seasonId, seasonId), ne(matches.stage, "group")),
+  });
+  if (existing) return 0;
+
+  const standings = await computeStandings(seasonId);
+  if (standings.length < 4) return 0;
+
+  const top4 = standings.slice(0, 4);
+  // Semi 1: #1 vs #4, Semi 2: #2 vs #3 (higher seed is home)
+  const rows = [
+    {
+      seasonId,
+      round: 101,
+      stage: "semis" as const,
+      homeTeamId: top4[0].teamId,
+      awayTeamId: top4[3].teamId,
+    },
+    {
+      seasonId,
+      round: 102,
+      stage: "semis" as const,
+      homeTeamId: top4[1].teamId,
+      awayTeamId: top4[2].teamId,
+    },
+  ];
+
+  await db.insert(matches).values(rows);
+  return rows.length;
 }
 
 export async function getTeamForCaptain(

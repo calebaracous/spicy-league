@@ -3,6 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { db } from "@/db/client";
+import { teams } from "@/db/schema/drafts";
+import { matches } from "@/db/schema/matches";
 import { seasons, seasonSignups, type SeasonState } from "@/db/schema/seasons";
 import { auth } from "@/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -21,10 +23,12 @@ function StatusPanel({
   state,
   slug,
   alreadySignedUp,
+  championName,
 }: {
   state: SeasonState;
   slug: string;
   alreadySignedUp: boolean;
+  championName?: string | null;
 }) {
   switch (state) {
     case "signups_open":
@@ -145,7 +149,15 @@ function StatusPanel({
             <CardTitle>Season complete</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-muted-foreground text-sm">Congrats to the champion.</p>
+            <p className="text-muted-foreground text-sm">
+              {championName ? (
+                <>
+                  Champion: <span className="text-foreground font-semibold">{championName}</span>
+                </>
+              ) : (
+                "Season complete."
+              )}
+            </p>
             <Link
               href={`/seasons/${slug}/matches`}
               className={cn(buttonVariants({ variant: "outline" }))}
@@ -193,6 +205,23 @@ export default async function SeasonDetailPage({
       }))
     : false;
 
+  let championName: string | null = null;
+  if (season.state === "complete") {
+    const finalMatch = await db.query.matches.findFirst({
+      where: and(
+        eq(matches.seasonId, season.id),
+        eq(matches.stage, "final"),
+        eq(matches.state, "confirmed"),
+      ),
+    });
+    if (finalMatch?.winnerTeamId) {
+      const champ = await db.query.teams.findFirst({
+        where: eq(teams.id, finalMatch.winnerTeamId),
+      });
+      championName = champ?.name ?? null;
+    }
+  }
+
   const signupOpens = formatDate(season.signupOpensAt);
   const signupCloses = formatDate(season.signupClosesAt);
   const seasonStart = formatDate(season.seasonStartAt);
@@ -221,7 +250,12 @@ export default async function SeasonDetailPage({
         </Alert>
       ) : null}
 
-      <StatusPanel state={season.state} slug={season.slug} alreadySignedUp={alreadySignedUp} />
+      <StatusPanel
+        state={season.state}
+        slug={season.slug}
+        alreadySignedUp={alreadySignedUp}
+        championName={championName}
+      />
 
       {signupOpens || signupCloses || seasonStart ? (
         <section className="grid gap-3 sm:grid-cols-3">

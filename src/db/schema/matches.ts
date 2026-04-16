@@ -11,6 +11,8 @@ export const matchStateEnum = pgEnum("match_state", [
   "disputed",
 ]);
 
+export const matchStageEnum = pgEnum("match_stage", ["group", "semis", "final"]);
+
 export const matches = pgTable(
   "matches",
   {
@@ -21,6 +23,7 @@ export const matches = pgTable(
       .notNull()
       .references(() => seasons.id, { onDelete: "cascade" }),
     round: integer("round").notNull(),
+    stage: matchStageEnum("stage").notNull().default("group"),
     homeTeamId: text("home_team_id")
       .notNull()
       .references(() => teams.id, { onDelete: "cascade" }),
@@ -46,3 +49,4 @@ export const matches = pgTable(
 
 export type Match = typeof matches.$inferSelect;
 export type MatchState = Match["state"];
+export type MatchStage = Match["stage"];
