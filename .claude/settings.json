@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git clone *)",
+      "Bash(cp -r /tmp/spicy-league-clone/. /c/Users/Caleeb/Desktop/dev/indie/spicy-league/)",
+      "Bash(rm -rf /tmp/spicy-league-clone)",
+      "Bash(vercel whoami *)",
+      "Bash(vercel env *)",
+      "Bash(vercel link *)",
+      "Bash(vercel integration *)",
+      "Bash(openssl rand *)",
+      "Bash(vercel blob *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "Bash(vercel domains *)",
+      "Bash(vercel ls *)",
+      "Bash(vercel inspect *)",
+      "Bash(vercel git *)",
+      "Bash(vercel deploy *)",
+      "Bash(curl -I https://spicyleague.dev)",
+      "Bash(curl -I https://www.spicyleague.dev)",
+      "Bash(vercel alias *)",
+      "Bash(curl -I https://spicy-league-a7kx2v0qj-calebaracous-projects.vercel.app)",
+      "Bash(vercel project *)",
+      "Bash(curl -sI https://www.spicyleague.dev/)",
+      "Bash(curl -sI https://spicyleague.dev/)",
+      "Bash(npx drizzle-kit *)",
+      "Bash(npx dotenv *)",
+      "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_8o4mHNCbndQg@ep-bold-boat-am18lac9.c-5.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require\" npx drizzle-kit migrate)",
+      "Bash(npx tsc *)",
+      "Bash(npx next *)",
+      "Bash(npx eslint *)"
+    ]
+  }
+}
