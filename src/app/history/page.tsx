@@ -11,6 +11,11 @@ type SeasonNote = {
   href?: string;
 };
 
+type SeasonImage = {
+  src: string;
+  alt: string;
+};
+
 type Season = {
   number: number;
   title: string;
@@ -18,6 +23,7 @@ type Season = {
   description: string;
   finalsDate: string | null;
   notes: SeasonNote[];
+  images: SeasonImage[];
 };
 
 const SEASONS: Season[] = [
@@ -36,11 +42,14 @@ const SEASONS: Season[] = [
         text: "Ciki was voted to have had the Best Play of the Finals",
         href: "https://clips.twitch.tv/SmilingReliableWombatDogFace-5zNOoQVZn56S5mkP",
       },
-      {
-        label: "Draft VOD",
-        text: "Watch on Twitch",
-        href: "https://www.twitch.tv/videos/2037821064",
-      },
+    ],
+    images: [
+      { src: "/history/season-9-img5.png", alt: "Draft picks" },
+      { src: "/history/season-9-img0.png", alt: "Group A — Matches" },
+      { src: "/history/season-9-img1.png", alt: "Group A — Standings" },
+      { src: "/history/season-9-img2.png", alt: "Group B — Matches" },
+      { src: "/history/season-9-img3.png", alt: "Group B — Standings" },
+      { src: "/history/season-9-img4.png", alt: "Playoffs" },
     ],
   },
   {
@@ -55,6 +64,12 @@ const SEASONS: Season[] = [
         text: "The tie between Team Silky and ♥ Pokimane was actually a win for Team Silky, but it was reported as a tie so that seeding into playoffs would go according to tiebreaker rules.",
       },
     ],
+    images: [
+      { src: "/history/season-8-img3.png", alt: "Team rosters" },
+      { src: "/history/season-8-img0.png", alt: "Group stage — Matches" },
+      { src: "/history/season-8-img1.png", alt: "Group stage — Standings" },
+      { src: "/history/season-8-img2.png", alt: "Playoffs" },
+    ],
   },
   {
     number: 7,
@@ -64,6 +79,11 @@ const SEASONS: Season[] = [
       "25 player captain's draft CSGO tournament with a $200 prize pool for first.",
     finalsDate: "September 8, 2023",
     notes: [],
+    images: [
+      { src: "/history/season-7-img2.png", alt: "Team rosters" },
+      { src: "/history/season-7-img0.png", alt: "Group stage — Standings" },
+      { src: "/history/season-7-img1.png", alt: "Playoffs" },
+    ],
   },
   {
     number: 6,
@@ -72,6 +92,7 @@ const SEASONS: Season[] = [
     description: "25 player captain's draft League of Legends tournament.",
     finalsDate: "June 26, 2023",
     notes: [],
+    images: [],
   },
   {
     number: 5,
@@ -81,6 +102,7 @@ const SEASONS: Season[] = [
       "35 player captain's draft League of Legends tournament with $250 prize for first.",
     finalsDate: "January 15, 2023",
     notes: [],
+    images: [{ src: "/history/season-5-img0.png", alt: "Standings" }],
   },
   {
     number: 4,
@@ -90,6 +112,11 @@ const SEASONS: Season[] = [
       "35 player captain's draft League of Legends tournament with $250 prize pool for first place.",
     finalsDate: "April 24, 2022",
     notes: [],
+    images: [
+      { src: "/history/season-4-img2.png", alt: "Team rosters" },
+      { src: "/history/season-4-img0.png", alt: "Standings" },
+      { src: "/history/season-4-img1.png", alt: "Masa's Backpack vs. Joe Biden" },
+    ],
   },
   {
     number: 3,
@@ -99,6 +126,11 @@ const SEASONS: Season[] = [
       "48 player captain's draft StarCraft 2 tournament using Proleague format.",
     finalsDate: "May 16, 2020",
     notes: [],
+    images: [
+      { src: "/history/season-3-img0.png", alt: "Prize pool" },
+      { src: "/history/season-3-img1.png", alt: "Participating teams" },
+      { src: "/history/season-3-img2.png", alt: "Group stage standings & playoffs" },
+    ],
   },
   {
     number: 2,
@@ -108,6 +140,11 @@ const SEASONS: Season[] = [
       "StarCraft 2 Olympics-style team league where American players represent their state.",
     finalsDate: "July 8, 2018",
     notes: [],
+    images: [
+      { src: "/history/season-2-img0.png", alt: "Prize pool" },
+      { src: "/history/season-2-img1.png", alt: "Participating teams" },
+      { src: "/history/season-2-img2.png", alt: "Results" },
+    ],
   },
   {
     number: 1,
@@ -117,6 +154,10 @@ const SEASONS: Season[] = [
       "Captain's draft team league in StarCraft 2 with 70+ signups and a spicy format. Cancelled early.",
     finalsDate: null,
     notes: [],
+    images: [
+      { src: "/history/season-1-img0.png", alt: "Participating teams" },
+      { src: "/history/season-1-img1.png", alt: "Group stage standings" },
+    ],
   },
 ];
 
@@ -195,6 +236,27 @@ export default function HistoryPage() {
                       </li>
                     ))}
                   </ul>
+                ) : null}
+
+                {season.images.length > 0 ? (
+                  <div className="mt-4 space-y-3">
+                    {season.images.map((img) => (
+                      <figure key={img.src}>
+                        <div className="overflow-x-auto rounded-lg border">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={img.src}
+                            alt={img.alt}
+                            loading="lazy"
+                            className="h-auto max-h-[420px] w-auto min-w-full object-contain"
+                          />
+                        </div>
+                        <figcaption className="text-muted-foreground mt-1 pl-1 text-xs">
+                          {img.alt}
+                        </figcaption>
+                      </figure>
+                    ))}
+                  </div>
                 ) : null}
               </div>
             </li>
