@@ -163,7 +163,7 @@ const SEASONS: Season[] = [
 
 export default function HistoryPage() {
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-6 py-12">
+    <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-12">
       <header className="mb-12 space-y-2">
         <h1 className="text-4xl font-bold tracking-tight">History</h1>
         <p className="text-muted-foreground">
@@ -248,7 +248,7 @@ export default function HistoryPage() {
                             src={img.src}
                             alt={img.alt}
                             loading="lazy"
-                            className="h-auto max-h-[420px] w-auto min-w-full object-contain"
+                            className="h-auto max-h-[600px] w-auto min-w-full object-contain"
                           />
                         </div>
                         <figcaption className="text-muted-foreground mt-1 pl-1 text-xs">
