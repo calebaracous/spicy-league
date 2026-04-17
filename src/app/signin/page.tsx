@@ -23,9 +23,7 @@ export default async function SignInPage({ searchParams }: { searchParams: Searc
         <CardContent className="space-y-4">
           {reset ? (
             <Alert>
-              <AlertDescription>
-                Password updated. Sign in with your new password.
-              </AlertDescription>
+              <AlertDescription>Password updated. Sign in with your new password.</AlertDescription>
             </Alert>
           ) : null}
           <SignInForm callbackUrl={callbackUrl} />

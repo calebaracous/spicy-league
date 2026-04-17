@@ -104,10 +104,7 @@ export async function confirmMatch(slug: string, matchId: string) {
     }
   } else if (match.stage === "final") {
     // Final confirmed → season is complete
-    await db
-      .update(seasons)
-      .set({ state: "complete" })
-      .where(eq(seasons.id, season.id));
+    await db.update(seasons).set({ state: "complete" }).where(eq(seasons.id, season.id));
     revalidatePath(`/seasons/${slug}`);
   }
 

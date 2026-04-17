@@ -75,8 +75,7 @@ const SEASONS: Season[] = [
     number: 7,
     title: "Spicy League: CSGO",
     champion: "Mental Fortitude",
-    description:
-      "25 player captain's draft CSGO tournament with a $200 prize pool for first.",
+    description: "25 player captain's draft CSGO tournament with a $200 prize pool for first.",
     finalsDate: "September 8, 2023",
     notes: [],
     images: [
@@ -122,8 +121,7 @@ const SEASONS: Season[] = [
     number: 3,
     title: "The NA Apprentice: Spicy League 2",
     champion: "Single-Horny Ponies",
-    description:
-      "48 player captain's draft StarCraft 2 tournament using Proleague format.",
+    description: "48 player captain's draft StarCraft 2 tournament using Proleague format.",
     finalsDate: "May 16, 2020",
     notes: [],
     images: [
@@ -166,14 +164,12 @@ export default function HistoryPage() {
     <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-12">
       <header className="mb-12 space-y-2">
         <h1 className="text-4xl font-bold tracking-tight">History</h1>
-        <p className="text-muted-foreground">
-          Every Spicy League season, from the beginning.
-        </p>
+        <p className="text-muted-foreground">Every Spicy League season, from the beginning.</p>
       </header>
 
       <div className="relative">
         {/* vertical timeline line */}
-        <div className="absolute top-0 bottom-0 left-5 w-px bg-border" />
+        <div className="bg-border absolute top-0 bottom-0 left-5 w-px" />
 
         <ol className="space-y-14">
           {SEASONS.map((season) => (
@@ -187,15 +183,11 @@ export default function HistoryPage() {
                     Season {season.number}
                   </span>
                   {season.finalsDate ? (
-                    <span className="text-muted-foreground text-xs">
-                      {season.finalsDate}
-                    </span>
+                    <span className="text-muted-foreground text-xs">{season.finalsDate}</span>
                   ) : null}
                 </div>
 
-                <h2 className="text-2xl font-bold leading-tight">
-                  {season.title}
-                </h2>
+                <h2 className="text-2xl leading-tight font-bold">{season.title}</h2>
 
                 {season.champion ? (
                   <p className="text-sm">
@@ -217,9 +209,7 @@ export default function HistoryPage() {
                     {season.notes.map((note, i) => (
                       <li key={i} className="text-muted-foreground text-sm">
                         {note.label ? (
-                          <span className="font-medium text-foreground">
-                            {note.label}:{" "}
-                          </span>
+                          <span className="text-foreground font-medium">{note.label}: </span>
                         ) : null}
                         {note.href ? (
                           <a

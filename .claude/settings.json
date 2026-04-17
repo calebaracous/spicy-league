@@ -40,7 +40,8 @@
       "Bash(echo 'BETTER_AUTH_URL=\"https://spicyleague.dev\"')",
       "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_8o4mHNCbndQg@ep-bold-boat-am18lac9.c-5.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require\" npx drizzle-kit generate)",
       "Bash(DATABASE_URL=\"postgresql://neondb_owner:npg_8o4mHNCbndQg@ep-bold-boat-am18lac9.c-5.us-east-1.aws.neon.tech/neondb?channel_binding=require&sslmode=require\" npx drizzle-kit push --force)",
-      "Bash(node -e \"const b = require\\('better-auth/next-js'\\); console.log\\(Object.keys\\(b\\)\\)\")"
+      "Bash(node -e \"const b = require\\('better-auth/next-js'\\); console.log\\(Object.keys\\(b\\)\\)\")",
+      "Bash(npx prettier *)"
     ],
     "additionalDirectories": [
       "c:\\Users\\Caleeb\\Desktop\\dev\\indie\\spicy-league\\src\\app\\api\\auth\\[...nextauth]"

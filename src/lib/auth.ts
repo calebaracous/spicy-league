@@ -9,7 +9,8 @@ import { users, sessions, accounts, verifications } from "@/db/schema/auth";
 
 const resend = new Resend(process.env.AUTH_RESEND_KEY);
 const FROM = process.env.AUTH_EMAIL_FROM ?? "no-reply@spicyleague.dev";
-const BASE_URL = process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+const BASE_URL =
+  process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET ?? process.env.AUTH_SECRET,

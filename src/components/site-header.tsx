@@ -4,18 +4,14 @@ import { auth } from "@/auth";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-
 export async function SiteHeader() {
   const session = await auth();
   const user = session?.user;
 
   return (
-    <header className="bg-primary border-b border-primary-foreground/10">
+    <header className="bg-primary border-primary-foreground/10 border-b">
       <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-        <Link
-          href="/"
-          className="flex items-center gap-2 font-semibold text-primary-foreground"
-        >
+        <Link href="/" className="text-primary-foreground flex items-center gap-2 font-semibold">
           <span>🌶</span>
           <span>Spicy League</span>
         </Link>
@@ -52,7 +48,7 @@ export async function SiteHeader() {
               href="/signin"
               className={cn(
                 buttonVariants({ size: "sm" }),
-                "ml-3 bg-primary-foreground text-primary hover:bg-primary-foreground/90",
+                "bg-primary-foreground text-primary hover:bg-primary-foreground/90 ml-3",
               )}
             >
               Sign in

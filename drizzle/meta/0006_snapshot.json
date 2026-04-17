@@ -81,12 +81,8 @@
           "name": "accounts_user_id_users_id_fk",
           "tableFrom": "accounts",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -94,10 +90,7 @@
       "compositePrimaryKeys": {
         "accounts_provider_provider_account_id_pk": {
           "name": "accounts_provider_provider_account_id_pk",
-          "columns": [
-            "provider",
-            "provider_account_id"
-          ]
+          "columns": ["provider", "provider_account_id"]
         }
       },
       "uniqueConstraints": {},
@@ -134,12 +127,8 @@
           "name": "sessions_user_id_users_id_fk",
           "tableFrom": "sessions",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -238,16 +227,12 @@
         "users_email_unique": {
           "name": "users_email_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "email"
-          ]
+          "columns": ["email"]
         },
         "users_display_name_unique": {
           "name": "users_display_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "display_name"
-          ]
+          "columns": ["display_name"]
         }
       },
       "policies": {},
@@ -282,10 +267,7 @@
       "compositePrimaryKeys": {
         "verification_tokens_identifier_token_pk": {
           "name": "verification_tokens_identifier_token_pk",
-          "columns": [
-            "identifier",
-            "token"
-          ]
+          "columns": ["identifier", "token"]
         }
       },
       "uniqueConstraints": {},
@@ -351,12 +333,8 @@
           "name": "season_captains_season_id_seasons_id_fk",
           "tableFrom": "season_captains",
           "tableTo": "seasons",
-          "columnsFrom": [
-            "season_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["season_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -364,12 +342,8 @@
           "name": "season_captains_user_id_users_id_fk",
           "tableFrom": "season_captains",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -379,10 +353,7 @@
         "season_captains_season_user_uniq": {
           "name": "season_captains_season_user_uniq",
           "nullsNotDistinct": false,
-          "columns": [
-            "season_id",
-            "user_id"
-          ]
+          "columns": ["season_id", "user_id"]
         }
       },
       "policies": {},
@@ -453,12 +424,8 @@
           "name": "season_signups_season_id_seasons_id_fk",
           "tableFrom": "season_signups",
           "tableTo": "seasons",
-          "columnsFrom": [
-            "season_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["season_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -466,12 +433,8 @@
           "name": "season_signups_user_id_users_id_fk",
           "tableFrom": "season_signups",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -481,10 +444,7 @@
         "season_signups_season_user_uniq": {
           "name": "season_signups_season_user_uniq",
           "nullsNotDistinct": false,
-          "columns": [
-            "season_id",
-            "user_id"
-          ]
+          "columns": ["season_id", "user_id"]
         }
       },
       "policies": {},
@@ -607,12 +567,8 @@
           "name": "seasons_created_by_users_id_fk",
           "tableFrom": "seasons",
           "tableTo": "users",
-          "columnsFrom": [
-            "created_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["created_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -622,16 +578,12 @@
         "seasons_name_unique": {
           "name": "seasons_name_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "name"
-          ]
+          "columns": ["name"]
         },
         "seasons_slug_unique": {
           "name": "seasons_slug_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "slug"
-          ]
+          "columns": ["slug"]
         }
       },
       "policies": {},
@@ -703,12 +655,8 @@
           "name": "account_links_user_id_users_id_fk",
           "tableFrom": "account_links",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -718,10 +666,7 @@
         "account_links_user_provider_uniq": {
           "name": "account_links_user_provider_uniq",
           "nullsNotDistinct": false,
-          "columns": [
-            "user_id",
-            "provider"
-          ]
+          "columns": ["user_id", "provider"]
         }
       },
       "policies": {},
@@ -798,12 +743,8 @@
           "name": "leetify_stat_snapshots_user_id_users_id_fk",
           "tableFrom": "leetify_stat_snapshots",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -902,12 +843,8 @@
           "name": "riot_stat_snapshots_user_id_users_id_fk",
           "tableFrom": "riot_stat_snapshots",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -982,12 +919,8 @@
           "name": "draft_picks_draft_id_drafts_id_fk",
           "tableFrom": "draft_picks",
           "tableTo": "drafts",
-          "columnsFrom": [
-            "draft_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["draft_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -995,12 +928,8 @@
           "name": "draft_picks_captain_user_id_users_id_fk",
           "tableFrom": "draft_picks",
           "tableTo": "users",
-          "columnsFrom": [
-            "captain_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["captain_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1008,12 +937,8 @@
           "name": "draft_picks_picked_user_id_users_id_fk",
           "tableFrom": "draft_picks",
           "tableTo": "users",
-          "columnsFrom": [
-            "picked_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["picked_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1023,18 +948,12 @@
         "draft_picks_draft_pick_uniq": {
           "name": "draft_picks_draft_pick_uniq",
           "nullsNotDistinct": false,
-          "columns": [
-            "draft_id",
-            "pick_number"
-          ]
+          "columns": ["draft_id", "pick_number"]
         },
         "draft_picks_draft_picked_uniq": {
           "name": "draft_picks_draft_picked_uniq",
           "nullsNotDistinct": false,
-          "columns": [
-            "draft_id",
-            "picked_user_id"
-          ]
+          "columns": ["draft_id", "picked_user_id"]
         }
       },
       "policies": {},
@@ -1091,12 +1010,8 @@
           "name": "drafts_season_id_seasons_id_fk",
           "tableFrom": "drafts",
           "tableTo": "seasons",
-          "columnsFrom": [
-            "season_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["season_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1106,9 +1021,7 @@
         "drafts_season_id_unique": {
           "name": "drafts_season_id_unique",
           "nullsNotDistinct": false,
-          "columns": [
-            "season_id"
-          ]
+          "columns": ["season_id"]
         }
       },
       "policies": {},
@@ -1173,12 +1086,8 @@
           "name": "team_members_team_id_teams_id_fk",
           "tableFrom": "team_members",
           "tableTo": "teams",
-          "columnsFrom": [
-            "team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1186,12 +1095,8 @@
           "name": "team_members_user_id_users_id_fk",
           "tableFrom": "team_members",
           "tableTo": "users",
-          "columnsFrom": [
-            "user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1201,10 +1106,7 @@
         "team_members_team_user_uniq": {
           "name": "team_members_team_user_uniq",
           "nullsNotDistinct": false,
-          "columns": [
-            "team_id",
-            "user_id"
-          ]
+          "columns": ["team_id", "user_id"]
         }
       },
       "policies": {},
@@ -1269,12 +1171,8 @@
           "name": "teams_season_id_seasons_id_fk",
           "tableFrom": "teams",
           "tableTo": "seasons",
-          "columnsFrom": [
-            "season_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["season_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1282,12 +1180,8 @@
           "name": "teams_captain_user_id_users_id_fk",
           "tableFrom": "teams",
           "tableTo": "users",
-          "columnsFrom": [
-            "captain_user_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["captain_user_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -1297,10 +1191,7 @@
         "teams_season_captain_uniq": {
           "name": "teams_season_captain_uniq",
           "nullsNotDistinct": false,
-          "columns": [
-            "season_id",
-            "captain_user_id"
-          ]
+          "columns": ["season_id", "captain_user_id"]
         }
       },
       "policies": {},
@@ -1459,12 +1350,8 @@
           "name": "matches_season_id_seasons_id_fk",
           "tableFrom": "matches",
           "tableTo": "seasons",
-          "columnsFrom": [
-            "season_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["season_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1472,12 +1359,8 @@
           "name": "matches_home_team_id_teams_id_fk",
           "tableFrom": "matches",
           "tableTo": "teams",
-          "columnsFrom": [
-            "home_team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["home_team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1485,12 +1368,8 @@
           "name": "matches_away_team_id_teams_id_fk",
           "tableFrom": "matches",
           "tableTo": "teams",
-          "columnsFrom": [
-            "away_team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["away_team_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -1498,12 +1377,8 @@
           "name": "matches_winner_team_id_teams_id_fk",
           "tableFrom": "matches",
           "tableTo": "teams",
-          "columnsFrom": [
-            "winner_team_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["winner_team_id"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         },
@@ -1511,12 +1386,8 @@
           "name": "matches_reported_by_users_id_fk",
           "tableFrom": "matches",
           "tableTo": "users",
-          "columnsFrom": [
-            "reported_by"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["reported_by"],
+          "columnsTo": ["id"],
           "onDelete": "set null",
           "onUpdate": "no action"
         }
@@ -1532,18 +1403,12 @@
     "public.user_role": {
       "name": "user_role",
       "schema": "public",
-      "values": [
-        "user",
-        "admin"
-      ]
+      "values": ["user", "admin"]
     },
     "public.game": {
       "name": "game",
       "schema": "public",
-      "values": [
-        "lol",
-        "cs2"
-      ]
+      "values": ["lol", "cs2"]
     },
     "public.season_state": {
       "name": "season_state",
@@ -1562,40 +1427,22 @@
     "public.account_provider": {
       "name": "account_provider",
       "schema": "public",
-      "values": [
-        "riot",
-        "steam",
-        "leetify"
-      ]
+      "values": ["riot", "steam", "leetify"]
     },
     "public.draft_state": {
       "name": "draft_state",
       "schema": "public",
-      "values": [
-        "pending",
-        "in_progress",
-        "paused",
-        "completed"
-      ]
+      "values": ["pending", "in_progress", "paused", "completed"]
     },
     "public.match_stage": {
       "name": "match_stage",
       "schema": "public",
-      "values": [
-        "group",
-        "semis",
-        "final"
-      ]
+      "values": ["group", "semis", "final"]
     },
     "public.match_state": {
       "name": "match_state",
       "schema": "public",
-      "values": [
-        "scheduled",
-        "reported",
-        "confirmed",
-        "disputed"
-      ]
+      "values": ["scheduled", "reported", "confirmed", "disputed"]
     }
   },
   "schemas": {},
