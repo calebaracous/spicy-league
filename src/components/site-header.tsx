@@ -26,6 +26,12 @@ export async function SiteHeader() {
           >
             Seasons
           </Link>
+          <Link
+            href="/history"
+            className="text-primary-foreground/70 hover:text-primary-foreground transition-colors"
+          >
+            History
+          </Link>
           {user?.role === "admin" ? (
             <Link
               href="/admin"
