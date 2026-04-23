@@ -9,12 +9,21 @@ import { users, sessions, accounts, verifications } from "@/db/schema/auth";
 
 const resend = new Resend(process.env.AUTH_RESEND_KEY);
 const FROM = process.env.AUTH_EMAIL_FROM ?? "no-reply@spicyleague.dev";
-const BASE_URL =
-  process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+
+// Only pass an explicit baseURL when one is configured. Without it Better Auth
+// auto-detects from the incoming request's host, which is correct on Vercel
+// where the host header is always reliable.
+const BASE_URL = process.env.BETTER_AUTH_URL ?? process.env.NEXT_PUBLIC_APP_URL;
 
 export const auth = betterAuth({
   secret: process.env.BETTER_AUTH_SECRET ?? process.env.AUTH_SECRET,
-  baseURL: BASE_URL,
+  ...(BASE_URL ? { baseURL: BASE_URL } : {}),
+
+  // Trust any explicitly configured URL so that both a custom domain and the
+  // *.vercel.app URL work without one blocking the other.
+  trustedOrigins: [process.env.BETTER_AUTH_URL, process.env.NEXT_PUBLIC_APP_URL].filter(
+    Boolean,
+  ) as string[],
 
   database: drizzleAdapter(db, {
     provider: "pg",

@@ -1,61 +1,14 @@
-import Link from "next/link";
-
 import { auth } from "@/auth";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { SiteHeaderClient } from "./site-header-client";
 
 export async function SiteHeader() {
   const session = await auth();
-  const user = session?.user;
+  const user = session?.user
+    ? {
+        displayName: session.user.displayName ?? null,
+        role: session.user.role ?? null,
+      }
+    : null;
 
-  return (
-    <header className="bg-primary border-primary-foreground/10 border-b">
-      <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-4">
-        <Link href="/" className="text-primary-foreground flex items-center gap-2 font-semibold">
-          <span>🌶</span>
-          <span>Spicy League</span>
-        </Link>
-        <nav className="flex items-center gap-2 text-sm">
-          <Link
-            href="/seasons"
-            className="text-primary-foreground/70 hover:text-primary-foreground transition-colors"
-          >
-            Seasons
-          </Link>
-          <Link
-            href="/history"
-            className="text-primary-foreground/70 hover:text-primary-foreground transition-colors"
-          >
-            History
-          </Link>
-          {user?.role === "admin" ? (
-            <Link
-              href="/admin"
-              className="text-primary-foreground/70 hover:text-primary-foreground ml-3 transition-colors"
-            >
-              Admin
-            </Link>
-          ) : null}
-          {user ? (
-            <Link
-              href="/profile"
-              className={cn(buttonVariants({ size: "sm", variant: "secondary" }), "ml-3")}
-            >
-              {user.displayName ?? "Profile"}
-            </Link>
-          ) : (
-            <Link
-              href="/signin"
-              className={cn(
-                buttonVariants({ size: "sm" }),
-                "bg-primary-foreground text-primary hover:bg-primary-foreground/90 ml-3",
-              )}
-            >
-              Sign in
-            </Link>
-          )}
-        </nav>
-      </div>
-    </header>
-  );
+  return <SiteHeaderClient user={user} />;
 }

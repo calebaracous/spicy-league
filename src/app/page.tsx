@@ -1,30 +1,58 @@
-import Link from "next/link";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { and, desc, inArray } from "drizzle-orm";
 
-export default function Home() {
+import { db } from "@/db/client";
+import { seasons } from "@/db/schema/seasons";
+import { Hero } from "./_sections/hero";
+import { About } from "./_sections/about";
+import { HowItWorks } from "./_sections/how-it-works";
+import { LatestSeasons } from "./_sections/latest-seasons";
+import { CallToAction } from "./_sections/call-to-action";
+import { Divider } from "@/components/ui/divider";
+
+export const dynamic = "force-dynamic";
+
+async function getLiveSeason() {
+  const rows = await db.query.seasons.findMany({
+    where: and(
+      inArray(seasons.state, [
+        "signups_open",
+        "signups_closed",
+        "captains_selected",
+        "drafting",
+        "group_stage",
+        "playoffs",
+      ]),
+    ),
+    orderBy: [desc(seasons.createdAt)],
+    limit: 1,
+  });
+  return rows[0] ?? null;
+}
+
+const LIVE_STATE_COPY: Record<string, string> = {
+  signups_open: "SIGNUPS OPEN",
+  signups_closed: "CAPTAINS INCOMING",
+  captains_selected: "DRAFT PENDING",
+  drafting: "DRAFT LIVE",
+  group_stage: "GROUP STAGE LIVE",
+  playoffs: "PLAYOFFS LIVE",
+};
+
+export default async function Home() {
+  const live = await getLiveSeason();
+  const liveLabel = live ? LIVE_STATE_COPY[live.state] : undefined;
+  const liveHref = live ? `/seasons/${live.slug}` : undefined;
+
   return (
-    <main className="flex flex-1 flex-col items-center justify-center gap-8 px-6 py-24 text-center">
-      <div className="space-y-3">
-        <p className="text-muted-foreground text-sm font-medium tracking-widest uppercase">
-          Spicy League
-        </p>
-        <h1 className="text-5xl font-bold tracking-tight text-balance sm:text-6xl">
-          Captains-draft tournaments for League of Legends and CS2.
-        </h1>
-        <p className="text-muted-foreground mx-auto max-w-xl text-lg text-balance">
-          Sign up for a season, get drafted onto a team, and compete through a round-robin group
-          stage into a single-elimination bracket.
-        </p>
-      </div>
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <Link href="/seasons" className={cn(buttonVariants({ size: "lg" }))}>
-          View seasons
-        </Link>
-        <Link href="/signup" className={cn(buttonVariants({ size: "lg", variant: "outline" }))}>
-          Sign up
-        </Link>
-      </div>
-    </main>
+    <>
+      <Hero liveLabel={liveLabel} liveHref={liveHref} />
+      <Divider />
+      <About />
+      <Divider />
+      <HowItWorks />
+      <Divider />
+      <LatestSeasons />
+      <CallToAction />
+    </>
   );
 }
