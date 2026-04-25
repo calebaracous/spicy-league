@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { LogoMark } from "@/components/ui/logo-mark";
+
 const navLinks = [
   { href: "/seasons", label: "Seasons" },
   { href: "/history", label: "History" },
@@ -17,10 +19,14 @@ export function SiteFooter() {
           <div className="flex flex-col gap-2">
             <Link
               href="/"
-              className="text-base font-medium tracking-tight transition-opacity hover:opacity-60"
+              className="inline-flex items-center gap-2 text-base font-medium tracking-tight transition-opacity hover:opacity-60"
               style={{ color: "var(--text)" }}
+              aria-label="Spicy League — home"
             >
-              Spicy League<span style={{ color: "var(--accent)" }}>.</span>
+              <LogoMark size={20} />
+              <span>
+                Spicy League<span style={{ color: "var(--accent)" }}>.</span>
+              </span>
             </Link>
             <p className="text-sm" style={{ color: "var(--muted)", maxWidth: "32ch" }}>
               Captains-draft tournaments for League of Legends and Counter-Strike 2.

@@ -17,11 +17,10 @@ Trivial shadcn primitives get a single entry at the bottom.
 
 ## App root
 
-- `src/app/layout.tsx` — `<html>`, Geist fonts, SiteHeader, main, SiteFooter.
+- `src/app/layout.tsx` — `<html>`, Geist fonts, SiteHeader, main, SiteFooter. Declares `metadata.icons`/`manifest`/`openGraph` and a dark `viewport.themeColor`.
 - `src/app/template.tsx` — per-route `animate-page` fade wrapper.
 - `src/app/page.tsx` — home; pulls a live season + composes `_sections/*`.
 - `src/app/globals.css` — design tokens (freelance hex + shadcn OKLCH), typography, animations. See [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md).
-- `src/app/favicon.ico` — asset.
 
 ## Home-page sections
 
@@ -126,6 +125,7 @@ Freelance-style (hex tokens, new):
 - `src/components/ui/divider.tsx` — 1px hr.
 - `src/components/ui/tag.tsx` — small pill.
 - `src/components/ui/link-button.tsx` — `<Link>`-wrapped button with primary/outline/ghost variants.
+- `src/components/ui/logo-mark.tsx` — inline flame SVG. Themed via `var(--accent)` / `var(--text)` by default; used in header + footer wordmarks.
 
 shadcn (OKLCH tokens, existing):
 - `alert.tsx`, `badge.tsx`, `button.tsx`, `card.tsx`, `input.tsx`, `label.tsx`, `select.tsx`, `separator.tsx`, `sonner.tsx`, `textarea.tsx` — standard shadcn generators under `src/components/ui/`.
@@ -133,7 +133,10 @@ shadcn (OKLCH tokens, existing):
 ## Public assets
 
 - `public/history/` — screenshots from seasons 1–9 (referenced by `src/app/history/page.tsx`).
-- `public/*.svg` — generic Next.js bootstrap icons.
+- `public/logo.svg`, `public/icon-512.svg` — vector flame mark (240×240 / 512×512 artboards). Source-of-truth shape lives inline in `src/components/ui/logo-mark.tsx`.
+- `public/icon-{16,32,64,128,192,512}.png` — favicon + PWA app-icon raster sizes. Wired via `metadata.icons` in `src/app/layout.tsx`.
+- `public/apple-touch-icon.png` — 180×180 iOS home-screen icon.
+- `public/site.webmanifest` — PWA manifest (name, theme/background `#0A0A0A`, icon set). Linked via `metadata.manifest`.
 
 ## Docs (you are here)
 

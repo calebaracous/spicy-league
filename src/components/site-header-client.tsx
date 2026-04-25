@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
+import { LogoMark } from "@/components/ui/logo-mark";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
@@ -58,10 +59,14 @@ export function SiteHeaderClient({ user }: { user: SiteHeaderUser | null }) {
         >
           <Link
             href="/"
-            className="relative z-10 text-sm font-medium tracking-tight transition-opacity hover:opacity-60"
+            className="relative z-10 inline-flex items-center gap-2 text-sm font-medium tracking-tight transition-opacity hover:opacity-60"
             style={{ color: "var(--text)" }}
+            aria-label="Spicy League — home"
           >
-            Spicy League<span style={{ color: "var(--accent)" }}>.</span>
+            <LogoMark size={22} />
+            <span>
+              Spicy League<span style={{ color: "var(--accent)" }}>.</span>
+            </span>
           </Link>
 
           {/* Desktop nav */}

@@ -6,6 +6,16 @@ OKLCH system** (used by the existing shadcn/ui primitives under
 `src/components/ui/`). Don't delete the shadcn set — existing admin and
 form surfaces depend on it.
 
+## Brand mark
+
+The flame is a two-path SVG: outer in `--accent` (`#B91C1C`), inner in
+`--text` (`#F5F0E8`). Source-of-truth lives in
+`src/components/ui/logo-mark.tsx` (the public `logo.svg` / `icon-512.svg`
+files mirror it for OG/PWA use). Drop `<LogoMark size={N} />` anywhere
+on a dark background — it inherits the design tokens, so it follows any
+future theme change without edits. For a light surface, pass an explicit
+`outerColor` / `innerColor`.
+
 ## Color palette
 
 Dark background + cream text + dark red accent. Black and dark-red pair
@@ -83,7 +93,8 @@ symmetric transitions.
 and `@base-ui/react` for accessibility.
 
 **Freelance-style (new)** — `reveal.tsx`, `section-label.tsx`,
-`divider.tsx`, `tag.tsx`, `link-button.tsx`. All use the hex tokens.
+`divider.tsx`, `tag.tsx`, `link-button.tsx`, `logo-mark.tsx`. All use the
+hex tokens.
 
 When building new chrome: prefer the freelance primitives + hex tokens.
 When touching existing forms / admin: keep using shadcn.
