@@ -40,20 +40,6 @@ export const auth = betterAuth({
     requireEmailVerification: true,
     minPasswordLength: 8,
 
-    sendVerificationEmail: async ({ user, url }: { user: { email: string }; url: string }) => {
-      await getResend().emails.send({
-        from: FROM,
-        to: user.email,
-        subject: "Verify your email — Spicy League",
-        html: `
-          <p>Welcome to Spicy League!</p>
-          <p>Click the link below to verify your email address and activate your account.</p>
-          <p><a href="${url}" style="font-weight:bold">Verify email</a></p>
-          <p>This link expires in 24 hours. If you didn't create an account you can ignore this email.</p>
-        `,
-      });
-    },
-
     sendResetPassword: async ({ user, url }: { user: { email: string }; url: string }) => {
       await getResend().emails.send({
         from: FROM,
@@ -72,6 +58,20 @@ export const auth = betterAuth({
     sendOnSignUp: true,
     autoSignInAfterVerification: true,
     expiresIn: 60 * 60 * 24, // 24 hours
+
+    sendVerificationEmail: async ({ user, url }: { user: { email: string }; url: string }) => {
+      await getResend().emails.send({
+        from: FROM,
+        to: user.email,
+        subject: "Verify your email — Spicy League",
+        html: `
+          <p>Welcome to Spicy League!</p>
+          <p>Click the link below to verify your email address and activate your account.</p>
+          <p><a href="${url}" style="font-weight:bold">Verify email</a></p>
+          <p>This link expires in 24 hours. If you didn't create an account you can ignore this email.</p>
+        `,
+      });
+    },
   },
 
   session: {
