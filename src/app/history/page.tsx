@@ -226,7 +226,7 @@ export default function HistoryPage() {
     <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-12">
       <header className="mb-12 space-y-2">
         <h1 className="text-4xl font-bold tracking-tight">History</h1>
-        <p className="text-muted-foreground">Every Spicy League season, from the beginning.</p>
+        <p className="text-muted-foreground">8 Years of the Spicy League</p>
       </header>
 
       <div className="relative">
