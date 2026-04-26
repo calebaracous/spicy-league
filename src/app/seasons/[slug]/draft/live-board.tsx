@@ -7,11 +7,28 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+type RiotRank = {
+  tier: string | null;
+  rankDivision: string | null;
+  lp: number | null;
+};
+
+type LolRolePrefs = {
+  primaryRole?: string;
+  secondaryRole?: string;
+};
+
 type Snapshot = {
   draft: { id: string; state: "pending" | "in_progress" | "paused" | "completed" };
-  season: { id: string; slug: string; name: string };
+  season: { id: string; slug: string; name: string; game: "lol" | "cs2" };
   captains: Array<{ userId: string; displayName: string; captainOrder: number }>;
-  pool: Array<{ userId: string; displayName: string; signupId: string }>;
+  pool: Array<{
+    userId: string;
+    displayName: string;
+    signupId: string;
+    rolePrefs: unknown;
+    riotRank: RiotRank | null;
+  }>;
   picks: Array<{
     pickNumber: number;
     captainUserId: string;
@@ -35,6 +52,39 @@ const STATE_LABELS: Record<Snapshot["draft"]["state"], string> = {
   paused: "Paused",
   completed: "Complete",
 };
+
+const ROLE_LABELS: Record<string, string> = {
+  top: "Top",
+  jungle: "JG",
+  mid: "Mid",
+  adc: "ADC",
+  support: "Sup",
+  fill: "Fill",
+};
+
+function formatRank(rank: RiotRank | null): string {
+  if (!rank || !rank.tier) return "Unranked";
+  const tier = rank.tier.charAt(0).toUpperCase() + rank.tier.slice(1).toLowerCase();
+  // Apex tiers have no division
+  const apexTiers = new Set(["Challenger", "Grandmaster", "Master"]);
+  const division = apexTiers.has(tier) ? "" : ` ${rank.rankDivision ?? ""}`;
+  const lp = rank.lp != null ? ` (${rank.lp} LP)` : "";
+  return `${tier}${division}${lp}`.trim();
+}
+
+function RolePrefsDisplay({ prefs }: { prefs: LolRolePrefs }) {
+  const primary = prefs.primaryRole ? (ROLE_LABELS[prefs.primaryRole] ?? prefs.primaryRole) : null;
+  const secondary = prefs.secondaryRole
+    ? (ROLE_LABELS[prefs.secondaryRole] ?? prefs.secondaryRole)
+    : null;
+  if (!primary && !secondary) return null;
+  return (
+    <span className="text-muted-foreground flex shrink-0 items-center gap-1 text-xs">
+      {primary ? <span className="bg-muted rounded px-1 py-0.5 font-medium">{primary}</span> : null}
+      {secondary ? <span className="bg-muted/60 rounded px-1 py-0.5">{secondary}</span> : null}
+    </span>
+  );
+}
 
 export function LiveBoard({
   initial,
@@ -70,6 +120,7 @@ export function LiveBoard({
   const onClock = snap.onTheClock;
   const isMyTurn = !!onClock && viewerUserId === onClock.captainUserId;
   const canPick = (isMyTurn || isAdmin) && snap.draft.state === "in_progress";
+  const isLol = snap.season.game === "lol";
 
   const teamsByCaptain = new Map<string, Snapshot["picks"]>();
   for (const cap of snap.captains) teamsByCaptain.set(cap.userId, []);
@@ -113,52 +164,7 @@ export function LiveBoard({
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-[1fr_2fr]">
-        {/* Pool */}
-        <Card className="self-start">
-          <CardHeader>
-            <CardTitle className="text-base">Available pool ({snap.pool.length})</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <input
-              type="text"
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              placeholder="Filter by name…"
-              className="border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
-            />
-            {filtered.length === 0 ? (
-              <p className="text-muted-foreground text-sm">No players match.</p>
-            ) : (
-              <ul className="max-h-[60vh] space-y-1 overflow-y-auto">
-                {filtered.map((p) => (
-                  <li
-                    key={p.userId}
-                    className="hover:bg-muted/50 flex items-center justify-between gap-2 rounded-md px-2 py-1"
-                  >
-                    <span className="text-sm">{p.displayName}</span>
-                    {canPick ? (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        disabled={pending}
-                        onClick={() => {
-                          if (!confirm(`Pick ${p.displayName}?`)) return;
-                          startTransition(async () => {
-                            await submitPick(slug, p.userId);
-                          });
-                        }}
-                      >
-                        Pick
-                      </Button>
-                    ) : null}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Teams */}
+        {/* Teams — left, narrower */}
         <div className="space-y-4">
           {snap.captains.map((cap) => {
             const roster = teamsByCaptain.get(cap.userId) ?? [];
@@ -196,6 +202,68 @@ export function LiveBoard({
             );
           })}
         </div>
+
+        {/* Pool — right, wider */}
+        <Card className="self-start">
+          <CardHeader>
+            <CardTitle className="text-base">Available pool ({snap.pool.length})</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <input
+              type="text"
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="Filter by name…"
+              className="border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
+            />
+            {filtered.length === 0 ? (
+              <p className="text-muted-foreground text-sm">No players match.</p>
+            ) : (
+              <ul className="max-h-[60vh] space-y-1 overflow-y-auto">
+                {filtered.map((p) => {
+                  const lolPrefs =
+                    isLol && p.rolePrefs && typeof p.rolePrefs === "object"
+                      ? (p.rolePrefs as LolRolePrefs)
+                      : null;
+                  return (
+                    <li
+                      key={p.userId}
+                      className="hover:bg-muted/50 flex items-center gap-2 rounded-md px-2 py-1.5"
+                    >
+                      <span className="min-w-0 flex-1 truncate text-sm font-medium">
+                        {p.displayName}
+                      </span>
+                      {isLol ? (
+                        <>
+                          {lolPrefs ? <RolePrefsDisplay prefs={lolPrefs} /> : null}
+                          <span className="text-muted-foreground shrink-0 text-xs">
+                            {formatRank(p.riotRank)}
+                          </span>
+                        </>
+                      ) : null}
+                      {canPick ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={pending}
+                          className="shrink-0"
+                          onClick={() => {
+                            if (!confirm(`Pick ${p.displayName}?`)) return;
+                            startTransition(async () => {
+                              await submitPick(slug, p.userId);
+                            });
+                          }}
+                        >
+                          Pick
+                        </Button>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       {/* Pick log */}

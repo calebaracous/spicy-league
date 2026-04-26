@@ -1,6 +1,6 @@
 import "server-only";
 
-import { asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { users } from "@/db/schema/auth";
@@ -13,6 +13,7 @@ import {
   type DraftPick,
 } from "@/db/schema/drafts";
 import { seasonCaptains, seasonSignups, seasons } from "@/db/schema/seasons";
+import { riotStatSnapshots } from "@/db/schema/stats";
 
 export const PICKS_PER_TEAM = 4;
 
@@ -30,11 +31,23 @@ export function totalPicks(captainCount: number): number {
   return PICKS_PER_TEAM * captainCount;
 }
 
+export type RiotRank = {
+  tier: string | null;
+  rankDivision: string | null;
+  lp: number | null;
+};
+
 export type DraftSnapshot = {
   draft: { id: string; state: Draft["state"]; startedAt: Date | null; completedAt: Date | null };
-  season: { id: string; slug: string; name: string };
+  season: { id: string; slug: string; name: string; game: "lol" | "cs2" };
   captains: Array<{ userId: string; displayName: string; captainOrder: number }>;
-  pool: Array<{ userId: string; displayName: string; signupId: string }>;
+  pool: Array<{
+    userId: string;
+    displayName: string;
+    signupId: string;
+    rolePrefs: unknown;
+    riotRank: RiotRank | null;
+  }>;
   picks: Array<{
     pickNumber: number;
     captainUserId: string;
@@ -75,6 +88,7 @@ export async function getDraftSnapshot(seasonSlug: string): Promise<DraftSnapsho
         signupId: seasonSignups.id,
         userId: seasonSignups.userId,
         displayName: sql<string>`COALESCE(${users.name}, ${users.username}, '?')`,
+        rolePrefs: seasonSignups.rolePrefs,
       })
       .from(seasonSignups)
       .innerJoin(users, eq(seasonSignups.userId, users.id))
@@ -92,6 +106,21 @@ export async function getDraftSnapshot(seasonSlug: string): Promise<DraftSnapsho
       .orderBy(asc(draftPicks.pickNumber)),
   ]);
 
+  const riotRankMap = new Map<string, RiotRank>();
+  if (season.game === "lol" && signupsRows.length > 0) {
+    const userIds = signupsRows.map((s) => s.userId);
+    const statsRows = await db
+      .select({
+        userId: riotStatSnapshots.userId,
+        tier: riotStatSnapshots.tier,
+        rankDivision: riotStatSnapshots.rankDivision,
+        lp: riotStatSnapshots.lp,
+      })
+      .from(riotStatSnapshots)
+      .where(and(eq(riotStatSnapshots.queue, "solo"), inArray(riotStatSnapshots.userId, userIds)));
+    for (const s of statsRows) riotRankMap.set(s.userId, s);
+  }
+
   const captainIds = new Set(captains.map((c) => c.userId));
   const pickedIds = new Set(picksRows.map((p) => p.pickedUserId));
   const captainName = new Map(captains.map((c) => [c.userId, c.displayName ?? "?"]));
@@ -99,7 +128,13 @@ export async function getDraftSnapshot(seasonSlug: string): Promise<DraftSnapsho
 
   const pool = signupsRows
     .filter((s) => !captainIds.has(s.userId) && !pickedIds.has(s.userId))
-    .map((s) => ({ userId: s.userId, displayName: s.displayName ?? "?", signupId: s.signupId }));
+    .map((s) => ({
+      userId: s.userId,
+      displayName: s.displayName ?? "?",
+      signupId: s.signupId,
+      rolePrefs: s.rolePrefs,
+      riotRank: riotRankMap.get(s.userId) ?? null,
+    }));
 
   const total = totalPicks(captains.length);
   const picks = picksRows.map((p) => ({
@@ -133,7 +168,7 @@ export async function getDraftSnapshot(seasonSlug: string): Promise<DraftSnapsho
       startedAt: draft.startedAt,
       completedAt: draft.completedAt,
     },
-    season: { id: season.id, slug: season.slug, name: season.name },
+    season: { id: season.id, slug: season.slug, name: season.name, game: season.game },
     captains: captains.map((c) => ({
       userId: c.userId,
       displayName: c.displayName ?? "?",

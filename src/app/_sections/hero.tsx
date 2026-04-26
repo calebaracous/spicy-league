@@ -1,30 +1,14 @@
-import { SectionLabel } from "@/components/ui/section-label";
 import { LinkButton } from "@/components/ui/link-button";
 
 const stats = ["9 seasons run", "Captain's draft format", "LoL & CS2", "Community-run"];
 
 interface HeroProps {
-  liveLabel?: string;
   liveHref?: string;
 }
 
-export function Hero({ liveLabel, liveHref }: HeroProps) {
+export function Hero({ liveHref }: HeroProps) {
   return (
     <section className="site-container pt-28 pb-24 md:pt-36 md:pb-32">
-      <div className="animate-fade-up mb-10 flex items-center gap-2.5">
-        <span className="relative flex h-2 w-2 shrink-0">
-          <span
-            className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
-            style={{ backgroundColor: "var(--accent)" }}
-          />
-          <span
-            className="relative inline-flex h-2 w-2 rounded-full"
-            style={{ backgroundColor: "var(--accent)" }}
-          />
-        </span>
-        <SectionLabel>{liveLabel ?? "COMMUNITY LEAGUE"}</SectionLabel>
-      </div>
-
       <h1
         className="text-display animate-fade-up mb-8 delay-100"
         style={{ color: "var(--text)", maxWidth: "17ch" }}

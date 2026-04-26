@@ -1,8 +1,10 @@
 import { auth } from "@/auth";
-import { SiteHeaderClient } from "./site-header-client";
+import { getLiveSeason, LIVE_STATE_COPY, liveSeasonHref } from "@/lib/live-season";
+import { SiteHeaderClient, type LiveSeasonPill } from "./site-header-client";
 
 export async function SiteHeader() {
-  const session = await auth();
+  const [session, live] = await Promise.all([auth(), getLiveSeason()]);
+
   const user = session?.user
     ? {
         name: session.user.name ?? session.user.username ?? null,
@@ -10,5 +12,10 @@ export async function SiteHeader() {
       }
     : null;
 
-  return <SiteHeaderClient user={user} />;
+  const livePill: LiveSeasonPill | null =
+    live && LIVE_STATE_COPY[live.state]
+      ? { label: LIVE_STATE_COPY[live.state]!, href: liveSeasonHref(live) }
+      : null;
+
+  return <SiteHeaderClient user={user} livePill={livePill} />;
 }

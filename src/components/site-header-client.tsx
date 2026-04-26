@@ -17,7 +17,18 @@ export interface SiteHeaderUser {
   role: string | null;
 }
 
-export function SiteHeaderClient({ user }: { user: SiteHeaderUser | null }) {
+export interface LiveSeasonPill {
+  label: string;
+  href: string;
+}
+
+export function SiteHeaderClient({
+  user,
+  livePill,
+}: {
+  user: SiteHeaderUser | null;
+  livePill: LiveSeasonPill | null;
+}) {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -54,7 +65,7 @@ export function SiteHeaderClient({ user }: { user: SiteHeaderUser | null }) {
         }}
       >
         <div
-          className="site-container flex items-center justify-between"
+          className="site-container relative flex items-center justify-between"
           style={{ height: "var(--navbar-height)" }}
         >
           <Link
@@ -68,6 +79,31 @@ export function SiteHeaderClient({ user }: { user: SiteHeaderUser | null }) {
               Spicy League<span style={{ color: "var(--accent)" }}>.</span>
             </span>
           </Link>
+
+          {/* Centered live-season pill */}
+          {livePill ? (
+            <Link
+              href={livePill.href}
+              className="absolute top-1/2 left-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-medium tracking-wider uppercase transition-opacity hover:opacity-80 sm:inline-flex sm:text-xs"
+              style={{
+                color: "var(--accent)",
+                borderColor: "var(--border)",
+                backgroundColor: "rgba(10,10,10,0.4)",
+              }}
+            >
+              <span className="relative flex h-1.5 w-1.5 shrink-0">
+                <span
+                  className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
+                  style={{ backgroundColor: "var(--accent)" }}
+                />
+                <span
+                  className="relative inline-flex h-1.5 w-1.5 rounded-full"
+                  style={{ backgroundColor: "var(--accent)" }}
+                />
+              </span>
+              <span>{livePill.label}</span>
+            </Link>
+          ) : null}
 
           {/* Desktop nav */}
           <nav className="hidden items-center gap-8 md:flex">
