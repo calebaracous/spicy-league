@@ -1,6 +1,6 @@
 import "server-only";
 
-import { asc, eq } from "drizzle-orm";
+import { asc, eq, sql } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { users } from "@/db/schema/auth";
@@ -63,7 +63,7 @@ export async function getDraftSnapshot(seasonSlug: string): Promise<DraftSnapsho
     db
       .select({
         userId: seasonCaptains.userId,
-        displayName: users.displayName,
+        displayName: sql<string>`COALESCE(${users.name}, ${users.username}, '?')`,
         captainOrder: seasonCaptains.captainOrder,
       })
       .from(seasonCaptains)
@@ -74,12 +74,12 @@ export async function getDraftSnapshot(seasonSlug: string): Promise<DraftSnapsho
       .select({
         signupId: seasonSignups.id,
         userId: seasonSignups.userId,
-        displayName: users.displayName,
+        displayName: sql<string>`COALESCE(${users.name}, ${users.username}, '?')`,
       })
       .from(seasonSignups)
       .innerJoin(users, eq(seasonSignups.userId, users.id))
       .where(eq(seasonSignups.seasonId, season.id))
-      .orderBy(asc(users.displayName)),
+      .orderBy(asc(sql`COALESCE(${users.name}, ${users.username})`)),
     db
       .select({
         pickNumber: draftPicks.pickNumber,
@@ -155,7 +155,10 @@ export async function finalizeDraft(draftId: string): Promise<void> {
   if (!draft) return;
 
   const captains = await db
-    .select({ userId: seasonCaptains.userId, displayName: users.displayName })
+    .select({
+      userId: seasonCaptains.userId,
+      displayName: sql<string>`COALESCE(${users.name}, ${users.username}, '?')`,
+    })
     .from(seasonCaptains)
     .innerJoin(users, eq(seasonCaptains.userId, users.id))
     .where(eq(seasonCaptains.seasonId, draft.seasonId))

@@ -13,7 +13,7 @@ const navLinks = [
 ];
 
 export interface SiteHeaderUser {
-  displayName: string | null;
+  name: string | null;
   role: string | null;
 }
 
@@ -104,7 +104,7 @@ export function SiteHeaderClient({ user }: { user: SiteHeaderUser | null }) {
                   borderColor: "var(--border)",
                 }}
               >
-                {user.displayName ?? "Profile"}
+                {user.name ?? "Profile"}
               </Link>
             ) : (
               <Link
@@ -198,7 +198,7 @@ export function SiteHeaderClient({ user }: { user: SiteHeaderUser | null }) {
             className="text-3xl font-medium tracking-tight transition-opacity hover:opacity-100"
             style={{ color: "var(--text)", opacity: 0.7 }}
           >
-            {user.displayName ?? "Profile"}
+            {user.name ?? "Profile"}
           </Link>
         ) : (
           <Link

@@ -97,17 +97,14 @@ export default async function SignupPage({
     );
   }
 
-  if (!session.user.displayName) {
+  if (!session.user.username) {
     return (
       <main className="mx-auto w-full max-w-xl flex-1 px-6 py-12">
         <Alert>
           <AlertDescription>
             You need to{" "}
-            <Link
-              href={`/onboarding?callbackUrl=/seasons/${slug}/signup`}
-              className="underline underline-offset-2"
-            >
-              finish setting up your profile
+            <Link href="/signup" className="underline underline-offset-2">
+              complete your account setup
             </Link>{" "}
             before signing up.
           </AlertDescription>

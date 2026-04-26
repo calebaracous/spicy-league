@@ -5,7 +5,7 @@ export async function SiteHeader() {
   const session = await auth();
   const user = session?.user
     ? {
-        displayName: session.user.displayName ?? null,
+        name: session.user.name ?? session.user.username ?? null,
         role: session.user.role ?? null,
       }
     : null;

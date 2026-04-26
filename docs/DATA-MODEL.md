@@ -20,9 +20,14 @@ wiring in `src/lib/auth.ts`).
 - `id` text PK (Better Auth–supplied)
 - `email` unique, not null
 - `emailVerified` bool — set by Better Auth after verification link clicked
-- `name`, `image` — Better Auth standard fields (mostly unused in UI)
+- `name` — Better Auth standard field used as the **editable display name**
+  (shown in draft lists, rosters, captains page). Defaults to username at
+  signup. 1–50 chars, editable on `/profile`.
+- `image` — Better Auth standard field (unused in UI)
 - **Custom fields** (added via `additionalFields` in `src/lib/auth.ts`):
-  - `displayName` text **unique** — the canonical handle; null until onboarded
+  - `username` text **unique** — immutable handle set at signup; used as the
+    public URL slug at `/users/{username}`. Regex: `[a-zA-Z0-9_-]{3,24}`.
+    `input: false` means clients cannot set it via Better Auth's endpoints.
   - `role` enum `user_role` (`user | admin`), default `user`
   - `bio`, `pronouns`, `opggUrl` — free-text profile fields
 - `createdAt`, `updatedAt` — auto-defaulted
@@ -168,7 +173,7 @@ state.
   Enforced in `reportMatch` via `getTeamForCaptain`.
 - Only one active draft per season. Enforced by `drafts.seasonId` being
   unique.
-- Signups only accept users whose display name is non-null. Enforced by
+- Signups only accept users whose username is non-null. Enforced by
   `requireOnboarded()`.
 
 ## Where to look when…

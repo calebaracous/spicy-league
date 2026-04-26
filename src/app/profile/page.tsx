@@ -36,6 +36,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   "leetify-host": "The Leetify link must point to leetify.com.",
   "leetify-url": "That doesn't look like a valid URL.",
   "refresh-rate-limited": "You can only refresh stats once per hour.",
+  "name-required": "Display name cannot be empty.",
+  "name-too-long": "Display name must be 50 characters or fewer.",
 };
 
 export default async function ProfilePage({ searchParams }: { searchParams: SearchParams }) {
@@ -69,9 +71,13 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
   async function saveProfile(formData: FormData) {
     "use server";
     const session = await requireOnboarded();
+    const nameRaw = (formData.get("name") ?? "").toString().trim();
     const bio = (formData.get("bio") ?? "").toString().slice(0, 500) || null;
     const pronouns = (formData.get("pronouns") ?? "").toString().slice(0, 40) || null;
     const opggUrlRaw = (formData.get("opggUrl") ?? "").toString().trim() || null;
+
+    if (!nameRaw) redirect("/profile?error=name-required");
+    if (nameRaw.length > 50) redirect("/profile?error=name-too-long");
 
     if (opggUrlRaw) {
       try {
@@ -86,7 +92,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
 
     await db
       .update(users)
-      .set({ bio, pronouns, opggUrl: opggUrlRaw, updatedAt: new Date() })
+      .set({ name: nameRaw, bio, pronouns, opggUrl: opggUrlRaw, updatedAt: new Date() })
       .where(eq(users.id, session.user.id));
 
     redirect("/profile?saved=1");
@@ -135,12 +141,23 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
         <CardHeader>
           <CardTitle>Public profile</CardTitle>
           <CardDescription>
-            Everyone in the league can see this. Your display name{" "}
-            <span className="font-mono">{user.displayName}</span> is permanent.
+            Your username <span className="font-mono">@{user.username}</span> is permanent and used
+            in your public URL. Your display name is shown to teammates and can be changed anytime.
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form action={saveProfile} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="name">Display name</Label>
+              <Input
+                id="name"
+                name="name"
+                defaultValue={user.name ?? user.username ?? ""}
+                maxLength={50}
+                placeholder="Your name"
+                required
+              />
+            </div>
             <div className="space-y-1.5">
               <Label htmlFor="pronouns">Pronouns</Label>
               <Input
@@ -164,7 +181,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
             </div>
             <div className="flex justify-between">
               <Link
-                href={`/u/${user.displayName}`}
+                href={`/users/${user.username}`}
                 className={cn(buttonVariants({ variant: "outline" }))}
               >
                 View public page
@@ -249,7 +266,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
                 defaultValue={user.opggUrl ?? ""}
                 placeholder="https://op.gg/summoners/na/YourName-NA1"
               />
-              {/* hidden fields so saveProfile gets bio/pronouns too */}
+              <input type="hidden" name="name" value={user.name ?? user.username ?? ""} />
               <input type="hidden" name="bio" value={user.bio ?? ""} />
               <input type="hidden" name="pronouns" value={user.pronouns ?? ""} />
               <Button type="submit" variant="outline">

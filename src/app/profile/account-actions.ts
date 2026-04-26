@@ -28,7 +28,6 @@ export async function linkRiotAccount(formData: FormData) {
     redirect("/profile?error=riot-not-found");
   }
 
-  // Upsert the link
   const existing = await db.query.accountLinks.findFirst({
     where: and(eq(accountLinks.userId, session.user.id), eq(accountLinks.provider, "riot")),
   });
@@ -51,11 +50,10 @@ export async function linkRiotAccount(formData: FormData) {
     });
   }
 
-  // Fetch stats immediately after linking
   await refreshRiotStats(session.user.id);
 
   revalidatePath("/profile");
-  revalidatePath(`/u/${session.user.displayName}`);
+  revalidatePath(`/users/${session.user.username}`);
   redirect("/profile?saved=1");
 }
 
@@ -65,7 +63,7 @@ export async function unlinkRiotAccount() {
     .delete(accountLinks)
     .where(and(eq(accountLinks.userId, session.user.id), eq(accountLinks.provider, "riot")));
   revalidatePath("/profile");
-  revalidatePath(`/u/${session.user.displayName}`);
+  revalidatePath(`/users/${session.user.username}`);
   redirect("/profile?saved=1");
 }
 
@@ -80,7 +78,6 @@ export async function linkCs2Account(formData: FormData) {
     redirect("/profile?error=steam-required");
   }
 
-  // Basic Steam64 ID validation (17 digit number starting with 7656)
   if (!/^7656\d{13}$/.test(steamId)) {
     redirect("/profile?error=steam-format");
   }
@@ -96,7 +93,6 @@ export async function linkCs2Account(formData: FormData) {
     }
   }
 
-  // Upsert Steam link
   const existingSteam = await db.query.accountLinks.findFirst({
     where: and(eq(accountLinks.userId, session.user.id), eq(accountLinks.provider, "steam")),
   });
@@ -113,7 +109,6 @@ export async function linkCs2Account(formData: FormData) {
     });
   }
 
-  // Upsert Leetify link
   if (leetifyUrl) {
     const existingLeetify = await db.query.accountLinks.findFirst({
       where: and(eq(accountLinks.userId, session.user.id), eq(accountLinks.provider, "leetify")),
@@ -134,7 +129,7 @@ export async function linkCs2Account(formData: FormData) {
   }
 
   revalidatePath("/profile");
-  revalidatePath(`/u/${session.user.displayName}`);
+  revalidatePath(`/users/${session.user.username}`);
   redirect("/profile?saved=1");
 }
 
@@ -147,7 +142,7 @@ export async function unlinkCs2Account() {
     .delete(accountLinks)
     .where(and(eq(accountLinks.userId, session.user.id), eq(accountLinks.provider, "leetify")));
   revalidatePath("/profile");
-  revalidatePath(`/u/${session.user.displayName}`);
+  revalidatePath(`/users/${session.user.username}`);
   redirect("/profile?saved=1");
 }
 
@@ -164,6 +159,6 @@ export async function manualRefreshStats() {
   await refreshRiotStats(session.user.id);
 
   revalidatePath("/profile");
-  revalidatePath(`/u/${session.user.displayName}`);
+  revalidatePath(`/users/${session.user.username}`);
   redirect("/profile?saved=1");
 }

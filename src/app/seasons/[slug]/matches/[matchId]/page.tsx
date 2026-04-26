@@ -67,7 +67,8 @@ export default async function MatchDetailPage({
     const members = await db
       .select({
         userId: teamMembers.userId,
-        displayName: users.displayName,
+        username: users.username,
+        name: users.name,
         pickNumber: teamMembers.pickNumber,
       })
       .from(teamMembers)
@@ -99,7 +100,7 @@ export default async function MatchDetailPage({
   let reporterName: string | null = null;
   if (match.reportedBy) {
     const reporter = await db.query.users.findFirst({ where: eq(users.id, match.reportedBy) });
-    reporterName = reporter?.displayName ?? reporter?.email ?? null;
+    reporterName = reporter?.name ?? reporter?.username ?? reporter?.email ?? null;
   }
 
   return (
@@ -190,10 +191,10 @@ export default async function MatchDetailPage({
                       </span>
                     )}
                     <Link
-                      href={`/u/${m.displayName}`}
+                      href={`/users/${m.username}`}
                       className="underline-offset-2 hover:underline"
                     >
-                      {m.displayName}
+                      {m.name ?? m.username}
                     </Link>
                   </li>
                 ))}

@@ -61,18 +61,18 @@ Trivial shadcn primitives get a single entry at the bottom.
 ## Auth pages
 
 - `src/app/signin/page.tsx` + `_components/sign-in-form.tsx` — email+password signin with rememberMe.
-- `src/app/signup/page.tsx` + `_components/sign-up-form.tsx` — signup form. Redirects to `/signin/check-email` after submit.
+- `src/app/signup/page.tsx` + `_components/sign-up-form.tsx` — signup form. Captures email, username, password. Redirects to `/signin/check-email` after submit.
+- `src/app/signup/actions.ts` — `registerUser` server action. Validates username regex + uniqueness, calls `auth.api.signUpEmail`, writes `username` to DB.
 - `src/app/signin/check-email/page.tsx` — "verify your email" confirmation page.
 - `src/app/forgot-password/page.tsx` + `_components/forgot-password-form.tsx` — trigger reset email.
 - `src/app/reset-password/page.tsx` + `_components/reset-password-form.tsx` — consume reset token.
-- `src/app/onboarding/page.tsx` — pick display name (one-time, required by `requireOnboarded`).
 - `src/app/profile/page.tsx` — private profile + account-link UI. Contains inline `saveProfile` and `doSignOut` server actions.
 - `src/app/profile/account-actions.ts` — `linkRiotAccount`, `unlinkRiotAccount`, `linkCs2Account`, `unlinkCs2Account`, `manualRefreshStats` (rate-limited).
 
 ## Other pages
 
 - `src/app/history/page.tsx` — hardcoded season archive (9 seasons, images from `public/history/`).
-- `src/app/u/[displayName]/page.tsx` — public profile page.
+- `src/app/users/[username]/page.tsx` — public profile page.
 
 ## API routes
 

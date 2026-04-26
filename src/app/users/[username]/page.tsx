@@ -9,11 +9,11 @@ import { getChampionName } from "@/lib/riot-api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 
-type Props = { params: Promise<{ displayName: string }> };
+type Props = { params: Promise<{ username: string }> };
 
 export async function generateMetadata({ params }: Props) {
-  const { displayName } = await params;
-  return { title: `${displayName} — Spicy League` };
+  const { username } = await params;
+  return { title: `${username} — Spicy League` };
 }
 
 function formatRank(tier: string | null, division: string | null, lp: number | null): string {
@@ -35,13 +35,13 @@ function winRate(wins: number | null, losses: number | null): string {
 }
 
 export default async function PublicProfilePage({ params }: Props) {
-  const { displayName } = await params;
-  const normalized = displayName.toLowerCase();
+  const { username } = await params;
+  const normalized = username.toLowerCase();
 
   const user = await db.query.users.findFirst({
-    where: eq(users.displayName, normalized),
+    where: eq(users.username, normalized),
   });
-  if (!user || !user.displayName) notFound();
+  if (!user || !user.username) notFound();
 
   const [riotLink, steamLink, leetifyLink, riotSnapshots] = await Promise.all([
     db.query.accountLinks.findFirst({
@@ -63,7 +63,6 @@ export default async function PublicProfilePage({ params }: Props) {
   const flexSnap = riotSnapshots.find((s) => s.queue === "flex");
   const lastRefreshed = riotSnapshots[0]?.capturedAt ?? null;
 
-  // Resolve champion names from Data Dragon (cached)
   type ChampEntry = { championId: number; championPoints: number };
   const topChamps = soloSnap?.topChamps as ChampEntry[] | null;
   const champNames = topChamps
@@ -73,10 +72,13 @@ export default async function PublicProfilePage({ params }: Props) {
   const hasLolData = riotLink || user.opggUrl;
   const hasCs2Data = steamLink;
 
+  const displayName = user.name || user.username;
+
   return (
     <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-6 py-12">
-      <header className="space-y-1">
-        <h1 className="font-mono text-4xl font-bold tracking-tight">{user.displayName}</h1>
+      <header className="space-y-0.5">
+        <h1 className="font-mono text-4xl font-bold tracking-tight">{displayName}</h1>
+        <p className="text-muted-foreground text-sm">@{user.username}</p>
         {user.pronouns ? <p className="text-muted-foreground text-sm">{user.pronouns}</p> : null}
       </header>
       <Separator />

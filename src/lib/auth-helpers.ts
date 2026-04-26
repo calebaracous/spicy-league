@@ -24,10 +24,12 @@ export async function requireAdmin() {
   return session;
 }
 
+// Username is now required at signup, so this guard should never fire for
+// legitimate sessions. Redirect to signin as a safety net.
 export async function requireOnboarded() {
   const session = await requireAuth();
-  if (!session.user.displayName) {
-    redirect("/onboarding");
+  if (!session.user.username) {
+    redirect("/signin");
   }
   return session;
 }

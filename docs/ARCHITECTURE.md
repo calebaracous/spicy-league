@@ -102,16 +102,17 @@ This pattern is *consistent* across the codebase: see
   that receives them (e.g. `ERROR_MESSAGES` in `src/app/profile/page.tsx`).
 - **Guards**: never check `session?.user?.role === "admin"` inline — use
   `requireAdmin()` from `src/lib/auth-helpers.ts`. Same for `requireAuth`
-  (must be signed in) and `requireOnboarded` (must also have a displayName).
+  (must be signed in) and `requireOnboarded` (must also have a username).
 - **Revalidation**: mutations call `revalidatePath` on *every* route that
   could display the changed data. Be explicit — App Router does not invalidate
   adjacent routes automatically.
 - **Slug**: every season URL is keyed by `slug`, validated by
   `isValidSlug()` in `src/lib/seasons.ts` (3–48 chars, lowercase alnum +
   hyphens).
-- **Display names** are required to do anything useful. `requireOnboarded()`
-  redirects to `/onboarding` if missing. Enforced case-insensitively at app
-  level (we lowercase on write), uniquely at DB level.
+- **Usernames** are required to do anything useful. `requireOnboarded()`
+  redirects to `/signin` if missing. Username is set at signup — there is no
+  separate onboarding step. Enforced case-insensitively at app level (we
+  lowercase on write), uniquely at DB level.
 
 ## Routing map
 
@@ -125,11 +126,10 @@ Public:
 - `/seasons/[slug]/matches` — schedule + standings
 - `/seasons/[slug]/matches/[matchId]` — match detail + report form
 - `/history` — static season archive (hard-coded in the page)
-- `/u/[displayName]` — public profile
+- `/users/[username]` — public profile
 
 Auth flow:
 - `/signin`, `/signup`, `/signin/check-email`, `/forgot-password`, `/reset-password`
-- `/onboarding` — pick display name (one-time, required)
 - `/profile` — private profile + account linking (Riot / Steam / Leetify)
 
 Admin (requires `role === "admin"`):

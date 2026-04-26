@@ -30,7 +30,8 @@ export async function GET(_req: Request, { params }: { params: Params }) {
 
   const signups = await db
     .select({
-      displayName: users.displayName,
+      username: users.username,
+      name: users.name,
       email: users.email,
       rolePrefs: seasonSignups.rolePrefs,
       notes: seasonSignups.notes,
@@ -48,9 +49,10 @@ export async function GET(_req: Request, { params }: { params: Params }) {
 
   const rows = signups.map((s) => {
     const prefs = s.rolePrefs as Record<string, unknown> | null;
+    const displayName = s.name ?? s.username ?? "";
     if (isLol) {
       return [
-        escapeCell(s.displayName),
+        escapeCell(displayName),
         escapeCell(s.email),
         escapeCell((prefs?.primaryRole as string) ?? ""),
         escapeCell((prefs?.secondaryRole as string) ?? ""),
@@ -59,7 +61,7 @@ export async function GET(_req: Request, { params }: { params: Params }) {
       ].join(",");
     }
     return [
-      escapeCell(s.displayName),
+      escapeCell(displayName),
       escapeCell(s.email),
       escapeCell(((prefs?.mapPrefs as string[]) ?? []).join("; ")),
       escapeCell(s.notes),

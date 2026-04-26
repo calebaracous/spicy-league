@@ -15,9 +15,8 @@ There are three things named "auth" — know which one to import.
 | `import { authClient } from "@/lib/auth-client"` + `signIn`, `signUp`, `signOut`, `useSession` | React client SDK | Client components (`"use client"`). Calls `/api/auth/*` under the hood. |
 
 Both server paths ultimately delegate to `betterAuth.api.getSession({ headers })`
-in `src/auth.ts`. `src/auth.ts` lowercase-safe-casts the custom user fields
-and collapses the shape so the rest of the app uses a clean `AppSession`
-with `{ id, email, displayName, role }`.
+in `src/auth.ts`. `src/auth.ts` safe-casts the custom user fields
+and collapses the shape so the rest of the app uses a clean `AppSession`.
 
 ## Session shape
 
@@ -28,8 +27,9 @@ type AppSession = {
   user: {
     id: string;
     email: string;
-    displayName: string | null;   // null until onboarded
-    role: "user" | "admin";        // DB default: "user"
+    username: string | null;  // immutable, set at signup, used as URL slug
+    name: string | null;      // editable display name (defaults to username)
+    role: "user" | "admin";   // DB default: "user"
   };
 };
 ```
@@ -37,9 +37,23 @@ type AppSession = {
 The Better Auth user record also carries `bio`, `pronouns`, `opggUrl` (see
 `user.additionalFields` in `src/lib/auth.ts`), but those are **not** on the
 session payload — query the `users` table when you need them. `input: false`
-on those fields means clients cannot set them via Better Auth's auto-generated
-endpoints; we mutate them through our own server actions (see
-`src/app/profile/page.tsx`).
+on `username` means clients cannot set it via Better Auth's auto-generated
+endpoints; we write it from our own signup server action (see
+`src/app/signup/actions.ts`). `bio`, `pronouns`, `opggUrl` are also
+`input: false` and mutated via `src/app/profile/page.tsx`.
+
+## Username vs display name
+
+- **`username`** (`users.username`, DB column `username`) — immutable, set at
+  signup via `/signup`, used as the public URL slug at `/users/{username}`.
+  Regex: `/^[a-zA-Z0-9_-]{3,24}$/`, lowercased before write.
+- **`name`** (`users.name`, Better Auth standard field) — editable display name
+  shown in draft lists, team rosters, captains page, etc. Defaults to the
+  username at signup. Editable on `/profile`. Constraints: 1–50 chars, trimmed.
+
+In UI layers that need a single display string, use the COALESCE pattern:
+`COALESCE(users.name, users.username, '?')`. The `DraftSnapshot` type surfaces
+this as `displayName` throughout the draft system.
 
 ## Guards
 
@@ -51,7 +65,7 @@ function never returns a bad session.
 | `getSession()` | always (returns null) | — |
 | `requireAuth(redirectTo = "/signin")` | signed in | `/signin` |
 | `requireAdmin()` | signed in AND `role === "admin"` | `/` if not admin, `/signin` if not auth'd |
-| `requireOnboarded()` | signed in AND `displayName !== null` | `/onboarding` |
+| `requireOnboarded()` | signed in AND `username !== null` | `/signin` |
 
 **Admin check pattern**: every admin server action calls `requireAdmin()`
 first. Grep `requireAdmin\(\)` to find the admin-gated surface — currently
@@ -60,23 +74,22 @@ everything under `src/app/admin/**/actions.ts` and some pieces of
 `resumeDraft`, `undoLastPick`).
 
 **Onboarded check pattern**: user-facing mutations use `requireOnboarded()`
-so we never have a team member with a null display name. See
+so we never have a team member with a null username. See
 `submitSignup`, `submitPick`, `reportMatch`.
 
-## Onboarding
+## Signup flow
 
-- New user signs up → Better Auth sends verification email via Resend
-  (`sendVerificationEmail` in `src/lib/auth.ts`).
-- On first authenticated request, `session.user.displayName` is `null`.
-- Any page wrapped in `requireOnboarded()` redirects them to `/onboarding`.
-- `/onboarding` accepts a 3–24 char `[a-zA-Z0-9_-]` string, lowercases it,
-  checks for conflict, writes to `users.display_name`.
-- Display name is treated as **permanent** — there is no change-name flow
-  on `/profile`.
-
-The regex is `/^[a-zA-Z0-9_-]{3,24}$/` (see `DISPLAY_NAME_PATTERN` in
-`src/app/onboarding/page.tsx`). On the server we lowercase before the
-uniqueness check and the write.
+- User fills out `/signup` form with email, username, password, confirm password.
+- `registerUser` server action in `src/app/signup/actions.ts`:
+  1. Validates passwords match and meet length requirement.
+  2. Validates `username` matches `[a-zA-Z0-9_-]{3,24}`, lowercases it.
+  3. Checks DB uniqueness against `users.username`.
+  4. Calls `auth.api.signUpEmail({ body: { email, password, name: username } })`
+     to create the Better Auth user (sets `name` = username as default display name).
+  5. Writes `username` to `users.username` via Drizzle.
+  6. Redirects to `/signin/check-email?type=verify`.
+- Better Auth sends verification email via Resend on signup.
+- There is no `/onboarding` page — username is captured during signup.
 
 ## Cookies + sessions
 
@@ -110,14 +123,15 @@ UPDATE users SET role = 'admin' WHERE email = 'me@example.com';
 
 `src/lib/auth.ts` reads `BETTER_AUTH_URL ?? NEXT_PUBLIC_APP_URL` for
 `baseURL` and sends both into `trustedOrigins`. If neither is set, Better
-Auth auto-detects from request host (correct on Vercel). Set at least one
-when running behind a custom domain. See [ENV.md](ENV.md).
+Auth auto-detects from request host (correct on Vercel). The production
+canonical URL is `https://www.spicyleague.dev` — both env vars must use
+the `www` form or Better Auth rejects requests from the apex domain.
+See [ENV.md](ENV.md).
 
 ## Where to look when…
 
-- …a user hits `/onboarding` in a loop → their displayName write failed
-  silently OR the session cookie cache is serving stale nulls. Check
-  `session.cookieCache.maxAge` and the `users` row directly.
+- …a user cannot sign up → check `users.username` uniqueness in DB, or see
+  if the validation regex rejects their chosen username.
 - …an email isn't sending → `AUTH_RESEND_KEY` unset, or the `from` address
   (`AUTH_EMAIL_FROM`, default `no-reply@spicyleague.dev`) isn't on a
   verified Resend domain.

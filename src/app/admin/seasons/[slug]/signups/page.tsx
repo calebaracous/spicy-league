@@ -67,7 +67,8 @@ export default async function AdminSignupsPage({
       rolePrefs: seasonSignups.rolePrefs,
       notes: seasonSignups.notes,
       createdAt: seasonSignups.createdAt,
-      displayName: users.displayName,
+      username: users.username,
+      name: users.name,
       email: users.email,
     })
     .from(seasonSignups)
@@ -80,7 +81,8 @@ export default async function AdminSignupsPage({
       id: seasonCaptains.id,
       userId: seasonCaptains.userId,
       captainOrder: seasonCaptains.captainOrder,
-      displayName: users.displayName,
+      username: users.username,
+      name: users.name,
     })
     .from(seasonCaptains)
     .innerJoin(users, eq(seasonCaptains.userId, users.id))
@@ -165,7 +167,7 @@ export default async function AdminSignupsPage({
                     <span className="text-muted-foreground w-5 text-right font-mono text-sm">
                       {c.captainOrder}.
                     </span>
-                    <span className="text-sm font-medium">{c.displayName}</span>
+                    <span className="text-sm font-medium">{c.name ?? c.username}</span>
                   </div>
                   <div className="flex items-center gap-1">
                     <form action={moveWithSlug.bind(null, c.id, "up")}>
@@ -265,7 +267,7 @@ export default async function AdminSignupsPage({
                       <tr key={s.id} className="hover:bg-muted/50">
                         <td className="py-2 pr-4">
                           <div className="flex items-center gap-2">
-                            <span className="font-medium">{s.displayName}</span>
+                            <span className="font-medium">{s.name ?? s.username}</span>
                             {isCaptain ? (
                               <Badge variant="secondary" className="text-xs">
                                 Captain

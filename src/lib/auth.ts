@@ -83,7 +83,7 @@ export const auth = betterAuth({
 
   user: {
     additionalFields: {
-      displayName: {
+      username: {
         type: "string",
         required: false,
         unique: true,

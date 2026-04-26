@@ -50,6 +50,13 @@
       "when": 1776306891896,
       "tag": "0006_absurd_frog_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1777163682691,
+      "tag": "0007_rename_display_name_to_username",
+      "breakpoints": true
     }
   ]
 }

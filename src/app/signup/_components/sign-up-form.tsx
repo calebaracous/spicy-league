@@ -1,56 +1,25 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
-import { authClient } from "@/lib/auth-client";
+import { registerUser } from "@/app/signup/actions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-const ERROR_MESSAGES: Record<string, string> = {
-  USER_ALREADY_EXISTS: "An account with that email already exists.",
-  PASSWORD_TOO_SHORT: "Password must be at least 8 characters.",
-  INVALID_EMAIL: "Please enter a valid email address.",
-};
-
 export function SignUpForm() {
-  const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const data = new FormData(e.currentTarget);
-    const email = (data.get("email") as string).trim().toLowerCase();
-    const password = data.get("password") as string;
-    const confirm = data.get("confirm") as string;
-
-    if (password !== confirm) {
-      setError("Passwords don't match.");
-      return;
-    }
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters.");
-      return;
-    }
-
+    const formData = new FormData(e.currentTarget);
     setError(null);
     startTransition(async () => {
-      const { error } = await authClient.signUp.email({
-        email,
-        password,
-        name: "",
-        callbackURL: "/profile",
-        fetchOptions: {
-          onSuccess: () => router.push("/signin/check-email?type=verify"),
-        },
-      });
-      if (error) {
-        setError(ERROR_MESSAGES[error.code ?? ""] ?? error.message ?? "Something went wrong.");
-      }
+      const result = await registerUser(formData);
+      if (result?.error) setError(result.error);
     });
   }
 
@@ -61,6 +30,24 @@ export function SignUpForm() {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
+
+      <div className="space-y-1.5">
+        <Label htmlFor="username">Username</Label>
+        <Input
+          id="username"
+          name="username"
+          autoComplete="username"
+          placeholder="spicy_caleb"
+          pattern="[a-zA-Z0-9_\-]{3,24}"
+          minLength={3}
+          maxLength={24}
+          required
+          disabled={isPending}
+        />
+        <p className="text-muted-foreground text-xs">
+          3–24 characters. Letters, numbers, underscore, hyphen. Can&apos;t be changed later.
+        </p>
+      </div>
 
       <div className="space-y-1.5">
         <Label htmlFor="email">Email</Label>

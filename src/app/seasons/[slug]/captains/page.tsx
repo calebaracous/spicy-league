@@ -35,7 +35,8 @@ export default async function CaptainsPage({ params }: { params: Params }) {
   const captains = await db
     .select({
       captainOrder: seasonCaptains.captainOrder,
-      displayName: users.displayName,
+      username: users.username,
+      name: users.name,
       id: users.id,
     })
     .from(seasonCaptains)
@@ -68,10 +69,10 @@ export default async function CaptainsPage({ params }: { params: Params }) {
                 {c.captainOrder}.
               </span>
               <Link
-                href={`/u/${c.displayName}`}
+                href={`/users/${c.username}`}
                 className="font-medium underline-offset-2 hover:underline"
               >
-                {c.displayName}
+                {c.name ?? c.username}
               </Link>
             </li>
           ))}

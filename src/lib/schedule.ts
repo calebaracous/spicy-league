@@ -90,10 +90,10 @@ export async function computeStandings(seasonId: string): Promise<StandingRow[]>
   const captainNames: Map<string, string> = new Map();
   if (captainIds.length > 0) {
     const captainRows = await db
-      .select({ id: users.id, displayName: users.displayName })
+      .select({ id: users.id, name: users.name, username: users.username })
       .from(users)
       .where(inArray(users.id, captainIds));
-    for (const c of captainRows) captainNames.set(c.id, c.displayName ?? "?");
+    for (const c of captainRows) captainNames.set(c.id, c.name ?? c.username ?? "?");
   }
 
   const confirmedMatches = await db
