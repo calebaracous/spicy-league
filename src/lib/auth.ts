@@ -2,6 +2,7 @@ import "server-only";
 
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { nextCookies } from "better-auth/next-js";
 import { Resend } from "resend";
 
 import { db } from "@/db/client";
@@ -116,6 +117,8 @@ export const auth = betterAuth({
       },
     },
   },
+
+  plugins: [nextCookies()],
 
   advanced: {
     cookiePrefix: "sl",
