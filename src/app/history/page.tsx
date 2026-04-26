@@ -30,6 +30,22 @@ type Season = {
 const SEASONS: Season[] = [
   {
     number: 11,
+    label: "Season 11 — LoL",
+    title: "Spicy League Season 11: League of Legends",
+    champion: "team 0% passion",
+    description:
+      "24 player captain's draft League of Legends tournament with 6 teams of 4 in a single group round robin into single elim playoffs. Runner-up: LEVEL 69 MANBEARPIG.",
+    finalsDate: "September 25, 2025",
+    notes: [],
+    images: [
+      { src: "/history/season-11-lol-img0.png", alt: "Draft picks" },
+      { src: "/history/season-11-lol-img1.png", alt: "Group A — Standings" },
+      { src: "/history/season-11-lol-img2.png", alt: "Group A — Matches" },
+      { src: "/history/season-11-lol-img3.png", alt: "Playoffs" },
+    ],
+  },
+  {
+    number: 11,
     label: "Season 11 — CS2",
     title: "Spicy League Season 11: CS2",
     champion: "Team Colonizers",
@@ -45,7 +61,7 @@ const SEASONS: Season[] = [
   {
     number: 10,
     title: "Spicy League Season 10",
-    champion: "Team 0% Passion",
+    champion: "Team JamAze",
     description:
       "24 player captain's draft League of Legends tournament with 6 teams of 4 in a single group round robin into single elim playoffs.",
     finalsDate: "November 17, 2024",
