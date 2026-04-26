@@ -34,7 +34,7 @@ const SEASONS: Season[] = [
     title: "Spicy League Season 11: League of Legends",
     champion: "team 0% passion",
     description:
-      "24 player captain's draft League of Legends tournament with 6 teams of 4 in a single group round robin into single elim playoffs. Runner-up: LEVEL 69 MANBEARPIG.",
+      "30 player captain's draft League of Legends tournament with 6 teams of 5 in a single group round robin into single elim playoffs. Runner-up: LEVEL 69 MANBEARPIG.",
     finalsDate: "September 25, 2025",
     notes: [],
     images: [
@@ -50,7 +50,7 @@ const SEASONS: Season[] = [
     title: "Spicy League Season 11: CS2",
     champion: "Team Colonizers",
     description:
-      "16 player captain's draft CS2 tournament with 4 teams of 4. Runner-up: Team Chlovis.",
+      "20 player captain's draft CS2 tournament with 4 teams of 5. Runner-up: Team Chlovis.",
     finalsDate: "August 17, 2025",
     notes: [],
     images: [
@@ -63,7 +63,7 @@ const SEASONS: Season[] = [
     title: "Spicy League Season 10",
     champion: "Team JamAze",
     description:
-      "24 player captain's draft League of Legends tournament with 6 teams of 4 in a single group round robin into single elim playoffs.",
+      "30 player captain's draft League of Legends tournament with 6 teams of 5 in a single group round robin into single elim playoffs.",
     finalsDate: "November 17, 2024",
     notes: [{ text: "Captains: jamze, caloxy, futdra, earcky, thenat, taghim" }],
     images: [
@@ -79,7 +79,7 @@ const SEASONS: Season[] = [
     title: "Spicy League Special Zero Space Edition",
     champion: "team future",
     description:
-      "16 player captain's draft League of Legends special interim season featuring 4 teams of 4 in a single group round robin into single elim playoffs.",
+      "20 player captain's draft League of Legends special interim season featuring 4 teams of 5 in a single group round robin into single elim playoffs.",
     finalsDate: "April 14, 2024",
     notes: [],
     images: [
