@@ -28,6 +28,21 @@ type Season = {
 
 const SEASONS: Season[] = [
   {
+    number: 10,
+    title: "Spicy League Season 10",
+    champion: "Team 0% Passion",
+    description:
+      "24 player captain's draft League of Legends tournament with 6 teams of 4 in a single group round robin into single elim playoffs.",
+    finalsDate: "November 17, 2024",
+    notes: [{ text: "Captains: jamze, caloxy, futdra, earcky, thenat, taghim" }],
+    images: [
+      { src: "/history/season-10-img0.png", alt: "Team rosters" },
+      { src: "/history/season-10-img1.png", alt: "Group A — Matches" },
+      { src: "/history/season-10-img2.png", alt: "Group A — Standings" },
+      { src: "/history/season-10-img3.png", alt: "Playoffs" },
+    ],
+  },
+  {
     number: 9,
     title: "Spicy League Season 9",
     champion: "Team Jheffe",
