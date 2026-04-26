@@ -7,8 +7,8 @@ import { Resend } from "resend";
 import { db } from "@/db/client";
 import { users, sessions, accounts, verifications } from "@/db/schema/auth";
 
-const resend = new Resend(process.env.AUTH_RESEND_KEY);
 const FROM = process.env.AUTH_EMAIL_FROM ?? "no-reply@spicyleague.dev";
+const getResend = () => new Resend(process.env.AUTH_RESEND_KEY);
 
 // Only pass an explicit baseURL when one is configured. Without it Better Auth
 // auto-detects from the incoming request's host, which is correct on Vercel
@@ -41,7 +41,7 @@ export const auth = betterAuth({
     minPasswordLength: 8,
 
     sendVerificationEmail: async ({ user, url }: { user: { email: string }; url: string }) => {
-      await resend.emails.send({
+      await getResend().emails.send({
         from: FROM,
         to: user.email,
         subject: "Verify your email — Spicy League",
@@ -55,7 +55,7 @@ export const auth = betterAuth({
     },
 
     sendResetPassword: async ({ user, url }: { user: { email: string }; url: string }) => {
-      await resend.emails.send({
+      await getResend().emails.send({
         from: FROM,
         to: user.email,
         subject: "Reset your password — Spicy League",
