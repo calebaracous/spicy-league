@@ -18,6 +18,7 @@ type SeasonImage = {
 
 type Season = {
   number: number;
+  label?: string;
   title: string;
   champion: string | null;
   description: string;
@@ -40,6 +41,22 @@ const SEASONS: Season[] = [
       { src: "/history/season-10-img1.png", alt: "Group A — Matches" },
       { src: "/history/season-10-img2.png", alt: "Group A — Standings" },
       { src: "/history/season-10-img3.png", alt: "Playoffs" },
+    ],
+  },
+  {
+    number: 9.5,
+    label: "Special Edition",
+    title: "Spicy League Special Zero Space Edition",
+    champion: "team future",
+    description:
+      "16 player captain's draft League of Legends special interim season featuring 4 teams of 4 in a single group round robin into single elim playoffs.",
+    finalsDate: "April 14, 2024",
+    notes: [],
+    images: [
+      { src: "/history/season-zs-img0.png", alt: "Team rosters" },
+      { src: "/history/season-zs-img1.png", alt: "Group A — Standings" },
+      { src: "/history/season-zs-img2.png", alt: "Group A — Matches" },
+      { src: "/history/season-zs-img3.png", alt: "Playoffs" },
     ],
   },
   {
@@ -195,7 +212,7 @@ export default function HistoryPage() {
               <div className="space-y-3">
                 <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
                   <span className="text-muted-foreground text-xs font-semibold tracking-widest uppercase">
-                    Season {season.number}
+                    {season.label ?? `Season ${season.number}`}
                   </span>
                   {season.finalsDate ? (
                     <span className="text-muted-foreground text-xs">{season.finalsDate}</span>
