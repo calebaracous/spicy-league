@@ -29,6 +29,20 @@ type Season = {
 
 const SEASONS: Season[] = [
   {
+    number: 11,
+    label: "Season 11 — CS2",
+    title: "Spicy League Season 11: CS2",
+    champion: "Team Colonizers",
+    description:
+      "16 player captain's draft CS2 tournament with 4 teams of 4. Runner-up: Team Chlovis.",
+    finalsDate: "August 17, 2025",
+    notes: [],
+    images: [
+      { src: "/history/season-11-cs2-img0.png", alt: "Team rosters" },
+      { src: "/history/season-11-cs2-img1.png", alt: "Champions celebration" },
+    ],
+  },
+  {
     number: 10,
     title: "Spicy League Season 10",
     champion: "Team 0% Passion",
