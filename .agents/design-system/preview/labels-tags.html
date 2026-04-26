@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tags & Labels</title>
+  <link rel="stylesheet" href="../colors_and_type.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: var(--font-sans);
+      background: var(--bg);
+    }
+    .component-group {
+      margin-bottom: 32px;
+      padding-bottom: 32px;
+      border-bottom: 1px solid var(--border);
+    }
+    .component-group:last-child {
+      border-bottom: none;
+    }
+    .group-label {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 16px;
+    }
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 9999px;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.01em;
+      background: var(--surface);
+      color: var(--muted);
+      border: 1px solid var(--border);
+      margin-right: 8px;
+      margin-bottom: 8px;
+    }
+    .section-label {
+      font-size: 12px;
+      font-weight: 500;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+    }
+  </style>
+</head>
+<body>
+  <div class="component-group">
+    <div class="group-label">Section Labels</div>
+    <div class="section-label">COMMUNITY LEAGUE</div>
+    <div style="margin-top: 12px;" class="section-label">ABOUT</div>
+    <div style="margin-top: 12px;" class="section-label">HOW IT WORKS</div>
+  </div>
+  <div class="component-group">
+    <div class="group-label">Tags</div>
+    <div>
+      <span class="tag">Captain's draft</span>
+      <span class="tag">Round robin groups</span>
+      <span class="tag">League of Legends</span>
+      <span class="tag">Counter-Strike 2</span>
+      <span class="tag">Community-run</span>
+      <span class="tag">9 seasons deep</span>
+    </div>
+  </div>
+</body>
+</html>

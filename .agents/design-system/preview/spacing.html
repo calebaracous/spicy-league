@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Spacing Scale</title>
+  <link rel="stylesheet" href="../colors_and_type.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: var(--font-sans);
+      background: var(--bg);
+    }
+    .spacing-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .spacing-label {
+      width: 80px;
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      font-family: var(--font-mono);
+    }
+    .spacing-value {
+      width: 60px;
+      font-size: 11px;
+      color: var(--text);
+      font-family: var(--font-mono);
+    }
+    .spacing-bar {
+      height: 24px;
+      background: var(--accent);
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="spacing-row">
+    <div class="spacing-label">--space-xs</div>
+    <div class="spacing-value">0.5rem</div>
+    <div class="spacing-bar" style="width: var(--space-xs);"></div>
+  </div>
+  <div class="spacing-row">
+    <div class="spacing-label">--space-sm</div>
+    <div class="spacing-value">0.75rem</div>
+    <div class="spacing-bar" style="width: var(--space-sm);"></div>
+  </div>
+  <div class="spacing-row">
+    <div class="spacing-label">--space-md</div>
+    <div class="spacing-value">1rem</div>
+    <div class="spacing-bar" style="width: var(--space-md);"></div>
+  </div>
+  <div class="spacing-row">
+    <div class="spacing-label">--space-lg</div>
+    <div class="spacing-value">1.5rem</div>
+    <div class="spacing-bar" style="width: var(--space-lg);"></div>
+  </div>
+  <div class="spacing-row">
+    <div class="spacing-label">--space-xl</div>
+    <div class="spacing-value">2.5rem</div>
+    <div class="spacing-bar" style="width: var(--space-xl);"></div>
+  </div>
+  <div class="spacing-row">
+    <div class="spacing-label">--space-2xl</div>
+    <div class="spacing-value">4rem</div>
+    <div class="spacing-bar" style="width: var(--space-2xl);"></div>
+  </div>
+  <div class="spacing-row">
+    <div class="spacing-label">--space-3xl</div>
+    <div class="spacing-value">6rem</div>
+    <div class="spacing-bar" style="width: var(--space-3xl);"></div>
+  </div>
+</body>
+</html>

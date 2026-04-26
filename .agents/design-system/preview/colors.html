@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Color Palette</title>
+  <link rel="stylesheet" href="../colors_and_type.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: var(--font-sans);
+      background: var(--bg);
+    }
+    .swatch-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 16px;
+    }
+    .swatch {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .color-box {
+      height: 80px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+    }
+    .color-label {
+      font-size: 11px;
+      font-weight: 500;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .color-value {
+      font-size: 12px;
+      font-family: var(--font-mono);
+      color: var(--text);
+    }
+  </style>
+</head>
+<body>
+  <div class="swatch-grid">
+    <div class="swatch">
+      <div class="color-box" style="background: var(--bg);"></div>
+      <div class="color-label">Background</div>
+      <div class="color-value">#0A0A0A</div>
+    </div>
+    <div class="swatch">
+      <div class="color-box" style="background: var(--surface);"></div>
+      <div class="color-label">Surface</div>
+      <div class="color-value">#111111</div>
+    </div>
+    <div class="swatch">
+      <div class="color-box" style="background: var(--border);"></div>
+      <div class="color-label">Border</div>
+      <div class="color-value">#1F1F1F</div>
+    </div>
+    <div class="swatch">
+      <div class="color-box" style="background: var(--text);"></div>
+      <div class="color-label">Text</div>
+      <div class="color-value">#F5F0E8</div>
+    </div>
+    <div class="swatch">
+      <div class="color-box" style="background: var(--muted);"></div>
+      <div class="color-label">Muted</div>
+      <div class="color-value">#6B6B6B</div>
+    </div>
+    <div class="swatch">
+      <div class="color-box" style="background: var(--accent);"></div>
+      <div class="color-label">Accent</div>
+      <div class="color-value">#B91C1C</div>
+    </div>
+  </div>
+</body>
+</html>

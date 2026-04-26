@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Card & Form Components</title>
+  <link rel="stylesheet" href="../colors_and_type.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: var(--font-sans);
+      background: var(--bg);
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+    }
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .card-title {
+      font-size: 16px;
+      font-weight: 500;
+      color: var(--text);
+      letter-spacing: -0.015em;
+    }
+    .card-description {
+      font-size: 14px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .label {
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text);
+    }
+    .input {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 14px;
+      color: var(--text);
+      font-family: var(--font-sans);
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(185, 28, 28, 0.15);
+    }
+    .input::placeholder {
+      color: var(--muted);
+    }
+  </style>
+</head>
+<body>
+  <div class="grid">
+    <div class="card">
+      <div class="card-title">Sign up for Season 10</div>
+      <div class="card-description">Enter your details to register for the upcoming tournament.</div>
+    </div>
+    <div class="card">
+      <div class="form-group">
+        <label class="label">Username</label>
+        <input class="input" type="text" placeholder="Enter your username">
+      </div>
+      <div class="form-group">
+        <label class="label">Riot ID</label>
+        <input class="input" type="text" placeholder="Name#TAG">
+      </div>
+    </div>
+  </div>
+</body>
+</html>

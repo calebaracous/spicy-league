@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Typography Scale</title>
+  <link rel="stylesheet" href="../colors_and_type.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: var(--font-sans);
+      background: var(--bg);
+    }
+    .type-specimen {
+      margin-bottom: 28px;
+      padding-bottom: 28px;
+      border-bottom: 1px solid var(--border);
+    }
+    .type-specimen:last-child {
+      border-bottom: none;
+    }
+    .type-label {
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 8px;
+    }
+  </style>
+</head>
+<body>
+  <div class="type-specimen">
+    <div class="type-label">Display</div>
+    <div class="text-display">Tournaments</div>
+  </div>
+  <div class="type-specimen">
+    <div class="type-label">Heading</div>
+    <div class="text-heading">A proper tournament, for the group chat</div>
+  </div>
+  <div class="type-specimen">
+    <div class="type-label">Subheading</div>
+    <div class="text-subheading">Captain's draft format with round-robin groups</div>
+  </div>
+  <div class="type-specimen">
+    <div class="type-label">Body</div>
+    <div class="text-body">Sign up for a season, get drafted onto a team, and compete through a round-robin group stage into a single-elimination bracket.</div>
+  </div>
+  <div class="type-specimen">
+    <div class="type-label">Small</div>
+    <div class="text-small">9 seasons deep · Community-run · LoL & CS2</div>
+  </div>
+  <div class="type-specimen">
+    <div class="type-label">Label</div>
+    <div class="text-label">Community League</div>
+  </div>
+</body>
+</html>

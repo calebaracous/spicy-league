@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Button Components</title>
+  <link rel="stylesheet" href="../colors_and_type.css">
+  <style>
+    body {
+      margin: 0;
+      padding: 24px;
+      font-family: var(--font-sans);
+      background: var(--bg);
+    }
+    .button-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 24px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid var(--border);
+    }
+    .button-group:last-child {
+      border-bottom: none;
+    }
+    .group-label {
+      width: 100%;
+      font-size: 10px;
+      font-weight: 500;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 4px;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-radius: 9999px;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: -0.01em;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      text-decoration: none;
+    }
+    .btn:hover {
+      opacity: 0.8;
+    }
+    .btn-primary {
+      background: var(--accent);
+      color: var(--accent-fg);
+      border: 1px solid var(--accent);
+    }
+    .btn-outline {
+      background: transparent;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid transparent;
+    }
+  </style>
+</head>
+<body>
+  <div class="button-group">
+    <div class="group-label">Primary</div>
+    <button class="btn btn-primary">Join the current season</button>
+    <button class="btn btn-primary">Sign in</button>
+  </div>
+  <div class="button-group">
+    <div class="group-label">Outline</div>
+    <button class="btn btn-outline">Profile</button>
+    <button class="btn btn-outline">View details</button>
+  </div>
+  <div class="button-group">
+    <div class="group-label">Ghost</div>
+    <button class="btn btn-ghost">See past seasons →</button>
+    <button class="btn btn-ghost">Learn more</button>
+  </div>
+</body>
+</html>
