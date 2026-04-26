@@ -5,11 +5,12 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db/client";
-import { accountLinks } from "@/db/schema/stats";
+import { accountLinks, riotStatSnapshots } from "@/db/schema/stats";
 import { requireOnboarded } from "@/lib/auth-helpers";
 import { checkRateLimit, rateLimits } from "@/lib/rate-limit";
 import { getAccountByRiotId } from "@/lib/riot-api";
 import { refreshRiotStats } from "@/lib/stat-refresh";
+import { MAX_RIOT_ACCOUNTS } from "./constants";
 
 // ── Riot linking ───────────────────────────────────────────────────────────
 
@@ -28,40 +29,57 @@ export async function linkRiotAccount(formData: FormData) {
     redirect("/profile?error=riot-not-found");
   }
 
-  const existing = await db.query.accountLinks.findFirst({
+  const existingLinks = await db.query.accountLinks.findMany({
     where: and(eq(accountLinks.userId, session.user.id), eq(accountLinks.provider, "riot")),
   });
 
-  if (existing) {
-    await db
-      .update(accountLinks)
-      .set({
-        externalId: account.puuid,
-        externalHandle: `${account.gameName}#${account.tagLine}`,
-        linkedAt: new Date(),
-      })
-      .where(eq(accountLinks.id, existing.id));
-  } else {
-    await db.insert(accountLinks).values({
+  if (existingLinks.some((l) => l.externalId === account.puuid)) {
+    redirect("/profile?error=riot-duplicate");
+  }
+  if (existingLinks.length >= MAX_RIOT_ACCOUNTS) {
+    redirect("/profile?error=riot-max");
+  }
+
+  const [inserted] = await db
+    .insert(accountLinks)
+    .values({
       userId: session.user.id,
       provider: "riot",
       externalId: account.puuid,
       externalHandle: `${account.gameName}#${account.tagLine}`,
-    });
-  }
+    })
+    .returning({ id: accountLinks.id });
 
-  await refreshRiotStats(session.user.id);
+  if (inserted) {
+    await refreshRiotStats(session.user.id);
+  }
 
   revalidatePath("/profile");
   revalidatePath(`/users/${session.user.username}`);
   redirect("/profile?saved=1");
 }
 
-export async function unlinkRiotAccount() {
+export async function unlinkRiotAccount(formData: FormData) {
   const session = await requireOnboarded();
+  const linkId = (formData.get("linkId") as string | null)?.trim() ?? "";
+  if (!linkId) redirect("/profile");
+
+  // Snapshots cascade-delete via FK; this also confirms the link belongs to
+  // the requesting user.
   await db
     .delete(accountLinks)
-    .where(and(eq(accountLinks.userId, session.user.id), eq(accountLinks.provider, "riot")));
+    .where(and(eq(accountLinks.id, linkId), eq(accountLinks.userId, session.user.id)));
+
+  // Defensive: clean up any orphan snapshots (shouldn't exist after cascade).
+  await db
+    .delete(riotStatSnapshots)
+    .where(
+      and(
+        eq(riotStatSnapshots.userId, session.user.id),
+        eq(riotStatSnapshots.accountLinkId, linkId),
+      ),
+    );
+
   revalidatePath("/profile");
   revalidatePath(`/users/${session.user.username}`);
   redirect("/profile?saved=1");

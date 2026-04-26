@@ -14,6 +14,10 @@ import { users } from "./auth";
 
 export const accountProviderEnum = pgEnum("account_provider", ["riot", "steam", "leetify"]);
 
+// Multiple links per (user, provider) are allowed for "riot" (up to 3, enforced
+// in app code). For "steam"/"leetify" the app still treats it as one-per-user.
+// The unique constraint is on (userId, provider, externalId) so a user can't
+// link the same Riot ID twice.
 export const accountLinks = pgTable(
   "account_links",
   {
@@ -31,7 +35,11 @@ export const accountLinks = pgTable(
     linkedAt: timestamp("linked_at", { mode: "date" }).defaultNow().notNull(),
   },
   (table) => [
-    unique("account_links_user_provider_uniq").on(table.userId, table.provider),
+    unique("account_links_user_provider_external_uniq").on(
+      table.userId,
+      table.provider,
+      table.externalId,
+    ),
     index("account_links_user_idx").on(table.userId),
   ],
 );
@@ -45,6 +53,9 @@ export const riotStatSnapshots = pgTable(
     userId: text("user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    accountLinkId: text("account_link_id")
+      .notNull()
+      .references(() => accountLinks.id, { onDelete: "cascade" }),
     queue: text("queue").notNull(), // "solo" | "flex"
     tier: text("tier"),
     rankDivision: text("rank_division"),
@@ -54,7 +65,10 @@ export const riotStatSnapshots = pgTable(
     topChamps: jsonb("top_champs"), // [{ championId, championPoints }]
     capturedAt: timestamp("captured_at", { mode: "date" }).defaultNow().notNull(),
   },
-  (table) => [index("riot_snapshots_user_idx").on(table.userId)],
+  (table) => [
+    index("riot_snapshots_user_idx").on(table.userId),
+    index("riot_snapshots_link_idx").on(table.accountLinkId),
+  ],
 );
 
 export const leetifyStatSnapshots = pgTable(

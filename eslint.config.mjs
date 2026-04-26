@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Reference material bundled for agents — not part of the app build.
+    ".agents/**",
   ]),
 ]);
 

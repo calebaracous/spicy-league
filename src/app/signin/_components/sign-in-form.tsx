@@ -4,17 +4,11 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
-import { authClient } from "@/lib/auth-client";
+import { signInWithUsername } from "@/app/signin/actions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-
-const ERROR_MESSAGES: Record<string, string> = {
-  INVALID_EMAIL_OR_PASSWORD: "Invalid email or password.",
-  EMAIL_NOT_VERIFIED: "Please verify your email before signing in. Check your inbox.",
-  USER_BANNED: "This account has been suspended.",
-};
 
 export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
   const router = useRouter();
@@ -23,24 +17,17 @@ export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
-    const data = new FormData(e.currentTarget);
-    const email = (data.get("email") as string).trim().toLowerCase();
-    const password = data.get("password") as string;
-    const rememberMe = data.get("rememberMe") === "on";
+    const formData = new FormData(e.currentTarget);
 
     setError(null);
     startTransition(async () => {
-      const { error } = await authClient.signIn.email({
-        email,
-        password,
-        rememberMe,
-        fetchOptions: {
-          onSuccess: () => router.push(callbackUrl ?? "/profile"),
-        },
-      });
-      if (error) {
-        setError(ERROR_MESSAGES[error.code ?? ""] ?? error.message ?? "Something went wrong.");
+      const result = await signInWithUsername(formData);
+      if ("error" in result) {
+        setError(result.error);
+        return;
       }
+      router.push(callbackUrl ?? "/profile");
+      router.refresh();
     });
   }
 
@@ -53,13 +40,15 @@ export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
       ) : null}
 
       <div className="space-y-1.5">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="username">Username</Label>
         <Input
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="email"
-          placeholder="you@example.com"
+          id="username"
+          name="username"
+          autoComplete="username"
+          placeholder="spicy_caleb"
+          pattern="[a-zA-Z0-9_\-]{3,24}"
+          minLength={3}
+          maxLength={24}
           required
           disabled={isPending}
         />

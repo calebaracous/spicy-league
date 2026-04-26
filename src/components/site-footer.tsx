@@ -77,34 +77,9 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div
-          className="flex flex-col gap-2 pt-8 sm:flex-row sm:items-center sm:justify-between"
-          style={{ borderTop: "1px solid var(--border)" }}
-        >
+        <div className="pt-8" style={{ borderTop: "1px solid var(--border)" }}>
           <p className="text-xs" style={{ color: "var(--muted)" }}>
             © {year} Spicy League.
-          </p>
-          <p className="text-xs" style={{ color: "var(--muted)" }}>
-            Built with{" "}
-            <a
-              href="https://nextjs.org"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition-opacity hover:opacity-100"
-              style={{ color: "var(--text)" }}
-            >
-              Next.js
-            </a>{" "}
-            & deployed on{" "}
-            <a
-              href="https://vercel.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="transition-opacity hover:opacity-100"
-              style={{ color: "var(--text)" }}
-            >
-              Vercel
-            </a>
           </p>
         </div>
       </div>

@@ -9,6 +9,7 @@ import {
   unlinkCs2Account,
   unlinkRiotAccount,
 } from "./account-actions";
+import { MAX_RIOT_ACCOUNTS } from "./constants";
 import { db } from "@/db/client";
 import { users } from "@/db/schema/auth";
 import { accountLinks, riotStatSnapshots } from "@/db/schema/stats";
@@ -31,6 +32,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   "opgg-url": "That doesn't look like a valid URL.",
   "riot-format": 'Enter your Riot ID as "GameName#TAG".',
   "riot-not-found": "That Riot ID wasn't found. Double-check your game name and tag.",
+  "riot-duplicate": "That Riot account is already linked to your profile.",
+  "riot-max": `You can link at most ${MAX_RIOT_ACCOUNTS} Riot accounts.`,
   "steam-required": "Steam ID is required.",
   "steam-format": "Enter a valid Steam64 ID (17-digit number starting with 7656).",
   "leetify-host": "The Leetify link must point to leetify.com.",
@@ -49,9 +52,10 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
   });
   if (!user) redirect("/signin");
 
-  const [riotLink, steamLink, leetifyLink, riotSnapshots] = await Promise.all([
-    db.query.accountLinks.findFirst({
+  const [riotLinks, steamLink, leetifyLink, riotSnapshots] = await Promise.all([
+    db.query.accountLinks.findMany({
       where: and(eq(accountLinks.userId, user.id), eq(accountLinks.provider, "riot")),
+      orderBy: (t, { asc }) => [asc(t.linkedAt)],
     }),
     db.query.accountLinks.findFirst({
       where: and(eq(accountLinks.userId, user.id), eq(accountLinks.provider, "steam")),
@@ -65,8 +69,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
     }),
   ]);
 
-  const soloSnap = riotSnapshots.find((s) => s.queue === "solo");
   const lastRefreshed = riotSnapshots[0]?.capturedAt ?? null;
+  const canAddRiot = riotLinks.length < MAX_RIOT_ACCOUNTS;
 
   async function saveProfile(formData: FormData) {
     "use server";
@@ -197,35 +201,46 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
         <CardHeader>
           <CardTitle>League of Legends</CardTitle>
           <CardDescription>
-            Link your Riot account to display your rank and champion stats on your profile.
+            Link up to {MAX_RIOT_ACCOUNTS} Riot accounts to display rank and champion stats on your
+            profile.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {riotLink ? (
+          {riotLinks.length > 0 ? (
             <div className="space-y-3">
-              <div className="flex items-center justify-between rounded-lg border px-4 py-3">
-                <div>
-                  <p className="text-sm font-medium">{riotLink.externalHandle}</p>
-                  {soloSnap?.tier ? (
-                    <p className="text-muted-foreground text-xs">
-                      {soloSnap.tier} {soloSnap.rankDivision} · {soloSnap.lp} LP · {soloSnap.wins}W{" "}
-                      {soloSnap.losses}L
-                    </p>
-                  ) : (
-                    <p className="text-muted-foreground text-xs">Unranked</p>
-                  )}
-                </div>
-                <form action={unlinkRiotAccount}>
-                  <Button
-                    type="submit"
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive hover:text-destructive"
+              {riotLinks.map((link) => {
+                const linkSnaps = riotSnapshots.filter((s) => s.accountLinkId === link.id);
+                const solo = linkSnaps.find((s) => s.queue === "solo");
+                return (
+                  <div
+                    key={link.id}
+                    className="flex items-center justify-between rounded-lg border px-4 py-3"
                   >
-                    Unlink
-                  </Button>
-                </form>
-              </div>
+                    <div>
+                      <p className="text-sm font-medium">{link.externalHandle}</p>
+                      {solo?.tier ? (
+                        <p className="text-muted-foreground text-xs">
+                          {solo.tier} {solo.rankDivision} · {solo.lp} LP · {solo.wins}W{" "}
+                          {solo.losses}L
+                        </p>
+                      ) : (
+                        <p className="text-muted-foreground text-xs">Unranked</p>
+                      )}
+                    </div>
+                    <form action={unlinkRiotAccount}>
+                      <input type="hidden" name="linkId" value={link.id} />
+                      <Button
+                        type="submit"
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:text-destructive"
+                      >
+                        Unlink
+                      </Button>
+                    </form>
+                  </div>
+                );
+              })}
               <div className="flex items-center justify-between">
                 <p className="text-muted-foreground text-xs">
                   {lastRefreshed
@@ -239,17 +254,30 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
                 </form>
               </div>
             </div>
-          ) : (
+          ) : null}
+
+          {canAddRiot ? (
             <form action={linkRiotAccount} className="space-y-3">
               <div className="space-y-1.5">
-                <Label htmlFor="riotId">Riot ID</Label>
+                <Label htmlFor="riotId">
+                  {riotLinks.length === 0 ? "Riot ID" : "Add another Riot account"}
+                </Label>
                 <Input id="riotId" name="riotId" placeholder="GameName#NA1" required />
                 <p className="text-muted-foreground text-xs">
-                  Found in the client under your profile icon (top right).
+                  Found in the client under your profile icon (top right).{" "}
+                  {riotLinks.length > 0
+                    ? `${MAX_RIOT_ACCOUNTS - riotLinks.length} slot${
+                        MAX_RIOT_ACCOUNTS - riotLinks.length === 1 ? "" : "s"
+                      } remaining.`
+                    : ""}
                 </p>
               </div>
               <Button type="submit">Link Riot account</Button>
             </form>
+          ) : (
+            <p className="text-muted-foreground text-xs">
+              Maximum of {MAX_RIOT_ACCOUNTS} Riot accounts reached. Unlink one to add another.
+            </p>
           )}
 
           <Separator />

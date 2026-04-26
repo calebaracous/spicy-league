@@ -45,7 +45,8 @@ export function SignUpForm() {
           disabled={isPending}
         />
         <p className="text-muted-foreground text-xs">
-          3–24 characters. Letters, numbers, underscore, hyphen. Can&apos;t be changed later.
+          Used to sign in. 3–24 characters: letters, numbers, underscore, hyphen. Can&apos;t be
+          changed later.
         </p>
       </div>
 
