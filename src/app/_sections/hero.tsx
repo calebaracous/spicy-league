@@ -1,14 +1,31 @@
 import { LinkButton } from "@/components/ui/link-button";
+import { SectionLabel } from "@/components/ui/section-label";
 
-const stats = ["9 seasons run", "Captain's draft format", "LoL & CS2", "Community-run"];
+const stats = ["11 seasons run", "Captain's draft format", "LoL & CS2", "Community-run"];
 
 interface HeroProps {
   liveHref?: string;
+  liveLabel?: string;
 }
 
-export function Hero({ liveHref }: HeroProps) {
+export function Hero({ liveHref, liveLabel }: HeroProps) {
   return (
     <section className="site-container pt-28 pb-24 md:pt-36 md:pb-32">
+      {liveLabel && (
+        <div className="animate-fade-up mb-10 flex items-center gap-2.5 delay-50">
+          <span className="relative flex h-2 w-2">
+            <span
+              className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
+              style={{ background: "var(--accent)" }}
+            />
+            <span
+              className="relative inline-flex h-2 w-2 rounded-full"
+              style={{ background: "var(--accent)" }}
+            />
+          </span>
+          <SectionLabel>{liveLabel}</SectionLabel>
+        </div>
+      )}
       <h1
         className="text-display animate-fade-up mb-8 delay-100"
         style={{ color: "var(--text)", maxWidth: "17ch" }}

@@ -355,6 +355,11 @@ a {
   animation: pageFade 0.35s var(--ease-out-expo) both;
 }
 
+/* ─── Section Tints ─────────────────────────────────────────────────── */
+.tint-subtle-warm {
+  background: linear-gradient(180deg, var(--bg) 0%, rgba(185, 28, 28, 0.03) 50%, var(--bg) 100%);
+}
+
 /* ─── Reduced Motion ─────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *,
