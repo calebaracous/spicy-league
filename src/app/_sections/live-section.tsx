@@ -1,15 +1,17 @@
 import { Divider } from "@/components/ui/divider";
 import { LinkButton } from "@/components/ui/link-button";
+import { PlayerCard } from "@/components/ui/player-card";
 import { Reveal } from "@/components/ui/reveal";
 import { SectionLabel } from "@/components/ui/section-label";
 import { TintedSection } from "@/components/ui/tinted-section";
-import type { NextMatchInfo } from "@/lib/homepage";
+import type { NextMatchInfo, PlayerInfo } from "@/lib/homepage";
 import type { Season } from "@/db/schema/seasons";
 import { SEASON_STATE_LABELS } from "@/lib/seasons";
 
 interface LiveSectionProps {
   season: Season;
   nextMatch: NextMatchInfo | null;
+  topPlayers: PlayerInfo[];
 }
 
 function matchLabel(round: number, stage: string): string {
@@ -30,7 +32,7 @@ function formatScheduledAt(d: Date | null): string {
   });
 }
 
-export function LiveSection({ season, nextMatch }: LiveSectionProps) {
+export function LiveSection({ season, nextMatch, topPlayers }: LiveSectionProps) {
   const phaseLabel = SEASON_STATE_LABELS[season.state].toUpperCase();
   const matchesHref = `/seasons/${season.slug}/matches`;
 
@@ -133,21 +135,39 @@ export function LiveSection({ season, nextMatch }: LiveSectionProps) {
 
       <Divider />
 
-      {/* Top performers — TODO: wire to real stat data */}
       <TintedSection tint="none">
-        <Reveal className="flex max-w-xl flex-col gap-4">
+        <Reveal className="mb-14 flex flex-col gap-4">
           <SectionLabel>PLAYERS TO WATCH OUT FOR</SectionLabel>
           <h2 className="text-heading" style={{ color: "var(--text)" }}>
             Carrying their <span style={{ color: "var(--accent)" }}>squads</span>
           </h2>
-          <p className="text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
-            Check the{" "}
-            <a href={matchesHref} style={{ color: "var(--accent)" }}>
-              full standings
-            </a>{" "}
-            to see who&apos;s running away with it.
+          <p
+            className="text-sm leading-relaxed"
+            style={{ color: "var(--muted)", maxWidth: "52ch" }}
+          >
+            Highest-ranked players in the pool, by solo queue MMR.
           </p>
         </Reveal>
+
+        {topPlayers.length > 0 ? (
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {topPlayers.map((p, i) => (
+              <Reveal key={p.username} delay={i * 80}>
+                <PlayerCard username={p.username} rank={p.rank} />
+              </Reveal>
+            ))}
+          </div>
+        ) : (
+          <Reveal>
+            <p className="text-sm" style={{ color: "var(--muted)" }}>
+              Check the{" "}
+              <a href={matchesHref} style={{ color: "var(--accent)" }}>
+                full standings
+              </a>{" "}
+              to see who&apos;s running away with it.
+            </p>
+          </Reveal>
+        )}
       </TintedSection>
     </>
   );

@@ -39,7 +39,7 @@ export function SignupSection({ season, signupCount, topPlayers }: SignupSection
   );
   const sectionBody = isLoL
     ? "Pulled live from Riot — these are the highest-ranked players who've linked their accounts and signed up."
-    : "A few notable players from the signup pool. Drafted captains will be fighting over these picks.";
+    : "A few players who've already signed up. See you in the pool.";
 
   return (
     <>

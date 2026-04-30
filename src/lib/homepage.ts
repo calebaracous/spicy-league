@@ -60,6 +60,7 @@ export type HomepageData =
       state: "signup_cs2";
       season: Season;
       signupCount: number;
+      highlightedPlayers: PlayerInfo[];
       pastSeasons: PastSeasonCard[];
     }
   | {
@@ -73,6 +74,7 @@ export type HomepageData =
       state: "live";
       season: Season;
       nextMatch: NextMatchInfo | null;
+      topPlayers: PlayerInfo[];
       pastSeasons: PastSeasonCard[];
     }
   | {
@@ -219,6 +221,30 @@ async function getCaptains(seasonId: string): Promise<CaptainFull[]> {
   return rows.map((r) => ({ userId: r.userId, username: r.username ?? "unknown" }));
 }
 
+async function getRandomSignups(seasonId: string, count: number): Promise<PlayerInfo[]> {
+  const signupRows = await db
+    .select({ userId: seasonSignups.userId })
+    .from(seasonSignups)
+    .where(eq(seasonSignups.seasonId, seasonId));
+
+  if (signupRows.length === 0) return [];
+
+  // Fisher-Yates shuffle
+  const shuffled = [...signupRows];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j]!, shuffled[i]!];
+  }
+
+  const selectedIds = shuffled.slice(0, count).map((r) => r.userId);
+  const userRows = await db
+    .select({ id: users.id, username: users.username })
+    .from(users)
+    .where(inArray(users.id, selectedIds));
+
+  return userRows.map((u) => ({ username: u.username ?? u.id, rank: null }));
+}
+
 async function getNextMatch(seasonId: string): Promise<NextMatchInfo | null> {
   const homeAlias = alias(teams, "home");
   const awayAlias = alias(teams, "away");
@@ -363,9 +389,8 @@ export async function getHomepageData(): Promise<HomepageData> {
       const topPlayers = await getTopRankedPlayers(active.id, [], 8);
       return { state: "signup_lol", season: active, signupCount, topPlayers, pastSeasons };
     }
-    // CS2 — admin-curated highlights not yet wired; show signup count only
-    // TODO: add admin-curated highlighted player list for CS2 signup phase
-    return { state: "signup_cs2", season: active, signupCount, pastSeasons };
+    const highlightedPlayers = await getRandomSignups(active.id, 3);
+    return { state: "signup_cs2", season: active, signupCount, highlightedPlayers, pastSeasons };
   }
 
   // Draft phase
@@ -388,6 +413,9 @@ export async function getHomepageData(): Promise<HomepageData> {
   }
 
   // Live phase (group_stage | playoffs)
-  const nextMatch = await getNextMatch(active.id);
-  return { state: "live", season: active, nextMatch, pastSeasons };
+  const [nextMatch, topPlayers] = await Promise.all([
+    getNextMatch(active.id),
+    active.game === "lol" ? getTopRankedPlayers(active.id, [], 3) : Promise.resolve([]),
+  ]);
+  return { state: "live", season: active, nextMatch, topPlayers, pastSeasons };
 }

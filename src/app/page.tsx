@@ -48,7 +48,11 @@ export default async function Home() {
       )}
 
       {data.state === "signup_cs2" && (
-        <SignupSection season={data.season} signupCount={data.signupCount} />
+        <SignupSection
+          season={data.season}
+          signupCount={data.signupCount}
+          topPlayers={data.highlightedPlayers}
+        />
       )}
 
       {data.state === "draft" && (
@@ -59,7 +63,9 @@ export default async function Home() {
         />
       )}
 
-      {data.state === "live" && <LiveSection season={data.season} nextMatch={data.nextMatch} />}
+      {data.state === "live" && (
+        <LiveSection season={data.season} nextMatch={data.nextMatch} topPlayers={data.topPlayers} />
+      )}
 
       {data.state === "upcoming" && <UpcomingSection season={data.season} />}
 
