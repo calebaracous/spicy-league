@@ -54,33 +54,49 @@ export function DraftSection({ season, captains, topNonCaptains }: DraftSectionP
         </Reveal>
       </TintedSection>
 
-      {topNonCaptains.length > 0 && (
-        <>
-          <Divider />
-          <TintedSection tint="none">
-            <Reveal className="mb-14 flex flex-col gap-4">
-              <SectionLabel>PLAYERS TO WATCH OUT FOR</SectionLabel>
-              <h2 className="text-heading" style={{ color: "var(--text)" }}>
+      <Divider />
+      <TintedSection tint="none">
+        <Reveal className="mb-14 flex flex-col gap-4">
+          <SectionLabel>PLAYERS TO WATCH OUT FOR</SectionLabel>
+          <h2 className="text-heading" style={{ color: "var(--text)" }}>
+            {season.game === "lol" ? (
+              <>
                 Highest-ranked <span style={{ color: "var(--accent)" }}>non-captains</span>
-              </h2>
-              <p
-                className="text-sm leading-relaxed"
-                style={{ color: "var(--muted)", maxWidth: "52ch" }}
-              >
-                Whoever lands these picks gets a serious advantage. Captains, choose wisely.
-              </p>
-            </Reveal>
+              </>
+            ) : (
+              <>
+                Still <span style={{ color: "var(--accent)" }}>up for grabs</span>
+              </>
+            )}
+          </h2>
+          <p
+            className="text-sm leading-relaxed"
+            style={{ color: "var(--muted)", maxWidth: "52ch" }}
+          >
+            {season.game === "lol"
+              ? "Whoever lands these picks gets a serious advantage. Captains, choose wisely."
+              : "A few players still in the draft pool. Captains, choose wisely."}
+          </p>
+        </Reveal>
 
-            <div className="grid gap-3 sm:grid-cols-2">
-              {topNonCaptains.map((p, i) => (
-                <Reveal key={p.username} delay={i * 80}>
-                  <PlayerCard username={p.username} rank={p.rank} />
-                </Reveal>
-              ))}
-            </div>
-          </TintedSection>
-        </>
-      )}
+        {topNonCaptains.length > 0 ? (
+          <div className="grid gap-3 sm:grid-cols-2">
+            {topNonCaptains.map((p, i) => (
+              <Reveal key={p.username} delay={i * 80}>
+                <PlayerCard username={p.username} rank={p.rank} />
+              </Reveal>
+            ))}
+          </div>
+        ) : (
+          <Reveal>
+            <p className="text-sm" style={{ color: "var(--muted)" }}>
+              {season.game === "lol"
+                ? "No rank data yet — players haven't linked their Riot accounts."
+                : "No signups yet."}
+            </p>
+          </Reveal>
+        )}
+      </TintedSection>
     </>
   );
 }

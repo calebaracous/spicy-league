@@ -221,7 +221,11 @@ async function getCaptains(seasonId: string): Promise<CaptainFull[]> {
   return rows.map((r) => ({ userId: r.userId, username: r.username ?? "unknown" }));
 }
 
-async function getRandomSignups(seasonId: string, count: number): Promise<PlayerInfo[]> {
+async function getRandomSignups(
+  seasonId: string,
+  count: number,
+  excludeUserIds: string[] = [],
+): Promise<PlayerInfo[]> {
   const signupRows = await db
     .select({ userId: seasonSignups.userId })
     .from(seasonSignups)
@@ -229,14 +233,20 @@ async function getRandomSignups(seasonId: string, count: number): Promise<Player
 
   if (signupRows.length === 0) return [];
 
+  const eligible = excludeUserIds.length
+    ? signupRows.filter((r) => !excludeUserIds.includes(r.userId))
+    : signupRows;
+
   // Fisher-Yates shuffle
-  const shuffled = [...signupRows];
+  const shuffled = [...eligible];
   for (let i = shuffled.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j]!, shuffled[i]!];
   }
 
   const selectedIds = shuffled.slice(0, count).map((r) => r.userId);
+  if (selectedIds.length === 0) return [];
+
   const userRows = await db
     .select({ id: users.id, username: users.username })
     .from(users)
@@ -402,7 +412,9 @@ export async function getHomepageData(): Promise<HomepageData> {
     const captainsFull = await getCaptains(active.id);
     const captainUserIds = captainsFull.map((c) => c.userId);
     const topNonCaptains =
-      active.game === "lol" ? await getTopRankedPlayers(active.id, captainUserIds, 8) : [];
+      active.game === "lol"
+        ? await getTopRankedPlayers(active.id, captainUserIds, 8)
+        : await getRandomSignups(active.id, 6, captainUserIds);
     return {
       state: "draft",
       season: active,
