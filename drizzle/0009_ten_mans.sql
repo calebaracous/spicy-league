@@ -56,22 +56,22 @@ CREATE TABLE "ten_man_picks" (
   CONSTRAINT "ten_man_picks_user_uniq" UNIQUE("ten_man_id","picked_user_id")
 );--> statement-breakpoint
 
-ALTER TABLE "ten_mans" ADD CONSTRAINT "ten_mans_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."user"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "ten_mans" ADD CONSTRAINT "ten_mans_winner_captain_user_id_user_id_fk" FOREIGN KEY ("winner_captain_user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ten_mans" ADD CONSTRAINT "ten_mans_created_by_user_id_fk" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ten_mans" ADD CONSTRAINT "ten_mans_winner_captain_user_id_user_id_fk" FOREIGN KEY ("winner_captain_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 
 ALTER TABLE "ten_man_signups" ADD CONSTRAINT "ten_man_signups_ten_man_id_ten_mans_id_fk" FOREIGN KEY ("ten_man_id") REFERENCES "public"."ten_mans"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "ten_man_signups" ADD CONSTRAINT "ten_man_signups_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ten_man_signups" ADD CONSTRAINT "ten_man_signups_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 
 ALTER TABLE "ten_man_votes" ADD CONSTRAINT "ten_man_votes_ten_man_id_ten_mans_id_fk" FOREIGN KEY ("ten_man_id") REFERENCES "public"."ten_mans"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "ten_man_votes" ADD CONSTRAINT "ten_man_votes_voter_user_id_user_id_fk" FOREIGN KEY ("voter_user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "ten_man_votes" ADD CONSTRAINT "ten_man_votes_candidate_user_id_user_id_fk" FOREIGN KEY ("candidate_user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ten_man_votes" ADD CONSTRAINT "ten_man_votes_voter_user_id_user_id_fk" FOREIGN KEY ("voter_user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ten_man_votes" ADD CONSTRAINT "ten_man_votes_candidate_user_id_user_id_fk" FOREIGN KEY ("candidate_user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 
 ALTER TABLE "ten_man_captains" ADD CONSTRAINT "ten_man_captains_ten_man_id_ten_mans_id_fk" FOREIGN KEY ("ten_man_id") REFERENCES "public"."ten_mans"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "ten_man_captains" ADD CONSTRAINT "ten_man_captains_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."user"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ten_man_captains" ADD CONSTRAINT "ten_man_captains_user_id_user_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 
 ALTER TABLE "ten_man_picks" ADD CONSTRAINT "ten_man_picks_ten_man_id_ten_mans_id_fk" FOREIGN KEY ("ten_man_id") REFERENCES "public"."ten_mans"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "ten_man_picks" ADD CONSTRAINT "ten_man_picks_captain_user_id_user_id_fk" FOREIGN KEY ("captain_user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "ten_man_picks" ADD CONSTRAINT "ten_man_picks_picked_user_id_user_id_fk" FOREIGN KEY ("picked_user_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ten_man_picks" ADD CONSTRAINT "ten_man_picks_captain_user_id_user_id_fk" FOREIGN KEY ("captain_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ten_man_picks" ADD CONSTRAINT "ten_man_picks_picked_user_id_user_id_fk" FOREIGN KEY ("picked_user_id") REFERENCES "public"."users"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 
 CREATE INDEX "ten_man_signups_ten_idx" ON "ten_man_signups" USING btree ("ten_man_id");--> statement-breakpoint
 CREATE INDEX "ten_man_votes_ten_idx" ON "ten_man_votes" USING btree ("ten_man_id");--> statement-breakpoint
