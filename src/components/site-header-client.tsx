@@ -10,6 +10,7 @@ import { cn } from "@/lib/utils";
 const navLinks = [
   { href: "/seasons", label: "Seasons" },
   { href: "/history", label: "History" },
+  { href: "/10-man", label: "10-man" },
 ];
 
 export interface SiteHeaderUser {

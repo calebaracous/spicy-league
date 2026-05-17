@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Reference material bundled for agents — not part of the app build.
     ".agents/**",
+    // Design handoff prototypes — browser-native JSX, not part of the app build.
+    "docs/design/**",
   ]),
 ]);
 

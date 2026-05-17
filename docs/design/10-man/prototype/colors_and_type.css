@@ -1,0 +1,152 @@
+/* ═══════════════════════════════════════════════════════════════════
+   Spicy League Design System — Colors & Typography
+   ═══════════════════════════════════════════════════════════════════ */
+
+/* ─── Base Color Tokens ────────────────────────────────────────────── */
+:root {
+  /* Core palette: black + dark red + cream */
+  --bg: #0a0a0a;
+  --surface: #111111;
+  --border: #1f1f1f;
+  --text: #f5f0e8;
+  --muted: #6b6b6b;
+  --accent: #b91c1c; /* Tailwind red-700 — the single brand color */
+  --accent-fg: #f5f0e8;
+
+  /* Canonical aliases */
+  --color-bg: var(--bg);
+  --color-fg: var(--text);
+  --color-accent: var(--accent);
+  --color-muted: var(--muted);
+  --color-border: var(--border);
+  --color-surface: var(--surface);
+}
+
+/* ─── Semantic Color Tokens ────────────────────────────────────────── */
+:root {
+  --background: var(--bg);
+  --foreground: var(--text);
+  --card: var(--surface);
+  --card-foreground: var(--text);
+  --primary: var(--accent);
+  --primary-foreground: var(--accent-fg);
+  --secondary: var(--muted);
+  --secondary-foreground: var(--text);
+  --destructive: var(--accent);
+  --destructive-foreground: var(--accent-fg);
+}
+
+/* ─── Typography Tokens ─────────────────────────────────────────────── */
+:root {
+  /* Font stacks — Geist Sans & Geist Mono via next/font/google */
+  --font-sans: var(--font-geist-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+
+  /* Type scale variables */
+  --text-display-size: clamp(3rem, 8vw, 7rem);
+  --text-heading-size: clamp(1.75rem, 4vw, 3rem);
+  --text-subheading-size: clamp(1.125rem, 2.5vw, 1.5rem);
+  --text-body-size: 1rem;
+  --text-small-size: 0.875rem;
+  --text-label-size: 0.75rem;
+
+  /* Line heights */
+  --leading-tight: 1.1;
+  --leading-normal: 1.3;
+  --leading-relaxed: 1.65;
+
+  /* Letter spacing */
+  --tracking-tight: -0.03em;
+  --tracking-heading: -0.025em;
+  --tracking-normal: -0.015em;
+  --tracking-label: 0.1em;
+}
+
+/* ─── Typography Utility Classes ────────────────────────────────────── */
+.text-display {
+  font-size: var(--text-display-size);
+  font-weight: 500;
+  letter-spacing: var(--tracking-tight);
+  line-height: 1;
+  color: var(--text);
+}
+
+.text-heading {
+  font-size: var(--text-heading-size);
+  font-weight: 500;
+  letter-spacing: var(--tracking-heading);
+  line-height: var(--leading-tight);
+  color: var(--text);
+}
+
+.text-subheading {
+  font-size: var(--text-subheading-size);
+  font-weight: 400;
+  letter-spacing: var(--tracking-normal);
+  line-height: var(--leading-normal);
+  color: var(--text);
+}
+
+.text-body {
+  font-size: var(--text-body-size);
+  line-height: var(--leading-relaxed);
+  color: var(--text);
+}
+
+.text-small {
+  font-size: var(--text-small-size);
+  line-height: 1.5;
+  color: var(--muted);
+}
+
+.text-label {
+  font-size: var(--text-label-size);
+  font-weight: 500;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ─── Semantic Heading Styles ────────────────────────────────────────── */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-weight: 500;
+  letter-spacing: var(--tracking-heading);
+  line-height: var(--leading-tight);
+  color: var(--text);
+}
+
+h1 {
+  font-size: var(--text-display-size);
+}
+
+h2 {
+  font-size: var(--text-heading-size);
+}
+
+h3 {
+  font-size: var(--text-subheading-size);
+}
+
+/* ─── Body & Base Styles ──────────────────────────────────────────────── */
+body {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: var(--font-sans);
+  font-size: var(--text-body-size);
+  line-height: var(--leading-relaxed);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+::selection {
+  background: var(--accent);
+  color: var(--accent-fg);
+}

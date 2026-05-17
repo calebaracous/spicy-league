@@ -64,6 +64,13 @@
       "when": 1777181964870,
       "tag": "0008_multi_riot_accounts",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1747526400000,
+      "tag": "0009_ten_mans",
+      "breakpoints": true
     }
   ]
 }
