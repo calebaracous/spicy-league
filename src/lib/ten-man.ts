@@ -111,8 +111,8 @@ export async function getTenManSnapshot(id: string): Promise<TenManSnapshot | nu
         pickedAt: tenManPicks.pickedAt,
       })
       .from(tenManPicks)
-      .leftJoin(sql`"user" cu`, sql`cu.id = ${tenManPicks.captainUserId}`)
-      .leftJoin(sql`"user" pu`, sql`pu.id = ${tenManPicks.pickedUserId}`)
+      .leftJoin(sql`"users" cu`, sql`cu.id = ${tenManPicks.captainUserId}`)
+      .leftJoin(sql`"users" pu`, sql`pu.id = ${tenManPicks.pickedUserId}`)
       .where(eq(tenManPicks.tenManId, id))
       .orderBy(tenManPicks.pickNumber),
   ]);
@@ -183,7 +183,7 @@ export async function getRecentTenMans(limit = 10) {
       winnerName: sql<string>`wu.name`,
     })
     .from(tenMans)
-    .leftJoin(sql`"user" wu`, sql`wu.id = ${tenMans.winnerCaptainUserId}`)
+    .leftJoin(sql`"users" wu`, sql`wu.id = ${tenMans.winnerCaptainUserId}`)
     .where(eq(tenMans.state, "complete"))
     .orderBy(desc(tenMans.completedAt))
     .limit(limit);
