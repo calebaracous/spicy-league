@@ -8,10 +8,7 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 config({ path: resolve(__dirname, "../.env.local") });
 
 const sql = neon(process.env.DATABASE_URL);
-const sqlText = readFileSync(
-  resolve(__dirname, "../drizzle/0009_ten_mans.sql"),
-  "utf8",
-);
+const sqlText = readFileSync(resolve(__dirname, "../drizzle/0009_ten_mans.sql"), "utf8");
 const statements = sqlText
   .split("--> statement-breakpoint")
   .map((s) => s.trim())
@@ -27,10 +24,7 @@ for (let i = 0; i < statements.length; i++) {
     console.log("✓");
   } catch (err) {
     // Skip "already exists" errors so the script is re-runnable
-    if (
-      err.message.includes("already exists") ||
-      err.message.includes("duplicate")
-    ) {
+    if (err.message.includes("already exists") || err.message.includes("duplicate")) {
       console.log("(already exists, skipped)");
     } else {
       console.log("✗");
