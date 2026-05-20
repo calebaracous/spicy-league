@@ -1,10 +1,9 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-
-import { LogoMark } from "@/components/ui/logo-mark";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
@@ -75,7 +74,7 @@ export function SiteHeaderClient({
             style={{ color: "var(--text)" }}
             aria-label="Spicy League — home"
           >
-            <LogoMark size={22} />
+            <Image src="/logo.png" alt="" width={22} height={32} className="shrink-0" />
             <span>
               Spicy League<span style={{ color: "var(--accent)" }}>.</span>
             </span>
