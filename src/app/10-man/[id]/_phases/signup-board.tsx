@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,7 @@ export function SignupBoard({
   viewerUserId: string | null;
   isAdmin: boolean;
 }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
   const { signups } = snap;
   const count = signups.length;
@@ -33,7 +35,10 @@ export function SignupBoard({
     startTransition(() => leaveSignup(tenManId));
   }
   function handleCancel() {
-    startTransition(() => cancel10Man(tenManId));
+    startTransition(async () => {
+      await cancel10Man(tenManId);
+      router.push("/10-man");
+    });
   }
 
   const right = (
