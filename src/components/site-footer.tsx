@@ -8,6 +8,11 @@ const navLinks = [
   { href: "/signup", label: "Sign up" },
 ];
 
+const legalLinks = [
+  { href: "/terms", label: "Terms of Service" },
+  { href: "/privacy", label: "Privacy Policy" },
+];
+
 export function SiteFooter() {
   const year = new Date().getFullYear();
 
@@ -77,10 +82,25 @@ export function SiteFooter() {
           </div>
         </div>
 
-        <div className="pt-8" style={{ borderTop: "1px solid var(--border)" }}>
+        <div
+          className="flex flex-col gap-3 pt-8 sm:flex-row sm:items-center sm:justify-between"
+          style={{ borderTop: "1px solid var(--border)" }}
+        >
           <p className="text-xs" style={{ color: "var(--muted)" }}>
             © {year} Spicy League.
           </p>
+          <nav className="flex gap-5">
+            {legalLinks.map(({ href, label }) => (
+              <Link
+                key={href}
+                href={href}
+                className="text-xs transition-opacity hover:opacity-100"
+                style={{ color: "var(--muted)" }}
+              >
+                {label}
+              </Link>
+            ))}
+          </nav>
         </div>
       </div>
     </footer>

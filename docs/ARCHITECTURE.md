@@ -127,6 +127,10 @@ Public:
 - `/seasons/[slug]/matches/[matchId]` — match detail + report form
 - `/history` — static season archive (hard-coded in the page)
 - `/users/[username]` — public profile
+- `/terms`, `/privacy` — static legal docs. Required by the Discord
+  Developer Portal for app creation. Shared chrome in
+  `src/components/legal-page.tsx`; prose styling is the `.legal-prose`
+  block in `globals.css`. Linked from `SiteFooter`.
 
 Auth flow:
 - `/signin`, `/signup`, `/signin/check-email`, `/forgot-password`, `/reset-password`
