@@ -40,12 +40,12 @@ function StatusPanel({
           <CardContent className="flex flex-wrap items-center justify-between gap-3">
             {alreadySignedUp ? (
               <p className="text-muted-foreground text-sm">
-                You&apos;re signed up. Captains will pick from the roster once signups close.
+                You are signed up. Captains draft from the signup list after signups close.
               </p>
             ) : (
               <>
                 <p className="text-muted-foreground text-sm">
-                  Grab a spot now — captains will pick from everyone who signs up.
+                  All signed-up players are eligible to be drafted by captains.
                 </p>
                 <Link
                   href={`/seasons/${slug}/signup`}
@@ -65,7 +65,7 @@ function StatusPanel({
             <CardTitle>Signups closed</CardTitle>
           </CardHeader>
           <CardContent className="text-muted-foreground text-sm">
-            The roster is locked. Captains are being selected next.
+            Signups are closed. Captains have not been announced yet.
           </CardContent>
         </Card>
       );
@@ -77,7 +77,7 @@ function StatusPanel({
           </CardHeader>
           <CardContent className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-muted-foreground text-sm">
-              Draft order is being finalized. The live draft starts soon.
+              Captains have been selected. The draft has not started yet.
             </p>
             <Link
               href={`/seasons/${slug}/captains`}
@@ -96,10 +96,10 @@ function StatusPanel({
           </CardHeader>
           <CardContent className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-muted-foreground text-sm">
-              Teams are being drafted live. Watch the board for your name.
+              Captains are drafting teams. Picks appear on the draft page as they are made.
             </p>
             <Link href={`/seasons/${slug}/draft`} className={cn(buttonVariants({ size: "lg" }))}>
-              Watch the draft
+              View the draft
             </Link>
           </CardContent>
         </Card>
@@ -112,7 +112,7 @@ function StatusPanel({
           </CardHeader>
           <CardContent className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-muted-foreground text-sm">
-              Round-robin matches are being played. Standings update as results come in.
+              Teams are playing round-robin matches. Standings update when results are confirmed.
             </p>
             <Link
               href={`/seasons/${slug}/matches`}
@@ -131,7 +131,7 @@ function StatusPanel({
           </CardHeader>
           <CardContent className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-muted-foreground text-sm">
-              Top 4 teams advanced. Single-elimination bracket to crown the champion.
+              The top 4 teams from the group stage play a single-elimination bracket.
             </p>
             <Link
               href={`/seasons/${slug}/matches`}
@@ -244,9 +244,7 @@ export default async function SeasonDetailPage({
 
       {signedUp ? (
         <Alert>
-          <AlertDescription>
-            You&apos;re signed up for {season.name}. See you in the draft!
-          </AlertDescription>
+          <AlertDescription>You are signed up for {season.name}.</AlertDescription>
         </Alert>
       ) : null}
 

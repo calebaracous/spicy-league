@@ -23,17 +23,17 @@ export function DraftSection({ season, captains, topNonCaptains }: DraftSectionP
     <>
       <TintedSection tint="subtle-warm">
         <Reveal className="mb-14 flex flex-col gap-4">
-          <SectionLabel>CAPTAINS LOCKED IN</SectionLabel>
+          <SectionLabel>CAPTAINS</SectionLabel>
           <h2 className="text-heading" style={{ color: "var(--text)" }}>
-            {captains.length} captains. <span style={{ color: "var(--accent)" }}>One trophy.</span>
+            {captains.length} <span style={{ color: "var(--accent)" }}>captains</span>
           </h2>
           <p
             className="text-sm leading-relaxed"
             style={{ color: "var(--muted)", maxWidth: "52ch" }}
           >
             {isDrafting
-              ? "The live snake draft is underway. Watch picks happen in real time."
-              : "Captains are selected. The draft is coming — watch picks happen in real time when it starts."}
+              ? "The snake draft is in progress. Picks appear on the draft page as they are made."
+              : "Captains have been selected. Picks will appear on the draft page once the draft starts."}
           </p>
         </Reveal>
 
@@ -49,7 +49,7 @@ export function DraftSection({ season, captains, topNonCaptains }: DraftSectionP
 
         <Reveal>
           <LinkButton href={isDrafting ? draftHref : seasonHref} variant="primary">
-            {isDrafting ? "Watch the draft live →" : "View season →"}
+            {isDrafting ? "View the draft →" : "View season →"}
           </LinkButton>
         </Reveal>
       </TintedSection>
@@ -57,7 +57,7 @@ export function DraftSection({ season, captains, topNonCaptains }: DraftSectionP
       <Divider />
       <TintedSection tint="none">
         <Reveal className="mb-14 flex flex-col gap-4">
-          <SectionLabel>PLAYERS TO WATCH OUT FOR</SectionLabel>
+          <SectionLabel>{season.game === "lol" ? "TOP-RANKED PLAYERS" : "PLAYERS"}</SectionLabel>
           <h2 className="text-heading" style={{ color: "var(--text)" }}>
             {season.game === "lol" ? (
               <>
@@ -65,7 +65,7 @@ export function DraftSection({ season, captains, topNonCaptains }: DraftSectionP
               </>
             ) : (
               <>
-                Still <span style={{ color: "var(--accent)" }}>up for grabs</span>
+                Registered <span style={{ color: "var(--accent)" }}>non-captains</span>
               </>
             )}
           </h2>
@@ -74,8 +74,8 @@ export function DraftSection({ season, captains, topNonCaptains }: DraftSectionP
             style={{ color: "var(--muted)", maxWidth: "52ch" }}
           >
             {season.game === "lol"
-              ? "Whoever lands these picks gets a serious advantage. Captains, choose wisely."
-              : "A few players still in the draft pool. Captains, choose wisely."}
+              ? "Signed-up players who are not captains, ordered by solo queue rank."
+              : "A random selection of signed-up players who are not captains."}
           </p>
         </Reveal>
 
@@ -91,7 +91,7 @@ export function DraftSection({ season, captains, topNonCaptains }: DraftSectionP
           <Reveal>
             <p className="text-sm" style={{ color: "var(--muted)" }}>
               {season.game === "lol"
-                ? "No rank data yet — players haven't linked their Riot accounts."
+                ? "No rank data available. No signed-up players have linked a Riot account."
                 : "No signups yet."}
             </p>
           </Reveal>

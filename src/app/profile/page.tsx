@@ -29,7 +29,7 @@ type SearchParams = Promise<{ saved?: string; error?: string }>;
 
 const ERROR_MESSAGES: Record<string, string> = {
   "opgg-host": "The OP.GG link must point to op.gg.",
-  "opgg-url": "That doesn't look like a valid URL.",
+  "opgg-url": "Enter a valid URL.",
   "riot-format": 'Enter your Riot ID as "GameName#TAG".',
   "riot-not-found": "That Riot ID wasn't found. Double-check your game name and tag.",
   "riot-duplicate": "That Riot account is already linked to your profile.",
@@ -37,7 +37,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   "steam-required": "Steam ID is required.",
   "steam-format": "Enter a valid Steam64 ID (17-digit number starting with 7656).",
   "leetify-host": "The Leetify link must point to leetify.com.",
-  "leetify-url": "That doesn't look like a valid URL.",
+  "leetify-url": "Enter a valid URL.",
   "refresh-rate-limited": "You can only refresh stats once per hour.",
   "name-required": "Display name cannot be empty.",
   "name-too-long": "Display name must be 50 characters or fewer.",

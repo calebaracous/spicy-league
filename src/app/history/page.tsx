@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "History | Spicy League",
+  title: "History",
   description: "Every Spicy League season, from the beginning.",
 };
 
@@ -211,7 +211,7 @@ const SEASONS: Season[] = [
     title: "Spicy League: Season 1",
     champion: null,
     description:
-      "Captain's draft team league in StarCraft 2 with 70+ signups and a spicy format. Cancelled early.",
+      "Captain's draft team league in StarCraft 2 with more than 70 signups. Cancelled before completion.",
     finalsDate: null,
     notes: [],
     images: [
@@ -226,7 +226,7 @@ export default function HistoryPage() {
     <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-12">
       <header className="mb-12 space-y-2">
         <h1 className="text-4xl font-bold tracking-tight">History</h1>
-        <p className="text-muted-foreground">8 Years of the Spicy League</p>
+        <p className="text-muted-foreground">All Spicy League seasons, most recent first.</p>
       </header>
 
       <div className="relative">
@@ -258,7 +258,7 @@ export default function HistoryPage() {
                   </p>
                 ) : (
                   <p className="text-muted-foreground text-sm italic">
-                    Season cancelled — no champion crowned.
+                    Season cancelled. No champion.
                   </p>
                 )}
 

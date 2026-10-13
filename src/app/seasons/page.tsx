@@ -37,7 +37,7 @@ export default async function SeasonsIndexPage() {
               <CardTitle>No active seasons</CardTitle>
             </CardHeader>
             <CardContent className="text-muted-foreground text-sm">
-              Check back soon — the next season will open signups here.
+              No season is currently in progress. New seasons are listed here when announced.
             </CardContent>
           </Card>
         ) : (

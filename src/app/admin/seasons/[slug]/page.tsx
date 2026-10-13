@@ -85,14 +85,12 @@ export default async function EditSeasonPage({
       <Card>
         <CardHeader>
           <CardTitle>Lifecycle</CardTitle>
-          <CardDescription>
-            Move the season through its phases. Each transition is one click.
-          </CardDescription>
+          <CardDescription>Move the season to the next or previous state.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {available.length === 0 ? (
             <p className="text-muted-foreground text-sm">
-              No further transitions — this season is complete.
+              This season is complete. No further transitions are available.
             </p>
           ) : (
             <div className="flex flex-wrap gap-2">
@@ -142,7 +140,7 @@ export default async function EditSeasonPage({
         <CardHeader>
           <CardTitle>Details</CardTitle>
           <CardDescription>
-            Rename, rewrite, or reschedule. Slug changes update the URL.
+            Edit season details. Changing the slug changes the season URL.
           </CardDescription>
         </CardHeader>
         <CardContent>

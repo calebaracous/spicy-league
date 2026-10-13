@@ -14,7 +14,7 @@ type Props = { params: Promise<{ username: string }> };
 
 export async function generateMetadata({ params }: Props) {
   const { username } = await params;
-  return { title: `${username} — Spicy League` };
+  return { title: username };
 }
 
 function formatRank(tier: string | null, division: string | null, lp: number | null): string {

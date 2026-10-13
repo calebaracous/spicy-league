@@ -55,7 +55,7 @@ export function UpcomingSection({ season }: UpcomingSectionProps) {
                 <div>
                   <span style={{ color: "var(--muted)" }}>Structure: </span>
                   <span style={{ color: "var(--text)" }}>
-                    Round-robin groups → single-elim playoffs
+                    Round-robin group stage, then single-elimination playoffs
                   </span>
                 </div>
               </div>
@@ -91,13 +91,13 @@ export function UpcomingSection({ season }: UpcomingSectionProps) {
 
       <TintedSection tint="none">
         <Reveal className="flex max-w-xl flex-col gap-4">
-          <SectionLabel>GET READY</SectionLabel>
+          <SectionLabel>ACCOUNTS</SectionLabel>
           <h2 className="text-heading" style={{ color: "var(--text)" }}>
-            Signups <span style={{ color: "var(--accent)" }}>open soon</span>
+            Signups <span style={{ color: "var(--accent)" }}>not yet open</span>
           </h2>
           <p className="text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
-            Make an account now so you&apos;re ready to register the moment signups open. Linked
-            Riot accounts get auto-ranked.
+            An account is required to sign up for a season. Players who link a Riot account have
+            their solo queue rank shown on their profile and in the draft pool.
           </p>
           <div className="mt-2 flex flex-wrap gap-3">
             <LinkButton href="/signup" variant="primary">

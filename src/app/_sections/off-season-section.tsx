@@ -16,11 +16,11 @@ export function OffSeasonSection({ lastSeason, podium }: OffSeasonSectionProps) 
       <Reveal className="mb-14 flex flex-col gap-4">
         <SectionLabel className="opacity-50">OFF-SEASON</SectionLabel>
         <h2 className="text-heading" style={{ color: "var(--text)" }}>
-          See you next season<span style={{ color: "var(--accent)" }}>.</span>
+          No season in progress<span style={{ color: "var(--accent)" }}>.</span>
         </h2>
         <p className="text-sm leading-relaxed" style={{ color: "var(--muted)", maxWidth: "52ch" }}>
-          We&apos;re between seasons right now. Check back soon — until then, here&apos;s how the
-          last season wrapped up.
+          The next season has not been announced. Final results from the most recent season are
+          below.
         </p>
       </Reveal>
 
@@ -54,13 +54,7 @@ export function OffSeasonSection({ lastSeason, podium }: OffSeasonSectionProps) 
                         className="font-mono text-[11px] font-semibold"
                         style={{ color: p.rank === 1 ? "var(--accent)" : "var(--muted)" }}
                       >
-                        {p.rank === 1
-                          ? "🏆 1st"
-                          : p.rank === 2
-                            ? "2nd"
-                            : p.rank === 3
-                              ? "3rd"
-                              : "4th"}
+                        {p.rank === 1 ? "1st" : p.rank === 2 ? "2nd" : p.rank === 3 ? "3rd" : "4th"}
                       </div>
                       <div
                         className="text-sm leading-snug font-medium"
@@ -85,7 +79,7 @@ export function OffSeasonSection({ lastSeason, podium }: OffSeasonSectionProps) 
               style={{ borderTop: podium.length > 0 ? "1px solid var(--border)" : undefined }}
             >
               <LinkButton href="/history" variant="ghost">
-                See full season history →
+                View season history →
               </LinkButton>
             </div>
           </div>

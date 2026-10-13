@@ -70,7 +70,7 @@ export function DraftBoard({
           }}
         >
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-            <SectionLabel>DRAFT · LIVE</SectionLabel>
+            <SectionLabel>DRAFT</SectionLabel>
             <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
               <span style={{ fontSize: 20, fontWeight: 500, color: "var(--text)" }}>
                 {complete ? "Draft complete" : `Pick ${currentPickNum} of 8`}
@@ -143,7 +143,7 @@ export function DraftBoard({
             }}
           >
             <span style={{ fontSize: 14, fontWeight: 500, color: "var(--text)" }}>
-              Available pool
+              Available players
             </span>
             <span
               style={{
@@ -224,7 +224,9 @@ export function DraftBoard({
                   fontSize: 13,
                 }}
               >
-                {pool.length === 0 ? "Pool exhausted — draft complete." : "No matches for filter."}
+                {pool.length === 0
+                  ? "All players have been picked."
+                  : "No players match the filter."}
               </li>
             ) : null}
           </ul>
@@ -293,7 +295,7 @@ function TeamCard({
               borderRadius: 4,
             }}
           >
-            ON CLOCK
+            PICKING
           </span>
         ) : null}
       </div>

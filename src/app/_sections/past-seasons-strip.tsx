@@ -19,8 +19,7 @@ export function PastSeasonsStrip({ seasons }: PastSeasonsStripProps) {
         <Reveal className="mb-14 flex flex-col gap-4">
           <SectionLabel>PAST SEASONS</SectionLabel>
           <h2 className="text-heading" style={{ color: "var(--text)" }}>
-            Built over{" "}
-            <span style={{ color: "var(--accent)" }}>{seasons.length > 1 ? "years" : "time"}</span>
+            Recently <span style={{ color: "var(--accent)" }}>completed</span>
           </h2>
         </Reveal>
 

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <LegalPage title="Terms of Service" updated="August 17, 2026">
+    <LegalPage title="Terms of Service" updated="October 13, 2026">
       <p>
         Spicy League (&ldquo;Spicy League&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;) is a
         community-run platform for organising captains-draft tournaments in League of Legends and
@@ -81,11 +81,11 @@ export default function TermsPage() {
         Those rules form part of these Terms for participants in that season.
       </p>
       <p>
-        Match results are reported by team captains and confirmed by administrators. Administrators
-        may pause or resume a draft, undo a pick, correct a reported result, resolve a disputed
-        match, reschedule fixtures, or remove a player from a season. In matters of league
-        competition, administrator decisions are final. Spicy League is played for fun &mdash; there
-        is no entry fee and no prize money.
+        Match results are reported by players on the competing teams and confirmed by
+        administrators. Administrators may pause or resume a draft, undo a pick, correct a reported
+        result, resolve a disputed match, reschedule fixtures, or remove a player from a season. In
+        matters of league competition, administrator decisions are final. Spicy League has no entry
+        fee and does not award prize money.
       </p>
 
       <h2>5. Linked game accounts</h2>

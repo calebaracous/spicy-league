@@ -44,9 +44,7 @@ export function SignupBoard({
   const right = (
     <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
       {full && isAdmin ? (
-        <span style={{ fontSize: 13, color: "var(--muted)" }}>
-          Captain voting will open automatically.
-        </span>
+        <span style={{ fontSize: 13, color: "var(--muted)" }}>Captain voting has started.</span>
       ) : null}
       {!full && viewerUserId && !hasJoined ? (
         <Button
@@ -56,7 +54,7 @@ export function SignupBoard({
           className="rounded-full"
           style={{ backgroundColor: "var(--accent)", color: "var(--accent-fg)" }}
         >
-          Join the 10-man
+          Join
         </Button>
       ) : null}
       {!full && hasJoined ? (
@@ -67,7 +65,7 @@ export function SignupBoard({
           onClick={handleLeave}
           className="rounded-full"
         >
-          Drop out
+          Leave
         </Button>
       ) : null}
       {isAdmin && !full ? (
@@ -78,7 +76,7 @@ export function SignupBoard({
           onClick={handleCancel}
           className="rounded-full"
         >
-          Cancel session
+          Cancel 10-man
         </Button>
       ) : null}
       {!viewerUserId && !full ? (
@@ -90,12 +88,12 @@ export function SignupBoard({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
       <PhaseBanner
-        phaseLabel={full ? "LOBBY FULL" : "SIGNUPS OPEN"}
-        title={full ? "All 10 in." : `${count} of 10`}
+        phaseLabel={full ? "SIGNUPS CLOSED" : "SIGNUPS OPEN"}
+        title={`${count} of 10`}
         sub={
           full
             ? "Captain voting has started."
-            : `Waiting on ${emptyCount} more player${emptyCount !== 1 ? "s" : ""}`
+            : `${emptyCount} spot${emptyCount !== 1 ? "s" : ""} remaining`
         }
         progress={count / 10}
         right={right}

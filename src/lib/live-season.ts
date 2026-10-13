@@ -25,11 +25,11 @@ export async function getLiveSeason(): Promise<Season | null> {
 
 export const LIVE_STATE_COPY: Partial<Record<SeasonState, string>> = {
   signups_open: "SIGNUPS OPEN",
-  signups_closed: "CAPTAINS INCOMING",
-  captains_selected: "DRAFT PENDING",
-  drafting: "DRAFT LIVE",
-  group_stage: "GROUP STAGE LIVE",
-  playoffs: "PLAYOFFS LIVE",
+  signups_closed: "SIGNUPS CLOSED",
+  captains_selected: "CAPTAINS SELECTED",
+  drafting: "DRAFT IN PROGRESS",
+  group_stage: "GROUP STAGE",
+  playoffs: "PLAYOFFS",
 };
 
 export function liveSeasonHref(season: Pick<Season, "slug" | "state">): string {

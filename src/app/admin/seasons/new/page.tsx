@@ -29,14 +29,17 @@ export default async function NewSeasonPage({ searchParams }: { searchParams: Se
         </Link>
         <h1 className="text-3xl font-bold tracking-tight">New season</h1>
         <p className="text-muted-foreground text-sm">
-          Seasons begin as drafts. You can fill in everything now or iterate later.
+          New seasons start in the draft state and are not public. All fields except name, slug, and
+          game can be edited later.
         </p>
       </header>
 
       <Card>
         <CardHeader>
           <CardTitle>Basics</CardTitle>
-          <CardDescription>The slug is permanent-ish — it becomes part of the URL.</CardDescription>
+          <CardDescription>
+            The slug is part of the season URL. Changing it later changes the URL.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           {errorMessage ? (
@@ -94,7 +97,7 @@ export default async function NewSeasonPage({ searchParams }: { searchParams: Se
                 name="description"
                 maxLength={5000}
                 rows={3}
-                placeholder="Short pitch shown on the season landing page."
+                placeholder="Short description shown on the season page."
               />
             </div>
             <div className="space-y-1.5">
@@ -104,7 +107,7 @@ export default async function NewSeasonPage({ searchParams }: { searchParams: Se
                 name="rules"
                 maxLength={10000}
                 rows={5}
-                placeholder="Optional longer-form ruleset. Markdown is fine."
+                placeholder="Optional. Plain text; line breaks are preserved."
               />
             </div>
             <div className="grid gap-4 sm:grid-cols-3">

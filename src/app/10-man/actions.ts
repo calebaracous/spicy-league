@@ -208,7 +208,7 @@ export async function submitPick(id: string, pickedUserId: string): Promise<void
 
   await db.transaction(async (tx) => {
     const [tm] = await tx.select().from(tenMans).where(eq(tenMans.id, id)).for("update");
-    if (!tm || tm.state !== "drafting") throw new Error("Draft is not live");
+    if (!tm || tm.state !== "drafting") throw new Error("The draft is not in progress");
 
     const picks = await tx
       .select()

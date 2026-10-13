@@ -40,9 +40,9 @@ export function ReadyBoard({
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "2rem" }}>
       <PhaseBanner
-        phaseLabel="TEAMS LOCKED"
-        title="Ready up"
-        sub="Lobby code below. Once the game's done, report the result."
+        phaseLabel="TEAMS SET"
+        title="Teams"
+        sub="Join the custom game lobby below. An admin records the result after the match."
         right={right}
       />
 
@@ -384,10 +384,10 @@ function ResultModal({
               color: "var(--text)",
             }}
           >
-            Who won?
+            Winning team
           </h2>
           <p style={{ fontSize: 13, color: "var(--muted)" }}>
-            This locks the 10-man and writes the W to history.
+            Submitting completes the 10-man. The result cannot be changed.
           </p>
         </div>
 

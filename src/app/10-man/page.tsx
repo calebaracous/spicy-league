@@ -4,7 +4,7 @@ import { auth } from "@/auth";
 import { getActiveTenMan, getRecentTenMans } from "@/lib/ten-man";
 import { TenManLanding } from "./_landing";
 
-export const metadata = { title: "10-man · Spicy League" };
+export const metadata = { title: "10-man" };
 
 export default async function TenManLandingPage() {
   const [session, active, history] = await Promise.all([

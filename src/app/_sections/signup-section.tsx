@@ -27,19 +27,19 @@ export function SignupSection({ season, signupCount, topPlayers }: SignupSection
   const signupHref = `/seasons/${season.slug}/signup`;
   const infoHref = `/seasons/${season.slug}`;
 
-  const sectionLabel = isLoL ? "PLAYERS TO WATCH" : "HIGHLIGHTED PLAYERS";
+  const sectionLabel = isLoL ? "TOP-RANKED SIGNUPS" : "SIGNUPS";
   const sectionHeading = isLoL ? (
     <>
-      The pool is <span style={{ color: "var(--accent)" }}>stacked</span>
+      Highest-ranked <span style={{ color: "var(--accent)" }}>signups</span>
     </>
   ) : (
     <>
-      Some faces <span style={{ color: "var(--accent)" }}>to know</span>
+      Registered <span style={{ color: "var(--accent)" }}>players</span>
     </>
   );
   const sectionBody = isLoL
-    ? "Pulled live from Riot — these are the highest-ranked players who've linked their accounts and signed up."
-    : "A few players who've already signed up. See you in the pool.";
+    ? "Signed-up players with a linked Riot account, ordered by solo queue rank. Ranks refresh daily."
+    : "A random selection of players registered for this season.";
 
   return (
     <>
@@ -86,7 +86,7 @@ export function SignupSection({ season, signupCount, topPlayers }: SignupSection
                 )}
                 {season.seasonStartAt && (
                   <>
-                    Tournament starts{" "}
+                    Season starts{" "}
                     <span style={{ color: "var(--text)" }}>{formatDate(season.seasonStartAt)}</span>
                     .
                   </>
@@ -117,7 +117,7 @@ export function SignupSection({ season, signupCount, topPlayers }: SignupSection
                   Sign up for {season.name.split(":")[0]} →
                 </LinkButton>
                 <LinkButton href={infoHref} variant="outline" className="px-7 py-3.5 text-base">
-                  Tournament info
+                  Season details
                 </LinkButton>
               </div>
             </div>

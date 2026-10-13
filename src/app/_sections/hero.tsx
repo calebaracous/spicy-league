@@ -1,7 +1,7 @@
 import { LinkButton } from "@/components/ui/link-button";
 import { SectionLabel } from "@/components/ui/section-label";
 
-const stats = ["11 seasons run", "Captain's draft format", "LoL & CS2", "Community-run"];
+const stats = ["11 seasons", "Captains-draft format", "LoL and CS2", "Community-run"];
 
 interface HeroProps {
   liveHref?: string;
@@ -32,23 +32,24 @@ export function Hero({ liveHref, liveLabel }: HeroProps) {
       >
         Captains-draft
         <br />
-        <span style={{ color: "var(--accent)" }}>tournaments</span> for sweaty friends
+        <span style={{ color: "var(--accent)" }}>tournaments</span> for LoL and CS2
       </h1>
 
       <p
         className="animate-fade-up mb-12 text-lg leading-relaxed delay-200 md:text-xl"
         style={{ color: "var(--muted)", maxWidth: "52ch" }}
       >
-        Sign up for a season, get drafted onto a team, and compete through a round-robin group stage
-        into a single-elimination bracket. League of Legends and Counter-Strike 2.
+        Players sign up for a season and are drafted onto teams of five by captains. Teams play a
+        round-robin group stage, and the top four advance to a single-elimination bracket. Seasons
+        are run for League of Legends and Counter-Strike 2.
       </p>
 
       <div className="animate-fade-up mb-20 flex flex-wrap items-center gap-4 delay-300">
         <LinkButton href={liveHref ?? "/seasons"} variant="primary">
-          {liveHref ? "Join the current season" : "View seasons"}
+          {liveHref ? "Current season" : "View seasons"}
         </LinkButton>
         <LinkButton href="/history" variant="ghost">
-          See past seasons →
+          Past seasons →
         </LinkButton>
       </div>
 

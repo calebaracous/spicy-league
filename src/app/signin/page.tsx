@@ -18,7 +18,7 @@ export default async function SignInPage({ searchParams }: { searchParams: Searc
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Sign in to Spicy League</CardTitle>
-          <CardDescription>Enter your email and password to continue.</CardDescription>
+          <CardDescription>Enter your username and password.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {reset ? (

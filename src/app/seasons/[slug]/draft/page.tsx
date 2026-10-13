@@ -26,7 +26,7 @@ export const dynamic = "force-dynamic";
 
 export async function generateMetadata({ params }: { params: Params }) {
   const { slug } = await params;
-  return { title: `Draft — ${slug} — Spicy League` };
+  return { title: `Draft · ${slug}` };
 }
 
 export default async function DraftPage({

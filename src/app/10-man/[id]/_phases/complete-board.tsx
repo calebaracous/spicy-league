@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 
@@ -56,12 +57,12 @@ export function CompleteBoard({ snap, isAdmin }: { snap: TenManSnapshotClient; i
             color: "var(--text)",
           }}
         >
-          <span style={{ color: "var(--accent)" }}>{winner?.displayName ?? "?"}</span> wins.
+          <span style={{ color: "var(--accent)" }}>{winner?.displayName ?? "?"}</span>&apos;s team
+          won
         </h1>
         <p style={{ fontSize: 15, lineHeight: 1.6, color: "var(--muted)", maxWidth: "46ch" }}>
           {winner?.displayName} def. {loser?.displayName}
-          {result?.durationLabel ? ` in ${result.durationLabel}` : ""}. The W is in the books —
-          bragging rights granted for the rest of the night.
+          {result?.durationLabel ? ` in ${result.durationLabel}` : ""}. This result is final.
         </p>
       </div>
 
@@ -108,20 +109,20 @@ export function CompleteBoard({ snap, isAdmin }: { snap: TenManSnapshotClient; i
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <span style={{ fontSize: 14, fontWeight: 500, color: "var(--text)" }}>
-            Want to run it back?
+            This 10-man is complete.
           </span>
           <span style={{ fontSize: 13, color: "var(--muted)" }}>
-            Spin up another lobby — same players, fresh draft.
+            A new 10-man starts with empty signups.
           </span>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
-          <a
-            href="/history"
+          <Link
+            href="/10-man"
             className="inline-flex items-center justify-center rounded-full border px-4 py-1.5 text-sm font-medium transition-opacity hover:opacity-80"
             style={{ color: "var(--text)", borderColor: "var(--border)" }}
           >
-            View in history
-          </a>
+            Recent 10-mans
+          </Link>
           {isAdmin ? (
             <Button
               size="sm"

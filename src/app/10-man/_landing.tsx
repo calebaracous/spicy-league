@@ -8,10 +8,18 @@ import { SectionLabel } from "@/components/ui/section-label";
 import { start10Man } from "./actions";
 
 const STEPS = [
-  { n: "01", t: "Signups", d: "First 10 names lock the lobby." },
-  { n: "02", t: "Vote", d: "Everyone picks 2 captains. Top 2 win." },
-  { n: "03", t: "Draft", d: "Snake draft on the 8 remaining." },
-  { n: "04", t: "Play", d: "Teams locked. Lobby up. Report the W." },
+  { n: "01", t: "Signups", d: "Signups close when 10 players have joined." },
+  {
+    n: "02",
+    t: "Vote",
+    d: "Each player votes for 2 captains. The 2 with the most votes are captains.",
+  },
+  { n: "03", t: "Draft", d: "Captains take turns picking from the remaining 8 players." },
+  {
+    n: "04",
+    t: "Play",
+    d: "Teams are set and a lobby code is shown. An admin records the winner.",
+  },
 ] as const;
 
 type HistoryEntry = {
@@ -48,9 +56,9 @@ export function TenManLanding({ isAdmin, history }: { isAdmin: boolean; history:
               color: "var(--text)",
             }}
           >
-            Got 10?
+            10-man
             <br />
-            <span style={{ color: "var(--accent)" }}>Let&apos;s go.</span>
+            <span style={{ color: "var(--accent)" }}>pickup matches</span>
           </h1>
           <p
             style={{
@@ -60,8 +68,8 @@ export function TenManLanding({ isAdmin, history }: { isAdmin: boolean; history:
               maxWidth: "56ch",
             }}
           >
-            A one-off 5v5 for whoever&apos;s around. Sign up, vote on captains, draft from the pool,
-            and play. The whole thing takes about 15 minutes — usually less.
+            A single 5v5 League of Legends match. Ten players sign up, vote for two captains, and
+            the captains draft the remaining eight players into two teams.
           </p>
 
           <div
@@ -92,7 +100,7 @@ export function TenManLanding({ isAdmin, history }: { isAdmin: boolean; history:
                   Start a 10-man
                 </Button>
                 <span style={{ fontSize: 13, color: "var(--muted)" }}>
-                  Admins start the session — you&apos;ll get the join link.
+                  Only admins can start a 10-man.
                 </span>
               </>
             )}

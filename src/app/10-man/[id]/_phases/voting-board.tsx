@@ -88,7 +88,7 @@ export function VotingBoard({
       <PhaseBanner
         phaseLabel="CAPTAIN VOTE"
         title={`${votersDone} of 10 voted`}
-        sub="Pick 2 — top 2 vote-getters become captains"
+        sub="Each player votes for 2 captains. The 2 players with the most votes become captains."
         progress={progress}
         right={right}
       />
@@ -164,7 +164,7 @@ export function VotingBoard({
                     textTransform: "uppercase",
                   }}
                 >
-                  Leading
+                  Most votes
                 </span>
               ) : null}
 
@@ -218,10 +218,10 @@ export function VotingBoard({
                   : !viewerUserId
                     ? "Sign in to vote"
                     : !isSignup
-                      ? "Not in this lobby"
+                      ? "Not signed up"
                       : allVoted
                         ? "Voting closed"
-                        : "Tap to vote"}
+                        : "Select to vote"}
               </span>
             </button>
           );
@@ -240,8 +240,8 @@ export function VotingBoard({
       >
         <span style={{ fontSize: 13, color: "var(--muted)" }}>
           {allVoted
-            ? "All votes are in. Captains are being set."
-            : `Waiting on ${10 - votersDone} player${10 - votersDone !== 1 ? "s" : ""} to vote…`}
+            ? "All 10 players have voted. Captains are being assigned."
+            : `${10 - votersDone} player${10 - votersDone !== 1 ? "s have" : " has"} not voted.`}
         </span>
         <span style={{ fontSize: 12, color: "var(--muted)" }}>Ties broken at random</span>
       </div>

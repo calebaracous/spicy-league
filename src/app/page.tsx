@@ -1,5 +1,5 @@
 import { getHomepageData } from "@/lib/homepage";
-import { liveSeasonHref } from "@/lib/live-season";
+import { LIVE_STATE_COPY, liveSeasonHref } from "@/lib/live-season";
 import { Divider } from "@/components/ui/divider";
 import { Hero } from "./_sections/hero";
 import { SignupSection } from "./_sections/signup-section";
@@ -12,12 +12,7 @@ import { PastSeasonsStrip } from "./_sections/past-seasons-strip";
 export const dynamic = "force-dynamic";
 
 const HERO_LABELS: Record<string, string> = {
-  signup_lol: "SIGNUPS OPEN",
-  signup_cs2: "SIGNUPS OPEN",
-  draft: "DRAFT PENDING",
-  live_group_stage: "GROUP STAGE LIVE",
-  live_playoffs: "PLAYOFFS LIVE",
-  upcoming: "NEXT SEASON COMING",
+  upcoming: "UPCOMING SEASON",
   off_season: "OFF-SEASON",
 };
 
@@ -25,9 +20,9 @@ export default async function Home() {
   const data = await getHomepageData();
 
   const heroLabel =
-    data.state === "live"
-      ? (HERO_LABELS[`live_${data.season.state}`] ?? "LIVE")
-      : (HERO_LABELS[data.state] ?? "COMMUNITY LEAGUE");
+    data.state === "upcoming" || data.state === "off_season"
+      ? HERO_LABELS[data.state]
+      : (LIVE_STATE_COPY[data.season.state] ?? "SEASON IN PROGRESS");
 
   const liveHref =
     data.state !== "off_season"

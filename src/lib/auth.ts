@@ -66,8 +66,8 @@ export const auth = betterAuth({
         to: user.email,
         subject: "Verify your email — Spicy League",
         html: `
-          <p>Welcome to Spicy League!</p>
-          <p>Click the link below to verify your email address and activate your account.</p>
+          <p>A Spicy League account was created with this email address.</p>
+          <p>Use the link below to verify your email address and activate the account.</p>
           <p><a href="${url}" style="font-weight:bold">Verify email</a></p>
           <p>This link expires in 24 hours. If you didn't create an account you can ignore this email.</p>
         `,

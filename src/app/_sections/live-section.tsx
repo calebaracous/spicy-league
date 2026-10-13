@@ -17,7 +17,7 @@ interface LiveSectionProps {
 function matchLabel(round: number, stage: string): string {
   if (stage === "final") return "Final";
   if (stage === "semis") return "Semifinal";
-  return `Week ${round}`;
+  return `Group stage · Round ${round}`;
 }
 
 function formatScheduledAt(d: Date | null): string {
@@ -54,7 +54,7 @@ export function LiveSection({ season, nextMatch, topPlayers }: LiveSectionProps)
             <SectionLabel>{phaseLabel}</SectionLabel>
           </div>
           <h2 className="text-heading" style={{ color: "var(--text)" }}>
-            Next match up
+            Next match
           </h2>
         </Reveal>
 
@@ -121,7 +121,7 @@ export function LiveSection({ season, nextMatch, topPlayers }: LiveSectionProps)
         ) : (
           <Reveal>
             <p className="text-sm" style={{ color: "var(--muted)" }}>
-              No upcoming matches scheduled yet.
+              No unplayed matches remain.
             </p>
           </Reveal>
         )}
@@ -137,15 +137,15 @@ export function LiveSection({ season, nextMatch, topPlayers }: LiveSectionProps)
 
       <TintedSection tint="none">
         <Reveal className="mb-14 flex flex-col gap-4">
-          <SectionLabel>PLAYERS TO WATCH OUT FOR</SectionLabel>
+          <SectionLabel>TOP-RANKED PLAYERS</SectionLabel>
           <h2 className="text-heading" style={{ color: "var(--text)" }}>
-            Carrying their <span style={{ color: "var(--accent)" }}>squads</span>
+            Highest-ranked <span style={{ color: "var(--accent)" }}>players</span>
           </h2>
           <p
             className="text-sm leading-relaxed"
             style={{ color: "var(--muted)", maxWidth: "52ch" }}
           >
-            Highest-ranked players in the pool, by solo queue MMR.
+            Players in this season with a linked Riot account, ordered by solo queue rank.
           </p>
         </Reveal>
 
@@ -160,11 +160,11 @@ export function LiveSection({ season, nextMatch, topPlayers }: LiveSectionProps)
         ) : (
           <Reveal>
             <p className="text-sm" style={{ color: "var(--muted)" }}>
-              Check the{" "}
+              No rank data available. Current results are on the{" "}
               <a href={matchesHref} style={{ color: "var(--accent)" }}>
-                full standings
-              </a>{" "}
-              to see who&apos;s running away with it.
+                standings page
+              </a>
+              .
             </p>
           </Reveal>
         )}

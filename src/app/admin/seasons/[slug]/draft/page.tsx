@@ -104,8 +104,8 @@ export default async function AdminDraftPage({
         <CardHeader>
           <CardTitle>Controls</CardTitle>
           <CardDescription>
-            Captains pick at their own pace — there&apos;s no clock. Admins can pick on behalf of
-            anyone from the live board.
+            There is no pick timer. Admins can make the current pick on behalf of the captain whose
+            turn it is from the live board.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
