@@ -1,5 +1,15 @@
 # Handoff: 10-man Feature
 
+> **Status: implemented.** This is the pre-build design handoff, kept for
+> reference. The shipped behavior is documented in
+> [docs/TEN-MAN.md](../../TEN-MAN.md) — read that first. Notable
+> divergences: the flow lives at `/10-man/[id]` (with `/10-man` redirecting
+> to the active session), only the slot-grid / tap-card / live-board
+> variants were built, there is no `vote-bar` primitive, SSE is plain
+> polling with no broadcast helper, and candidate/self-vote validation
+> in `castVote` was not implemented.
+
+
 A single, one-off 5v5 pickup match flow for Spicy League — alongside the existing season system, but completely standalone. Five phases: signup → captain vote → snake draft → ready/lobby → result/complete.
 
 ## About the Design Files

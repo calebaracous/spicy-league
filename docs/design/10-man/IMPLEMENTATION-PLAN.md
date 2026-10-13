@@ -1,5 +1,15 @@
 # 10-man Feature — Implementation Plan
 
+> **Status: implemented.** This is the pre-build design handoff, kept for
+> reference. The shipped behavior is documented in
+> [docs/TEN-MAN.md](../../TEN-MAN.md) — read that first. Notable
+> divergences: the flow lives at `/10-man/[id]` (with `/10-man` redirecting
+> to the active session), only the slot-grid / tap-card / live-board
+> variants were built, there is no `vote-bar` primitive, SSE is plain
+> polling with no broadcast helper, and candidate/self-vote validation
+> in `castVote` was not implemented.
+
+
 A handoff for Claude Code to wire this prototype into the live Next.js app.
 The prototype (`10man/index.html`) shows the target UI; this doc maps each
 piece to source files in `spicy-league/`.

@@ -17,7 +17,9 @@ Each season follows the same lifecycle:
 5. **Playoffs** — top 4 teams, single-elimination bracket
 6. **Archive** — season is frozen and preserved in history
 
-The app handles all of it: signups, a live draft with a pick clock, match reporting, standings with tiebreakers, and player profiles backed by Riot API stats.
+The app handles all of it: signups, a live realtime draft, match reporting, standings with tiebreakers, and player profiles backed by Riot API stats.
+
+It also runs **10-mans** — one-off 5v5 pickup games: the first 10 signups vote for two captains, who snake-draft the other eight live. See [docs/TEN-MAN.md](docs/TEN-MAN.md).
 
 ---
 
@@ -28,11 +30,11 @@ The app handles all of it: signups, a live draft with a pick clock, match report
 | Framework | Next.js 16 (App Router) + React 19 |
 | Language | TypeScript (strict) |
 | Styling | Tailwind CSS v4 + shadcn/ui |
-| Auth | Better Auth — email + password, email verification |
+| Auth | Better Auth — username + password, email verification |
 | Database | Neon Postgres |
 | ORM | Drizzle ORM |
 | Email | Resend |
-| Realtime (draft) | Server-Sent Events (DB polling, no external pub/sub) |
+| Realtime (drafts, 10-mans) | Server-Sent Events (DB polling, no external pub/sub) |
 | Rate limiting | Upstash Redis (optional — falls open if not configured) |
 | Cron | Vercel Cron — daily Riot stat refresh |
 | Validation | Zod |
@@ -45,7 +47,7 @@ The app handles all of it: signups, a live draft with a pick clock, match report
 **Prerequisites:** Node.js 20+, a Neon Postgres database, a Resend account.
 
 ```bash
-git clone https://github.com/CalebAracous/spicy-league.git
+git clone https://github.com/calebaracous/spicy-league.git
 cd spicy-league
 npm install
 ```
@@ -95,7 +97,13 @@ npm run db:migrate    # apply pending migrations
 npm run db:studio     # open Drizzle Studio to browse the DB
 ```
 
-Schemas live in `src/db/schema/` — one file per domain (`auth`, `seasons`, `drafts`, `matches`, `stats`).
+Schemas live in `src/db/schema/` — one file per domain (`auth`, `seasons`, `drafts`, `matches`, `stats`, `ten-mans`).
+
+To get a populated season locally, seed one (4 captain + 16 bot accounts; credentials are in the script header):
+
+```bash
+npx tsx --env-file=.env.local scripts/seed-test-season.ts
+```
 
 ---
 
@@ -106,10 +114,10 @@ npm run dev        # dev server with Turbopack
 npm run build      # production build
 npm run lint       # ESLint
 npm run typecheck  # tsc --noEmit
-npm run format     # Prettier
+npm run format     # Prettier (format:check is what CI runs)
 ```
 
-CI runs format, lint, typecheck, and build on every push.
+CI runs format check, lint, typecheck, and build on every push. A Husky pre-commit hook runs ESLint + Prettier on staged files.
 
 ---
 
@@ -120,11 +128,13 @@ src/
   app/              # Next.js App Router — pages, server actions, API routes
     admin/          # Admin-only pages (season management, draft controls)
     seasons/        # Public season pages (signup, draft viewer, matches)
-    api/            # Route handlers (auth, draft SSE stream, cron)
+    10-man/         # 10-man pickup flow (signup, vote, draft, result)
+    api/            # Route handlers (auth, draft + 10-man SSE streams, cron)
   components/       # Shared UI components and shadcn primitives
   db/               # Drizzle client and schema
   lib/              # Server-side logic (auth, draft, schedule, Riot API, etc.)
 drizzle/            # Generated migration files
+scripts/            # Dev scripts (test-season seeder, one-off migration runner)
 docs/               # Architecture and domain docs (good starting point)
 ```
 
@@ -136,9 +146,11 @@ docs/               # Architecture and domain docs (good starting point)
 - [SEASON-LIFECYCLE.md](docs/SEASON-LIFECYCLE.md) — season state machine
 - [DRAFT.md](docs/DRAFT.md) — snake algorithm and realtime architecture
 - [MATCHES.md](docs/MATCHES.md) — scheduling, standings, tiebreakers
+- [TEN-MAN.md](docs/TEN-MAN.md) — 10-man pickup flow
 - [INTEGRATIONS.md](docs/INTEGRATIONS.md) — Neon, Resend, Riot API, Upstash
 - [DESIGN-SYSTEM.md](docs/DESIGN-SYSTEM.md) — tokens, typography, component conventions
 - [ENV.md](docs/ENV.md) — all env vars with notes
+- [FILE-MAP.md](docs/FILE-MAP.md) — one line per source file
 
 ---
 

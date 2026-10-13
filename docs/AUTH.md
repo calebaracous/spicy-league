@@ -2,7 +2,9 @@
 
 Shipped with **Better Auth** (`better-auth@^1.6.5`) + Drizzle adapter +
 Resend email. **Not** NextAuth, despite what [PLANNING.md](../PLANNING.md)
-says. Email + password, with required email verification.
+says. Users **sign in with username + password** (email is only used for
+verification and password reset). Email verification is required before
+first sign-in.
 
 ## The three `auth` surfaces
 
@@ -12,7 +14,7 @@ There are three things named "auth" — know which one to import.
 |---|---|---|
 | `import { auth } from "@/lib/auth"` | Better Auth instance itself | Server only. Used by the auth route handler and by `src/auth.ts`. |
 | `import { auth } from "@/auth"` | App wrapper that returns `AppSession \| null` | Server components, pages. Normalizes the session shape. |
-| `import { authClient } from "@/lib/auth-client"` + `signIn`, `signUp`, `signOut`, `useSession` | React client SDK | Client components (`"use client"`). Calls `/api/auth/*` under the hood. |
+| `import { authClient } from "@/lib/auth-client"` + `signIn`, `signUp`, `signOut`, `useSession` | React client SDK | Client components (`"use client"`). Calls `/api/auth/*` under the hood. Currently used by the forgot/reset-password forms; sign-in and sign-up go through server actions instead. |
 
 Both server paths ultimately delegate to `betterAuth.api.getSession({ headers })`
 in `src/auth.ts`. `src/auth.ts` safe-casts the custom user fields
@@ -40,7 +42,8 @@ session payload — query the `users` table when you need them. `input: false`
 on `username` means clients cannot set it via Better Auth's auto-generated
 endpoints; we write it from our own signup server action (see
 `src/app/signup/actions.ts`). `bio`, `pronouns`, `opggUrl` are also
-`input: false` and mutated via `src/app/profile/page.tsx`.
+`input: false` and mutated via the inline `saveProfile` action in
+`src/app/profile/page.tsx`.
 
 ## Username vs display name
 
@@ -69,13 +72,35 @@ function never returns a bad session.
 
 **Admin check pattern**: every admin server action calls `requireAdmin()`
 first. Grep `requireAdmin\(\)` to find the admin-gated surface — currently
-everything under `src/app/admin/**/actions.ts` and some pieces of
-`src/app/seasons/[slug]/draft/actions.ts` (`startDraft`, `pauseDraft`,
-`resumeDraft`, `undoLastPick`).
+everything under `src/app/admin/**/actions.ts`, `startDraft` / `pauseDraft` /
+`resumeDraft` / `undoLastPick` in `src/app/seasons/[slug]/draft/actions.ts`,
+`confirmMatch` / `disputeMatch` / `resetMatch` in
+`src/app/seasons/[slug]/matches/actions.ts`, and `start10Man` /
+`cancel10Man` / `reportResult` in `src/app/10-man/actions.ts`.
 
-**Onboarded check pattern**: user-facing mutations use `requireOnboarded()`
-so we never have a team member with a null username. See
-`submitSignup`, `submitPick`, `reportMatch`.
+**Onboarded check pattern**: season and profile mutations use
+`requireOnboarded()` so we never have a team member with a null username.
+See `submitSignup`, `submitPick`, `reportMatch`, and everything in
+`src/app/profile/account-actions.ts`. 10-man actions only use
+`requireAuth()`.
+
+## Sign-in flow
+
+- `/signin` renders `SignInForm` (client) with **username**, password, and a
+  "remember me" checkbox.
+- On submit it calls the `signInWithUsername` server action in
+  `src/app/signin/actions.ts`:
+  1. Validates the username against `/^[a-zA-Z0-9_-]{3,24}$/` and lowercases it.
+  2. Looks up the user's email by username.
+  3. Calls `auth.api.signInEmail({ body: { email, password, rememberMe }, headers })`.
+     The `nextCookies()` plugin in `src/lib/auth.ts` is what makes the
+     `Set-Cookie` from this server-side call land on the response — without
+     it, server-action sign-in silently produces no session.
+  4. Returns `{ ok: true }` or `{ error }`. Unknown user and bad password
+     both return the same generic message. `EMAIL_NOT_VERIFIED` maps to a
+     "verify your email" message.
+- On `ok`, the client does `router.push(callbackUrl ?? "/profile")` +
+  `router.refresh()`.
 
 ## Signup flow
 
@@ -97,8 +122,13 @@ so we never have a team member with a null username. See
   `src/lib/auth.ts`). The session cookie name is therefore
   `sl.session_token` — that's the one we `cookies().delete()` on sign-out in
   `src/app/profile/page.tsx`.
-- **Session expiry**: 1 day default, updated every 12 hours. rememberMe on
-  signIn can extend to 30 days (not currently wired in UI).
+- **Session expiry**: `expiresIn` = 1 day, `updateAge` = 12 hours (rolling:
+  an active session is extended once it's 12h old).
+- **Remember me** (checkbox on `/signin`): Better Auth has no separate
+  long-lived duration. Checked → persistent cookie with `maxAge = expiresIn`
+  (1 day, rolling). Unchecked → browser-session cookie that is *not*
+  refreshed. The checkbox label currently says "30 days", which the config
+  does not deliver — raise `session.expiresIn` if that's the intent.
 - **Cookie cache**: 5-minute in-memory cache on the session cookie so we're
   not hitting Postgres on every request — configured in `src/lib/auth.ts`.
 
@@ -107,8 +137,9 @@ so we never have a team member with a null username. See
 - `/api/auth/[...all]/route.ts` mounts Better Auth's handler via
   `toNextJsHandler(auth)`. All sign-in, sign-up, verification, and
   reset-password requests flow through here.
-- `/api/auth/[...nextauth]/` is an **empty stub directory** — historical
-  remnant from the Auth.js plan. Ignore it.
+- `/api/auth/[...nextauth]/` may still exist on disk as an **empty,
+  untracked directory** — historical remnant from the Auth.js plan. It's
+  not in git; ignore or delete it.
 
 ## Admin promotion
 
@@ -132,6 +163,9 @@ See [ENV.md](ENV.md).
 
 - …a user cannot sign up → check `users.username` uniqueness in DB, or see
   if the validation regex rejects their chosen username.
+- …sign-in "succeeds" but the user isn't signed in → confirm `nextCookies()`
+  is still last in `plugins` in `src/lib/auth.ts`.
+- …a user can't sign in with their email → by design; sign-in is username-only.
 - …an email isn't sending → `AUTH_RESEND_KEY` unset, or the `from` address
   (`AUTH_EMAIL_FROM`, default `no-reply@spicyleague.dev`) isn't on a
   verified Resend domain.

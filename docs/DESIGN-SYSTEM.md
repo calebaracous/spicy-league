@@ -37,8 +37,9 @@ Shadcn-side mirror (kept for the primitives): `--destructive`,
 
 ## Typography
 
-Font: Geist Sans via `next/font/google` in `src/app/layout.tsx`, wired to
-`--font-geist-sans`.
+Fonts: Geist Sans + Geist Mono via `next/font/google` in
+`src/app/layout.tsx`, wired to `--font-geist-sans` / `--font-geist-mono`
+and exposed as `--font-sans` / `--font-mono`.
 
 Utility classes (in `globals.css`):
 
@@ -61,6 +62,17 @@ horizontal padding that grows at `md`. Prefer this over ad-hoc
 
 `--navbar-height: 64px` is exposed so sticky-offset calculations can share
 it (currently used only in `src/components/site-header-client.tsx`).
+
+Spacing scale tokens `--space-xs` (0.5rem) → `--space-3xl` (6rem) and
+`--container-max: 1120px` live in the same `:root` block.
+
+`TintedSection` (`src/components/ui/tinted-section.tsx`) is the home-page
+section wrapper: vertical padding + `.site-container`, with an optional
+`tint="subtle-warm"` that applies the `.tint-subtle-warm` background wash
+from `globals.css`.
+
+`.legal-prose` styles plain semantic HTML (h2/h3/p/ul/a/code) on
+`/terms` and `/privacy` via `LegalPage` (`src/components/legal-page.tsx`).
 
 ## Animation utilities
 
@@ -92,9 +104,17 @@ symmetric transitions.
 `separator.tsx`, `sonner.tsx`, `textarea.tsx`. All use the OKLCH tokens
 and `@base-ui/react` for accessibility.
 
-**Freelance-style (new)** — `reveal.tsx`, `section-label.tsx`,
-`divider.tsx`, `tag.tsx`, `link-button.tsx`, `logo-mark.tsx`. All use the
-hex tokens.
+**Freelance-style (new)** — all use the hex tokens:
+- General: `reveal.tsx`, `section-label.tsx`, `divider.tsx`, `tag.tsx`,
+  `link-button.tsx`, `logo-mark.tsx`, `tinted-section.tsx`.
+- Player/draft: `player-card.tsx` (username + role/rank row),
+  `captain-badge.tsx` (red-tinted name chip) — home sections.
+- 10-man: `snake-order-strip.tsx` (8-cell C1/C2 order, exports
+  `SNAKE_ORDER`), `vs-divider.tsx`.
+
+The 10-man phase boards (`src/app/10-man/[id]/_phases/`) use mostly inline
+`style={{…}}` with hex tokens plus local `Avatar` / `PhaseBanner` helpers
+in `_phases/shared.tsx`.
 
 When building new chrome: prefer the freelance primitives + hex tokens.
 When touching existing forms / admin: keep using shadcn.
@@ -105,11 +125,11 @@ When touching existing forms / admin: keep using shadcn.
 |---|---|
 | `src/app/layout.tsx` | `<html>` + Geist fonts + SiteHeader + SiteFooter. |
 | `src/app/template.tsx` | Adds `animate-page` to every route change. |
-| `src/components/site-header.tsx` | Server component. Calls `auth()`. |
-| `src/components/site-header-client.tsx` | Sticky nav: scroll-triggered blur+border, mobile hamburger overlay, session-aware actions. |
-| `src/components/site-footer.tsx` | Two-column footer. |
-| `src/app/_sections/*` | Home-page sections: Hero, About, HowItWorks, LatestSeasons, CallToAction. |
-| `src/app/page.tsx` | Composes the sections + pulls a live season for hero CTA. |
+| `src/components/site-header.tsx` | Server component. Calls `auth()`, builds the live pill (season or 10-man). |
+| `src/components/site-header-client.tsx` | Sticky nav: live pill, scroll-triggered blur+border, mobile hamburger overlay, session-aware actions. |
+| `src/components/site-footer.tsx` | Footer: nav links + Terms / Privacy. |
+| `src/app/_sections/*` | Home-page sections: Hero + one of Signup / Draft / Live / Upcoming / OffSeason + PastSeasonsStrip. (`about`, `how-it-works`, `latest-seasons`, `call-to-action` are unused leftovers.) |
+| `src/app/page.tsx` | Picks the section from `getHomepageData()` (`src/lib/homepage.ts`). |
 
 ## Conventions
 
@@ -130,6 +150,14 @@ set up so shadcn components don't explode when they look for `.dark`, but
 no toggle is wired. Light-mode values in `globals.css` are actually dark
 values — this predates the design pass. If you ever want a light mode,
 it'll require a proper token pair.
+
+## Agent design-system reference
+
+`.agents/design-system/` is a self-contained copy of the brand for agents
+and offline previews: `README.md` + `SKILL.md`, `colors_and_type.css`
+(mirror of the hex tokens), logo assets, `preview/*.html` swatches, and a
+marketing-site UI kit. `src/app/globals.css` remains the source of truth —
+update both if you change a token.
 
 ## Where to look when…
 

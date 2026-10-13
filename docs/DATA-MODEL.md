@@ -1,14 +1,19 @@
 # Data model
 
 All schemas live in `src/db/schema/` — one file per domain, re-exported from
-`src/db/schema/index.ts`. The Drizzle client is `src/db/client.ts` and
-uses **snake_case** column naming (`casing: "snake_case"` in both
+`src/db/schema/index.ts`. The Drizzle client is `src/db/client.ts` (Neon
+`Pool` over WebSocket via `drizzle-orm/neon-serverless`, so
+`db.transaction()` and `SELECT … FOR UPDATE` work) and uses **snake_case**
+column naming (`casing: "snake_case"` in both
 `drizzle.config.ts` and `client.ts`). IDs are all `text` primary keys —
 either crypto.randomUUID() (`$defaultFn`) or string IDs supplied by Better
 Auth.
 
-Migrations are generated sequentially under `drizzle/` — never edit an
-existing SQL file, create a new one with `npm run db:generate`.
+Migrations are generated sequentially under `drizzle/` (currently
+`0000_init` → `0009_ten_mans`) — never edit an existing SQL file, create a
+new one with `npm run db:generate`. Two are hand-written: `0007` (rename
+`display_name` → `username`) and `0009` (10-man tables + a partial unique
+index Drizzle can't express).
 
 ## auth.ts — users, sessions, accounts, verifications
 
@@ -25,8 +30,9 @@ wiring in `src/lib/auth.ts`).
   signup. 1–50 chars, editable on `/profile`.
 - `image` — Better Auth standard field (unused in UI)
 - **Custom fields** (added via `additionalFields` in `src/lib/auth.ts`):
-  - `username` text **unique** — immutable handle set at signup; used as the
-    public URL slug at `/users/{username}`. Regex: `[a-zA-Z0-9_-]{3,24}`.
+  - `username` text **unique** — immutable handle set at signup; the
+    sign-in identifier and the public URL slug at `/users/{username}`.
+    (Was `display_name` before migration 0007.) Regex: `[a-zA-Z0-9_-]{3,24}`.
     `input: false` means clients cannot set it via Better Auth's endpoints.
   - `role` enum `user_role` (`user | admin`), default `user`
   - `bio`, `pronouns`, `opggUrl` — free-text profile fields
@@ -56,9 +62,13 @@ Auth, not queried directly by app code.
 - `description` (text), `rules` (text) — markdown-ish, rendered as
   `whitespace-pre-wrap`
 - `signupOpensAt`, `signupClosesAt`, `seasonStartAt` — optional timestamps
-- `championTeamId` — **declared but never populated**; champion is derived
-  from `matches.stage = 'final' AND state = 'confirmed'` in
-  `src/app/seasons/[slug]/page.tsx`
+- `championTeamId` — **declared but never written by any code path**.
+  `src/app/seasons/[slug]/page.tsx` correctly derives the champion from
+  `matches.stage = 'final' AND state = 'confirmed'`, but
+  `src/lib/homepage.ts` *reads* `championTeamId` (past-seasons strip
+  `championName`, off-season podium) — so those show no champion / an
+  empty podium until something populates it (e.g. `confirmMatch` on the
+  final).
 - `createdBy` FK → users (set null)
 - Index on `state` for the home-page live-season query
 
@@ -76,9 +86,11 @@ One row per (season, user). Enforced by a unique constraint
 ### `seasonCaptains`
 One row per (season, user) — unique. `captainOrder` is 1-indexed and drives
 the snake draft. Order is mutable via `promoteCaptain` / `demoteCaptain` /
-`moveCaptain` in `src/app/admin/seasons/[slug]/signups/actions.ts` — note
-`moveCaptain` does a three-write swap (through `-1`) to avoid the unique
-constraint colliding mid-swap.
+`moveCaptain` in `src/app/admin/seasons/[slug]/signups/actions.ts`.
+There is **no** unique constraint on `(seasonId, captainOrder)` — order
+uniqueness is maintained by those actions only. `moveCaptain` still swaps
+through a `-1` placeholder (three writes) so it stays safe if such a
+constraint is ever added.
 
 ## drafts.ts — drafts, picks, teams, team_members
 
@@ -126,27 +138,48 @@ See [MATCHES.md](MATCHES.md) for the lifecycle and tiebreaker rules.
 ## stats.ts — accountLinks, riotStatSnapshots, leetifyStatSnapshots
 
 ### `accountLinks`
-One per (user, provider) — unique. Provider is enum `account_provider`:
+Unique on `(userId, provider, externalId)` (`account_links_user_provider_external_uniq`,
+since migration 0008). Provider is enum `account_provider`:
 `riot | steam | leetify`.
 
-- `externalId` — PUUID for riot, Steam64 for steam, profile URL for leetify
-- `externalHandle` — `gameName#tagLine` for riot, display name / URL for others
+- **Riot**: up to `MAX_RIOT_ACCOUNTS = 3` links per user
+  (`src/app/profile/constants.ts`, enforced in `linkRiotAccount`). The
+  same PUUID can't be linked twice by one user.
+- **Steam / Leetify**: app code keeps one per user (update-in-place in
+  `linkCs2Account`), but the DB would allow more.
+- `externalId` — PUUID for riot, Steam64 (`7656…`, 17 digits) for steam,
+  profile URL for leetify
+- `externalHandle` — `gameName#tagLine` for riot, URL for leetify, null for steam
 
 ### `riotStatSnapshots`
-**Replace-all-on-refresh**: `refreshRiotStats(userId)` in
-`src/lib/stat-refresh.ts` deletes all existing rows for the user before
-inserting the new ones. So multiple rows per user are possible only within
-a single refresh pass (solo + flex queues), never accumulating history.
+Keyed per **account link** (`accountLinkId` FK → `account_links`, cascade)
+as well as `userId`. **Replace-on-refresh per link**: `refreshRiotLink` in
+`src/lib/stat-refresh.ts` deletes that link's rows and inserts fresh ones —
+up to two (solo + flex), never accumulating history. If the Riot rank call
+fails (`null`), the existing rows are left untouched.
 
 If the Riot API returns no ranked entries, we insert a single placeholder
-row with queue `"solo"` and all other fields null — that's how we
+row with queue `"solo"` and all rank fields null — that's how we
 distinguish "unranked" from "never refreshed".
+
+Consumers that want "a user's rank" (draft pool, home page) filter
+`queue = 'solo'` by `userId`; with multiple linked accounts they get
+whichever row comes first, not the best one.
 
 - `topChamps` jsonb — `[{ championId, championPoints, championLevel }]`
 
 ### `leetifyStatSnapshots`
 Scaffolded, **not populated** by any code path. Placeholder for future CS2
 stats integration.
+
+## ten-mans.ts — 10-man pickup matches
+
+Five tables: `ten_mans`, `ten_man_signups`, `ten_man_votes`,
+`ten_man_captains`, `ten_man_picks`, plus enum `ten_man_state`
+(`signups | voting | drafting | ready | complete | cancelled`). Fully
+independent of seasons/teams/matches. Constraints, lifecycle and the
+"one active at a time" partial unique index are documented in
+[TEN-MAN.md](TEN-MAN.md).
 
 ## Cascade semantics
 
@@ -156,12 +189,18 @@ their derived rows. Exceptions:
 - `seasons.createdBy` → set null
 - `matches.winnerTeamId` → set null
 - `matches.reportedBy` → set null
+- `ten_mans.createdBy` → set null, **but the column is `NOT NULL`** — so
+  deleting a user who started a 10-man fails.
+- `ten_mans.winnerCaptainUserId`, `ten_man_picks.captainUserId`,
+  `ten_man_picks.pickedUserId` → no action — deleting a user who was
+  drafted in / captained a 10-man fails.
 
 Deleting a **user** cascades to sessions, accounts, signups, captains, team
-memberships, draft picks (both as captain AND as picked), and stat
-snapshots. There is no user-delete UI — it'd leave orphaned team captains
-with no captain. Don't delete users without thinking through the season
-state.
+memberships, teams they captain (and therefore those teams' matches), draft
+picks (both as captain AND as picked), 10-man signups/votes/captaincies,
+account links and stat snapshots — subject to the blocking FKs above.
+There is no user-delete UI. Don't delete users without thinking through
+season and 10-man state.
 
 ## Invariants enforced in code, not DB
 
@@ -169,12 +208,16 @@ state.
   running when `picks.length === totalPicks(captains.length)`.
 - Captain cannot be picked. Enforced in `submitPick` in
   `src/app/seasons/[slug]/draft/actions.ts`.
-- Match reporter must be captain of home or away team (or admin).
-  Enforced in `reportMatch` via `getTeamForCaptain`.
+- Match reporter must be on the home or away team — captain **or**
+  rostered member — or an admin. Enforced in `reportMatch` via
+  `getTeamForCaptain` (which, despite the name, also matches team members).
 - Only one active draft per season. Enforced by `drafts.seasonId` being
   unique.
 - Signups only accept users whose username is non-null. Enforced by
   `requireOnboarded()`.
+- Max 3 Riot links per user. Enforced in `linkRiotAccount`.
+- 10-man invariants (10 signups, 2 captains, 8 picks) — enforced in
+  `src/app/10-man/actions.ts`; see [TEN-MAN.md](TEN-MAN.md).
 
 ## Where to look when…
 

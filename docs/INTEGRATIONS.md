@@ -2,9 +2,16 @@
 
 ## Neon Postgres
 
-- Driver: `@neondatabase/serverless` over HTTP (`neon(DATABASE_URL)`).
+- Driver: `@neondatabase/serverless` **`Pool`** over WebSocket, via
+  `drizzle-orm/neon-serverless`. Switched from the HTTP driver because the
+  10-man actions need interactive transactions (`db.transaction()` +
+  `SELECT … FOR UPDATE`). `neonConfig.webSocketConstructor` is set to the
+  runtime's global `WebSocket` (native in Node 22).
 - ORM: `drizzle-orm` with schema inferred from `src/db/schema/**`.
-- Connection: single `db` instance exported from `src/db/client.ts`.
+- Connection: single module-level `Pool` + `db` instance exported from
+  `src/db/client.ts`.
+- Scripts in `scripts/` still use the HTTP driver (`neon()` /
+  `drizzle-orm/neon-http`) — fine for one-shot statements.
 - Missing `DATABASE_URL` → a placeholder URL is used so module load
   doesn't throw. Queries fail with a clear connection error at request
   time. This keeps CI + first-time setup working without a DB.
@@ -38,17 +45,18 @@ every 24h).
   mastery go to `na1.api.riotgames.com`. Non-NA players are not supported.
 - **Endpoints in use**:
   - `/riot/account/v1/accounts/by-riot-id/{gameName}/{tagLine}` — PUUID
-    resolution on account link.
+    resolution on account link (`linkRiotAccount`; returns
+    `riot-not-found` if null).
   - `/lol/league/v4/entries/by-puuid/{puuid}` — ranked solo / flex.
   - `/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}/top` —
     top champs.
 - **No explicit rate limiter** — `riotFetch` is a plain `fetch` with the
-  API-key header. Daily batch refresh (`refreshAllRiotStats`) sleeps 1200ms
-  between users, keeping us well under the personal-key limit of 100
+  API-key header. Refreshes sleep 1200ms between **account links** (each
+  link costs 2 calls), keeping us under the personal-key limit of 100
   requests per 2 minutes.
 - **Response caching**: `next: { revalidate: 0 }` means no cache. Each call
-  is fresh. Fine since we only hit Riot from the daily cron and the manual
-  refresh button.
+  is fresh. Fine since we only hit Riot from account linking, the daily
+  cron, and the manual refresh button.
 - **Error policy**: every failure returns `null`, never throws. Callers
   check for null. This loses specificity (404 vs 429 vs 5xx are all null)
   but keeps the UI robust — stats just don't update.
@@ -61,12 +69,20 @@ every 24h).
 
 `src/lib/stat-refresh.ts`:
 
-- `refreshRiotStats(userId)` — delete-then-insert pattern. Fetches rank
-  entries + top 3 champs, wipes existing snapshots for the user, inserts
-  new ones. If unranked, inserts a placeholder row so we can distinguish
-  "unranked" from "not refreshed".
-- `refreshAllRiotStats()` — iterates all riot `accountLinks`, calls
-  `refreshRiotStats` with a 1200ms sleep between. Returns count.
+Users can link up to 3 Riot accounts; snapshots are stored per link
+(`riot_stat_snapshots.account_link_id`).
+
+- `refreshRiotLink(link)` (internal) — fetches rank entries + top 3 champs
+  for one PUUID. If the rank call returns `null`, bails *without* touching
+  existing rows. Otherwise deletes that link's snapshots and inserts solo
+  and/or flex rows (or one all-null `solo` placeholder if unranked).
+- `refreshRiotStats(userId)` — runs `refreshRiotLink` for each of the
+  user's Riot links, 1200ms apart. Called after `linkRiotAccount` and by the
+  manual refresh button.
+- `refreshAllRiotStats()` — iterates **every** riot `accountLink` (not just
+  active-season players), 1200ms apart. Returns the count refreshed. At
+  ~1.2s per link, `maxDuration = 300` caps a single cron run at roughly
+  250 links.
 
 ### Cron refresh
 
@@ -94,7 +110,7 @@ Defined specs:
 | `statRefresh` | 1 | 1h | manual `/profile` refresh button |
 
 The `magicLink` spec is declared but currently unused — we ship
-email+password, not magic links.
+username + password (Better Auth credential provider), not magic links.
 
 Identifier pattern: user ID for per-user limits, email for pre-login
 limits.
@@ -107,14 +123,20 @@ limits.
   UTC.
 - **Runtime**: Node.js (not edge) — Better Auth's Drizzle adapter and
   Resend need Node APIs.
-- **Image / Blob**: `@next/image` is used (see `src/app/history/page.tsx`
-  and the CTA cards), but Vercel Blob is **not wired up** for uploads.
+- **Images / Blob**: `next/image` is not used — `/history` renders plain
+  `<img>` tags from `public/history/`. Vercel Blob is **not wired up** for
+  uploads.
+- **SSE routes** (`/api/draft/[slug]/stream`, `/api/ten-man/[id]/stream`)
+  set `maxDuration = 300`; the browser's `EventSource` reconnects when
+  Vercel closes them.
 
 ## Things set up but not in use
 
 - **Leetify / Steam API calls** — schemas exist (`leetifyStatSnapshots`,
   `account_provider = 'steam' | 'leetify'`), but there's no code that
-  calls Leetify or Steam Web API. Users just paste URLs we store.
+  calls Leetify or Steam Web API. Users paste a Steam64 ID (validated
+  `^7656\d{13}$`) and optionally a leetify.com URL; we store them and
+  link out from the public profile.
 - **Discord webhooks / bot** — planned in PLANNING.md, not started.
 - **Sentry / PostHog** — planned, not wired.
 - **Avatar uploads** — `users.image` column exists, no upload flow.

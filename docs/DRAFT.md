@@ -3,6 +3,10 @@
 The hardest subsystem. A captains-draft snake, played live, with realtime
 updates to all viewers via Server-Sent Events.
 
+This file covers the **season** draft. The 10-man flow has its own,
+simpler 2-captain draft with a fixed pick order — see
+[TEN-MAN.md](TEN-MAN.md). It reuses the same SSE pattern.
+
 ## Snake order
 
 ```ts
@@ -38,6 +42,10 @@ All draft state lives in Postgres. Two tables:
 Derived view: `getDraftSnapshot(seasonSlug)` in `src/lib/draft.ts` joins
 everything into a single `DraftSnapshot` with captains, pool,
 picks, `onTheClock`, and totals — this is what we serve to clients.
+Display names are `COALESCE(users.name, users.username, '?')`. For LoL
+seasons each pool entry also carries `riotRank` (`tier`, `rankDivision`,
+`lp` from the user's `queue = 'solo'` snapshot, or `null`), which the live
+board renders next to each player.
 
 ## The "on the clock" derivation
 
@@ -92,13 +100,13 @@ All failures redirect with a short error code; the page's error renderer
 displays them.
 
 Order of checks:
-1. `requireOnboarded()` — must be signed in + have a displayName.
-2. Season exists.
-3. Draft exists.
-4. Draft `state === "in_progress"` (rejects paused / pending / completed).
+1. `requireOnboarded()` — must be signed in + have a username.
+2. Season exists (else redirect `/admin?error=not-found`).
+3. Draft exists → `no-draft`.
+4. Draft `state === "in_progress"` (rejects paused / pending / completed) → `not-running`.
 5. Fetch captains + existing picks.
 6. If `existingPicks.length >= total` → `draft-complete`.
-7. Compute `nextPickNumber` and `onClockCaptain`.
+7. Compute `nextPickNumber` and `onClockCaptain` (missing → `internal`).
 8. `!isAdmin && userId !== onClockCaptain.userId` → `not-your-turn`.
 9. Picked user is not themselves a captain → `cant-pick-captain`.
 10. Picked user not already picked → `already-picked`.
@@ -119,17 +127,20 @@ All in `src/app/seasons/[slug]/draft/actions.ts`, all gated by
 
 | Action | Effect |
 |---|---|
-| `startDraft(slug)` | Creates or resumes the `drafts` row (`state=in_progress`). Also transitions `seasons.state` to `drafting` if not already. Bails if `< 2 captains`. |
+| `startDraft(slug)` | Creates or resumes the `drafts` row (`state=in_progress`). Also transitions `seasons.state` to `drafting` if not already. Bails with `need-captains` if `< 2` captains, `already-complete` if the draft is completed. |
 | `pauseDraft(slug)` | `state=paused` (only if currently `in_progress`). |
 | `resumeDraft(slug)` | `state=in_progress` (only if currently `paused`). |
-| `undoLastPick(slug)` | Deletes the row with max `pickNumber`. Does nothing to the draft state or the season. If you undo past a `finalizeDraft` call, you'll need to also wipe teams manually. |
+| `undoLastPick(slug)` | Deletes the row with max `pickNumber` (`no-draft` / `no-picks` errors). Does nothing to the draft state or the season. If you undo past a `finalizeDraft` call, you'll need to also wipe teams and reset draft/season state manually. |
 
 There is no auto-pick / pick clock. Pick timers were planned (see
-PLANNING Phase 5) but are not implemented.
+PLANNING Phase 5) but are not implemented. Captain seeding is whatever
+order the admin set — no randomisation.
 
 ## Finalize
 
 `finalizeDraft(draftId)` in `src/lib/draft.ts`:
+
+Plain sequential writes — **not** wrapped in a transaction.
 
 1. Fetch the draft, captains, picks.
 2. Bail if pick count isn't exactly `totalPicks(captains.length)`.
@@ -153,8 +164,9 @@ Captains are registered in `seasonCaptains` by admin action (see
 [SEASON-LIFECYCLE.md](SEASON-LIFECYCLE.md)). `captainOrder` is the 1-indexed
 seed and drives snake order. `moveCaptain` in
 `src/app/admin/seasons/[slug]/signups/actions.ts` re-ranks with a
-three-step swap because `(seasonId, captainOrder)` would otherwise collide
-mid-update — careful if you refactor that.
+three-step swap through `-1`. There's no unique constraint on
+`(seasonId, captainOrder)` today, so this is defensive — keep it if you
+refactor, in case one is added.
 
 Once `drafting` begins, admins should avoid reordering captains (the snake
 computation doesn't consult existing picks — you'd skew the order).

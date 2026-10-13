@@ -1,8 +1,19 @@
 # Environment variables
 
-Validated at boot by `@t3-oss/env-nextjs` in `src/lib/env.ts`. Anything
-missing is silently `undefined` (all vars are `.optional()`), but features
-that need them will no-op or fail at request time.
+Declared and validated by `@t3-oss/env-nextjs` in `src/lib/env.ts`.
+Anything missing is silently `undefined` (all vars are `.optional()`), but
+features that need them will no-op or fail at request time. Validation
+only bites on *malformed* values (e.g. a non-URL `DATABASE_URL`, a
+`BETTER_AUTH_SECRET` under 32 chars).
+
+Note: validation runs when `src/lib/env.ts` is first imported, not at
+boot — and only `riot-api.ts`, `rate-limit.ts` and the cron route import
+it. `src/db/client.ts` and `src/lib/auth.ts` read `process.env` directly,
+so a malformed auth/DB var won't be caught until one of those three
+modules loads.
+
+Template: `.env.example` lists every var below with comments. Copy it to
+`.env.local`.
 
 Set `SKIP_ENV_VALIDATION=1` to bypass the schema — useful in CI for
 builds that don't need runtime secrets.
@@ -11,10 +22,10 @@ builds that don't need runtime secrets.
 
 | Var | Required for | Notes |
 |---|---|---|
-| `DATABASE_URL` | any DB query | Neon pooled URL. Missing → fallback placeholder URL; queries fail at request time, not at module load. |
+| `DATABASE_URL` | any DB query | Neon connection string (used by the `Pool` WebSocket driver and by `scripts/`). Missing → fallback placeholder URL; queries fail at request time, not at module load. |
 | `BETTER_AUTH_SECRET` | any auth operation | Min 32 chars. `AUTH_SECRET` is also read as fallback in `src/lib/auth.ts`. |
-| `BETTER_AUTH_URL` | custom domain deploys | Only set when Better Auth needs a fixed baseURL (e.g. behind Cloudflare). Vercel default auto-detects. |
-| `AUTH_RESEND_KEY` | email verification, password reset | Without this, signup emails silently 500. |
+| `BETTER_AUTH_URL` | custom domain deploys | Fixed `baseURL` + trusted origin for Better Auth. Unset → auto-detected from the request host. Production uses `https://www.spicyleague.dev` (the `www` form — see [AUTH.md](AUTH.md)). |
+| `AUTH_RESEND_KEY` | email verification, password reset | Without this, the Resend send throws and signup / reset fail. Users can't verify, so they can't sign in. |
 | `AUTH_EMAIL_FROM` | email sending | Defaults to `no-reply@spicyleague.dev`. Must be a domain Resend has verified. |
 | `RIOT_PERSONAL_API_KEY` | LoL stats refresh | Preferred over developer key (doesn't expire). |
 | `RIOT_DEVELOPER_API_KEY` | LoL stats refresh (fallback) | Expires every 24h; only for dev. |

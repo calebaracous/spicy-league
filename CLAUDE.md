@@ -30,6 +30,8 @@ source of truth for what's shipped.**
   `submitPick` validation chain.
 - `docs/MATCHES.md` — scheduling (circle method), match lifecycle,
   standings + tiebreakers, playoff seeding.
+- `docs/TEN-MAN.md` — 10-man pickup flow: lifecycle, transactional
+  actions, captain vote/election, fixed snake order, SSE.
 - `docs/INTEGRATIONS.md` — Neon, Resend, Riot API, Upstash, Vercel Cron.
 - `docs/DESIGN-SYSTEM.md` — two coexisting token systems (freelance hex +
   shadcn OKLCH), typography, animations, primitives.

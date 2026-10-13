@@ -33,7 +33,11 @@ once).
 Admin triggers via `generateMatchSchedule(slug)` in
 `src/app/admin/seasons/[slug]/matches/actions.ts` → `/admin/seasons/[slug]/matches`
 page. Must be run once, after teams are created (i.e. after the draft
-finalizes).
+finalizes). Returns `already-generated` if any match exists or there are
+fewer than 2 teams. `scheduledAt` is never set — matches are unscheduled
+(captains coordinate). The home page's "next match" orders by
+`scheduledAt`, so with all-null values it picks an effectively arbitrary
+`scheduled` match.
 
 ## Match lifecycle
 
@@ -48,22 +52,29 @@ All transitions are server actions in
 
 ### `reportMatch(slug, matchId, formData)`
 - `requireOnboarded()`.
-- Match must exist, not be `confirmed`.
-- If not admin: caller must be captain of the home or away team
-  (`getTeamForCaptain` in `src/lib/schedule.ts`).
-- `winnerTeamId` must match home or away ID.
-- Scores parsed as ints (defaulted to null if 0/missing).
+- Match must exist (`not-found`), not be `confirmed` (`already-confirmed`).
+- If not admin: caller must be **on** the home or away team — captain or
+  any rostered member. `getTeamForCaptain` in `src/lib/schedule.ts` checks
+  `teams.captainUserId` first, then `team_members`. Errors: `not-on-team`,
+  `not-your-match`.
+- `winnerTeamId` must match home or away ID (`invalid-winner`).
+- Scores parsed as ints; `0`, blank, or non-numeric all become `null`
+  (`parseInt(...) || null`). A 2–0 is stored as home 2 / away null — the
+  standings treat null as 0, so game diff is still correct.
+- Can re-report a `reported` or `disputed` match — it simply overwrites.
 - Sets `state = 'reported'`, stamps `reportedBy` + `reportedAt`.
 
 ### `confirmMatch(slug, matchId)` — admin only
-- Sets `state = 'confirmed'`, stamps `confirmedAt`.
+- Sets `state = 'confirmed'`, stamps `confirmedAt`. Does not require the
+  match to be `reported` first, and doesn't check `winnerTeamId` is set.
 - **Branches on stage**:
   - If the match is a **semi**: check both semis are now confirmed with
     winners. If so, create the final as `round=201, stage='final',
     home=semi1.winner, away=semi2.winner`. Idempotent (bails if final
     already exists).
   - If the match is the **final**: set the enclosing `seasons.state` to
-    `complete`. The season is now over.
+    `complete`. The season is now over. It does **not** write
+    `seasons.championTeamId`.
 
 ### `disputeMatch(slug, matchId)` — admin only
 Resets `winnerTeamId`, `homeScore`, `awayScore` to null and sets
@@ -120,8 +131,11 @@ const finalMatch = await db.query.matches.findFirst({
 const champ = await db.query.teams.findFirst({ where: teams.id=finalMatch.winnerTeamId });
 ```
 
-`seasons.championTeamId` **is not populated** — derivation is always via
-the final match. This was a scope decision: avoid two sources of truth.
+`seasons.championTeamId` **is not populated** — the season page derives
+the champion via the final match. But the home page
+(`src/lib/homepage.ts`: past-seasons strip and off-season podium) *reads*
+`championTeamId`, so it shows no champion. Either populate it in
+`confirmMatch` or switch the home page to the final-match derivation.
 
 ## Round ordering
 

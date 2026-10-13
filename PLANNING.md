@@ -3,6 +3,24 @@
 A Next.js web app to run the Spicy League: a recurring captains-draft 5v5
 tournament series for League of Legends and Counter-Strike 2.
 
+> **This is the original, aspirational plan — not the current state.**
+> [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) is the source of truth for
+> what shipped. Major divergences as of 2026-10:
+>
+> - **Auth**: Better Auth with username + password + email verification —
+>   not Auth.js magic links. No `/onboarding`; username is set at signup.
+>   Public profiles are `/users/[username]`, not `/u/[displayName]`.
+> - **Realtime**: SSE polling the DB every 2s — not Pusher/Ably.
+> - **Email**: Resend with inline HTML — no React Email.
+> - **Phases 0–7** are built, with these gaps: no pick clock / auto-pick,
+>   no randomized captain seeding, no Discord webhooks, no `bottleneck`
+>   limiter or response cache for Riot, no head-to-head tiebreaker, no
+>   avatar uploads, no audit log. Riot users can link up to 3 accounts.
+> - **Phase 8** (polish & ops) is not started — no Sentry/PostHog, Discord
+>   bot, or notification emails.
+> - **Unplanned addition**: 10-man pickup matches
+>   ([docs/TEN-MAN.md](docs/TEN-MAN.md)), Terms/Privacy pages.
+
 ---
 
 ## 1. Tournament format (authoritative spec)
