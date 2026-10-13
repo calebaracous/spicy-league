@@ -118,10 +118,19 @@ See `submitSignup`, `submitPick`, `reportMatch`, and everything in
 
 ## Cookies + sessions
 
-- **Cookie prefix**: `sl` (from `advanced.cookiePrefix` in
-  `src/lib/auth.ts`). The session cookie name is therefore
-  `sl.session_token` — that's the one we `cookies().delete()` on sign-out in
-  `src/app/profile/page.tsx`.
+- **Cookies** (prefix `sl` from `advanced.cookiePrefix` in
+  `src/lib/auth.ts`; on HTTPS Better Auth prepends `__Secure-`, so prod
+  names are `__Secure-sl.*`):
+  - `sl.session_token` — the session token.
+  - `sl.session_data` — signed cookie cache of the session (see below).
+  - `sl.dont_remember` — only when signed in with "remember me" unchecked.
+  `sl.account_data` is not used (`account.storeAccountCookie` is off).
+  These are listed in the Privacy Policy (`src/app/privacy/page.tsx`) —
+  update it if this set changes.
+- **Sign-out**: `doSignOut` in `src/app/profile/page.tsx` calls Better
+  Auth's `signOut`, which clears the cookies via `nextCookies()`. Its extra
+  `cookies().delete("sl.session_token")` only matches the unprefixed dev
+  name; it's a harmless no-op in production.
 - **Session expiry**: `expiresIn` = 30 days, `updateAge` = 1 day (rolling:
   an active session is pushed out to 30 days once it's a day old).
 - **Remember me** (checkbox on `/signin`, "Stay signed in for 30 days"):
@@ -130,8 +139,9 @@ See `submitSignup`, `submitPick`, `reportMatch`, and everything in
   `maxAge = expiresIn` (30 days, rolling). Unchecked → browser-session
   cookie, not refreshed, and Better Auth caps the DB session at 1 day.
   Email-verification auto sign-in uses the remembered (30-day) path.
-- **Cookie cache**: 5-minute in-memory cache on the session cookie so we're
-  not hitting Postgres on every request — configured in `src/lib/auth.ts`.
+- **Cookie cache**: `cookieCache` (5 minutes) stores the session in the
+  signed `sl.session_data` cookie so most requests skip the Postgres
+  session lookup — configured in `src/lib/auth.ts`.
 
 ## Routing
 
@@ -172,6 +182,6 @@ See [ENV.md](ENV.md).
   verified Resend domain.
 - …a server action redirects to `/signin` unexpectedly → it's calling
   `requireAuth` and the session is missing. Check cookies in devtools and
-  confirm `sl.session_token` is present.
+  confirm `sl.session_token` (`__Secure-sl.session_token` in prod) is present.
 - …admin check fails → confirm `users.role = 'admin'` at DB level, then
   sign out + sign back in so the session cookie refreshes.

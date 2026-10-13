@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="August 17, 2026">
+    <LegalPage title="Privacy Policy" updated="October 13, 2026">
       <p>
         This policy explains what personal data Spicy League collects when you use{" "}
         <a href="https://www.spicyleague.dev">www.spicyleague.dev</a> or interact with our Discord
@@ -104,10 +104,27 @@ export default function PrivacyPage() {
 
       <h2>3. Cookies</h2>
       <p>
-        We set one cookie, <code>sl.session_token</code>, which keeps you signed in. It is strictly
-        necessary for the site to function and is removed when you sign out or when the session
-        expires. We do not use cookies for advertising or analytics, which is why you will not see a
-        cookie consent banner.
+        We set up to three cookies, all used only to keep you signed in. They are strictly necessary
+        for the site to function, are removed when you sign out, and are not shared with any third
+        party. On the live site their names begin with <code>__Secure-</code>.
+      </p>
+      <ul>
+        <li>
+          <code>sl.session_token</code>&nbsp;&mdash; identifies your signed-in session. Lasts 30
+          days if you choose to stay signed in, otherwise until you close your browser.
+        </li>
+        <li>
+          <code>sl.session_data</code>&nbsp;&mdash; a short-lived copy of your session details so
+          pages load without a database lookup. Expires after 5 minutes.
+        </li>
+        <li>
+          <code>sl.dont_remember</code>&nbsp;&mdash; set only when you sign in without choosing to
+          stay signed in, so your session ends when you close your browser.
+        </li>
+      </ul>
+      <p>
+        We do not use cookies for advertising or analytics, which is why you will not see a cookie
+        consent banner.
       </p>
 
       <h2>4. How we use your data</h2>

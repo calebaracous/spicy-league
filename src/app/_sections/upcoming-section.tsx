@@ -103,18 +103,6 @@ export function UpcomingSection({ season }: UpcomingSectionProps) {
             <LinkButton href="/signup" variant="primary">
               Create an account
             </LinkButton>
-            <button
-              disabled
-              title="Coming soon"
-              className="inline-flex cursor-not-allowed items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-medium opacity-50"
-              style={{
-                background: "transparent",
-                color: "var(--text)",
-                border: "1px solid var(--border)",
-              }}
-            >
-              Notify me when signups open
-            </button>
           </div>
         </Reveal>
       </TintedSection>
