@@ -115,9 +115,11 @@ npm run build      # production build
 npm run lint       # ESLint
 npm run typecheck  # tsc --noEmit
 npm run format     # Prettier (format:check is what CI runs)
+npm run test:unit  # Vitest — draft order, round-robin (runs in CI)
+npm run test:e2e   # Playwright — full season draft through the UI (see docs/TESTING.md)
 ```
 
-CI runs format check, lint, typecheck, and build on every push. A Husky pre-commit hook runs ESLint + Prettier on staged files.
+CI runs format check, lint, typecheck, unit tests, and build on every push. A Husky pre-commit hook runs ESLint + Prettier on staged files.
 
 ---
 
@@ -151,6 +153,7 @@ docs/               # Architecture and domain docs (good starting point)
 - [DESIGN-SYSTEM.md](docs/DESIGN-SYSTEM.md) — tokens, typography, component conventions
 - [ENV.md](docs/ENV.md) — all env vars with notes
 - [FILE-MAP.md](docs/FILE-MAP.md) — one line per source file
+- [TESTING.md](docs/TESTING.md) — unit and end-to-end tests
 
 ---
 

@@ -36,6 +36,8 @@ source of truth for what's shipped.**
 - `docs/DESIGN-SYSTEM.md` — two coexisting token systems (freelance hex +
   shadcn OKLCH), typography, animations, primitives.
 - `docs/ENV.md` — env vars and what breaks without them.
+- `docs/TESTING.md` — unit tests (Vitest, in CI) and the end-to-end draft
+  suite (Playwright, on demand, writes tagged data to `DATABASE_URL`).
 
 When you add non-trivial functionality or change a flow, update the
 relevant doc in the same commit. Docs live with the code; stale docs

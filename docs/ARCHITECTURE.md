@@ -66,7 +66,8 @@ src/
     env.ts              # Zod-validated env via @t3-oss/env-nextjs.
     utils.ts            # cn() — clsx + tailwind-merge.
 drizzle/                # Squashed migrations: 0000_baseline + 0001_reconcile_live_schema. See DATA-MODEL.md.
-scripts/                # Dev scripts (test-season seeder).
+scripts/                # Dev scripts (test-season seeder, e2e cleanup).
+tests/                  # unit/ (Vitest) and e2e/ (Playwright). See TESTING.md.
 docs/                   # You are here. docs/design/ holds design handoffs (not source of truth).
 .agents/                # Agent skills: Spicy League design-system reference, Neon skill.
 ```
@@ -201,7 +202,8 @@ API:
 - No `fetch` cache for app data. Every DB read is per-request.
 - No Pusher / Ably / Socket.io / LISTEN-NOTIFY. Realtime is SSE polling the DB.
 - No pick clock / auto-pick in either draft.
-- No automated tests.
+- Only the draft has automated tests: unit tests in CI, a Playwright e2e
+  suite on demand. See [TESTING.md](TESTING.md).
 - No Sentry / PostHog / analytics wired yet.
 - No Vercel Blob usage yet (user avatars referenced in `users.image` but no
   upload flow).

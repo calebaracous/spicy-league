@@ -23,9 +23,19 @@ Trivial shadcn primitives get a single entry at the bottom.
 - `.agents/design-system/` — design-system skill for agents: token CSS, logo assets, HTML previews, marketing-site UI kit.
 - `.agents/skills/neon-postgres/SKILL.md` — Neon reference skill. `skills-lock.json` pins it.
 
+## Tests — see [TESTING.md](TESTING.md)
+
+- `vitest.config.mts` — unit test config; aliases `@` and stubs `server-only`.
+- `tests/unit/draft-order.test.ts`, `tests/unit/round-robin.test.ts` — snake order and round-robin logic.
+- `playwright.config.ts` — e2e config: serial, builds + starts the app on :3100 with auth URLs overridden to localhost.
+- `tests/e2e/global-setup.ts` / `global-teardown.ts` — seed run-scoped admin + players; delete all e2e-tagged data afterwards.
+- `tests/e2e/support/` — `env.ts` (DB URL, markers), `db.ts` (assert helpers, `cleanupE2EData`), `seed.ts` (users, signups, `seedDraftSeason`), `pages.ts` (sign-in, live-board + admin-draft helpers, `freezeLiveUpdates`).
+- `tests/e2e/draft.spec.ts` — full season draft through the UI. `tests/e2e/draft-edge-cases.spec.ts` — captain limits, short pool, SSE undo race, simultaneous picks.
+
 ## Scripts
 
-- `scripts/seed-test-season.ts` — seeds `test-s1` LoL season with 4 captain + 16 bot accounts (re-runnable; cleans first). Run with `npx tsx --env-file=.env.local scripts/seed-test-season.ts`. Credentials are in the file header.
+- `scripts/e2e-cleanup.mjs` — `npm run test:e2e:cleanup`: deletes e2e-tagged seasons/users; `--legacy` also removes the old seed-test-season data.
+- `scripts/seed-test-season.ts` — refuses to run without `ALLOW_TEST_SEED=1` (it writes to the live DB from `.env.local`). Seeds `test-s1` LoL season with 4 captain + 16 bot accounts (re-runnable; cleans first). Run with `ALLOW_TEST_SEED=1 npx tsx --env-file=.env.local scripts/seed-test-season.ts`. Credentials are in the file header.
 
 ## App root
 

@@ -16,6 +16,10 @@ const eslintConfig = defineConfig([
     ".agents/**",
     // Design handoff prototypes — browser-native JSX, not part of the app build.
     "docs/design/**",
+    // Test output and local Claude Code worktrees.
+    "test-results/**",
+    "playwright-report/**",
+    ".claude/**",
   ]),
 ]);
 
