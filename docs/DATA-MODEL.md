@@ -10,10 +10,32 @@ either crypto.randomUUID() (`$defaultFn`) or string IDs supplied by Better
 Auth.
 
 Migrations are generated sequentially under `drizzle/` (currently
-`0000_init` → `0009_ten_mans`) — never edit an existing SQL file, create a
-new one with `npm run db:generate`. Two are hand-written: `0007` (rename
-`display_name` → `username`) and `0009` (10-man tables + a partial unique
-index Drizzle can't express).
+`0000_init` → `0010_ten_man_fks_champion_backfill`) — never edit an
+existing SQL file. Three are hand-written: `0007` (rename `display_name` →
+`username`), `0009` (10-man tables + a partial unique index Drizzle can't
+express) and `0010` (10-man FK `ON DELETE` fixes + `championTeamId`
+backfill).
+
+**Two migration-history traps** — read before running `db:migrate` against
+anything:
+
+1. **The history can't build a working DB from scratch.** `0000_init`
+   created Auth.js-shaped `sessions` / `accounts` / `verification_tokens`,
+   and no later migration converts them to the Better Auth shape in
+   `src/db/schema/auth.ts`. Production was evidently synced with
+   `db:push`. For a fresh dev DB use `npm run db:push`, then run the
+   `ten_mans_active_uniq` statement from the bottom of
+   `drizzle/0009_ten_mans.sql` by hand (`db:push` can't create it). The
+   snapshots in `drizzle/meta/` carry the same drift, which is why
+   `db:generate` stops on an interactive "was this table renamed?" prompt.
+2. **0009 is out of order.** Its journal `when` (1747526400000) is *earlier*
+   than 0008's. Drizzle's migrator only applies entries whose `when` is
+   newer than the last applied row, so on a DB already at 0008,
+   `db:migrate` silently **skips** 0009. Apply it with
+   `node scripts/run-migration-0009.mjs` instead. Don't "fix" the
+   timestamp: prod already has 0009 (via the script) and would try to
+   re-run it. `0010` has a normal, current `when`.
+
 
 ## auth.ts — users, sessions, accounts, verifications
 
@@ -62,13 +84,14 @@ Auth, not queried directly by app code.
 - `description` (text), `rules` (text) — markdown-ish, rendered as
   `whitespace-pre-wrap`
 - `signupOpensAt`, `signupClosesAt`, `seasonStartAt` — optional timestamps
-- `championTeamId` — **declared but never written by any code path**.
-  `src/app/seasons/[slug]/page.tsx` correctly derives the champion from
-  `matches.stage = 'final' AND state = 'confirmed'`, but
-  `src/lib/homepage.ts` *reads* `championTeamId` (past-seasons strip
-  `championName`, off-season podium) — so those show no champion / an
-  empty podium until something populates it (e.g. `confirmMatch` on the
-  final).
+- `championTeamId` — set by `confirmMatch` when the **final** is
+  confirmed (to the final's `winnerTeamId`), cleared again if that final
+  is disputed or reset. Migration 0010 backfilled it for seasons that
+  already had a confirmed final. Read by `src/lib/homepage.ts`
+  (past-seasons strip, off-season podium). No FK to `teams`.
+  `src/app/seasons/[slug]/page.tsx` still derives the champion from the
+  final match directly; both agree as long as the final goes through
+  `confirmMatch`.
 - `createdBy` FK → users (set null)
 - Index on `state` for the home-page live-season query
 
@@ -189,16 +212,14 @@ their derived rows. Exceptions:
 - `seasons.createdBy` → set null
 - `matches.winnerTeamId` → set null
 - `matches.reportedBy` → set null
-- `ten_mans.createdBy` → set null, **but the column is `NOT NULL`** — so
-  deleting a user who started a 10-man fails.
-- `ten_mans.winnerCaptainUserId`, `ten_man_picks.captainUserId`,
-  `ten_man_picks.pickedUserId` → no action — deleting a user who was
-  drafted in / captained a 10-man fails.
+- `ten_mans.createdBy`, `ten_mans.winnerCaptainUserId` → set null (both
+  nullable since migration 0010).
 
 Deleting a **user** cascades to sessions, accounts, signups, captains, team
 memberships, teams they captain (and therefore those teams' matches), draft
-picks (both as captain AND as picked), 10-man signups/votes/captaincies,
-account links and stat snapshots — subject to the blocking FKs above.
+picks (both as captain AND as picked), 10-man signups/votes/captaincies/
+picks, account links and stat snapshots. Removing a player's 10-man picks
+leaves gaps in that session's pick numbers — acceptable for history.
 There is no user-delete UI. Don't delete users without thinking through
 season and 10-man state.
 
@@ -224,7 +245,9 @@ season and 10-man state.
 - …a query types wrong → run `npm run db:generate` and check the inferred
   types on `*$inferSelect` at the bottom of the schema file.
 - …you need a migration → `npm run db:generate` (after schema edit), then
-  `npm run db:migrate`. Never edit existing `drizzle/*.sql` files.
+  `npm run db:migrate`. Never edit existing `drizzle/*.sql` files. If
+  `db:generate` hangs on a rename prompt, that's the snapshot drift above —
+  hand-write the SQL and journal entry like 0007/0009/0010 did.
 - …a cascade surprises you → it's listed on the FK in the schema file.
 - …a "unique constraint violation" happens → grep the schema for
   `unique(` — the named constraint string is what Postgres will report.

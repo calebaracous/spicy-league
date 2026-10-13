@@ -152,8 +152,9 @@ server actions to find them. Examples:
   are multiple live seasons and `orderBy desc(createdAt)` picked the newer
   one. Same logic for the header pill in `getLiveSeason()`.
 - …the off-season podium / past-season champion is blank → it reads
-  `seasons.championTeamId`, which nothing populates. See
-  [DATA-MODEL.md](DATA-MODEL.md).
+  `seasons.championTeamId`, written only when the final is confirmed via
+  `confirmMatch`. A season marked `complete` by the generic transition
+  (no confirmed final) has none. See [MATCHES.md](MATCHES.md).
 - …the StatusPanel renders nothing → state is `draft`, which is filtered
   out before we get to StatusPanel (ne draft in the where clause).
 - …a season won't complete → the final isn't `state='confirmed' AND

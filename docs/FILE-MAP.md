@@ -26,7 +26,7 @@ Trivial shadcn primitives get a single entry at the bottom.
 ## Scripts
 
 - `scripts/seed-test-season.ts` — seeds `test-s1` LoL season with 4 captain + 16 bot accounts (re-runnable; cleans first). Run with `npx tsx --env-file=.env.local scripts/seed-test-season.ts`. Credentials are in the file header.
-- `scripts/run-migration-0009.mjs` — one-off applier for `drizzle/0009_ten_mans.sql`; skips "already exists" errors.
+- `scripts/run-migration-0009.mjs` — applier for `drizzle/0009_ten_mans.sql`, which `db:migrate` skips on DBs past 0008 (out-of-order timestamp); skips "already exists" errors.
 
 ## App root
 
@@ -46,8 +46,6 @@ Rendered by `src/app/page.tsx`:
 - `off-season-section.tsx` — `off_season` state: last season podium.
 - `past-seasons-strip.tsx` — last 3 complete seasons, always rendered.
 
-**Not imported anywhere** (pre-overhaul, kept but dead): `about.tsx`, `how-it-works.tsx`, `latest-seasons.tsx`, `call-to-action.tsx`.
-
 ## Public season pages
 
 - `src/app/seasons/page.tsx` — list of non-draft seasons (active + past split).
@@ -59,7 +57,7 @@ Rendered by `src/app/page.tsx`:
 - `src/app/seasons/[slug]/draft/live-board.tsx` — client component; SSE-subscribes to `/api/draft/[slug]/stream`; shows solo-queue rank per pool player (LoL).
 - `src/app/seasons/[slug]/draft/actions.ts` — `submitPick`, `startDraft`, `pauseDraft`, `resumeDraft`, `undoLastPick`. Full validation chain in `submitPick` — see [DRAFT.md](DRAFT.md).
 - `src/app/seasons/[slug]/matches/page.tsx` — schedule + standings table.
-- `src/app/seasons/[slug]/matches/actions.ts` — `reportMatch`, `confirmMatch`, `disputeMatch`, `resetMatch`. See [MATCHES.md](MATCHES.md).
+- `src/app/seasons/[slug]/matches/actions.ts` — `reportMatch`, `confirmMatch` (writes `championTeamId` on the final), `disputeMatch`, `resetMatch`. See [MATCHES.md](MATCHES.md).
 - `src/app/seasons/[slug]/matches/[matchId]/page.tsx` — match detail + report form.
 
 ## 10-man (`src/app/10-man/`) — see [TEN-MAN.md](TEN-MAN.md)
@@ -113,7 +111,6 @@ Rendered by `src/app/page.tsx`:
 - `src/app/api/ten-man/[id]/stream/route.ts` — 10-man SSE, same pattern. See [TEN-MAN.md](TEN-MAN.md).
 - `src/app/api/cron/refresh-stats/route.ts` — daily cron. `CRON_SECRET` bearer auth. Calls `refreshAllRiotStats()`.
 
-Empty, untracked leftovers on disk (safe to delete): `src/app/api/auth/[...nextauth]/`, `src/types/`.
 
 ## Auth / session
 
@@ -133,7 +130,7 @@ Empty, untracked leftovers on disk (safe to delete): `src/app/api/auth/[...nexta
 - `src/db/schema/stats.ts` — `accountLinks`, `riotStatSnapshots` (per account link), `leetifyStatSnapshots`.
 - `src/db/schema/ten-mans.ts` — `tenMans`, `tenManSignups`, `tenManVotes`, `tenManCaptains`, `tenManPicks`. `ten_man_state` enum.
 
-Migrations under `drizzle/0000…0009_*.sql` (+ `drizzle/meta/`).
+Migrations under `drizzle/0000…0010_*.sql` (+ `drizzle/meta/`). Read the migration traps in [DATA-MODEL.md](DATA-MODEL.md) before running them.
 
 ## Business logic (`src/lib`)
 

@@ -76,9 +76,11 @@ export const auth = betterAuth({
   },
 
   session: {
-    // Default session: 1 day. rememberMe=true extends to 30 days (set per-signIn).
-    expiresIn: 60 * 60 * 24,
-    updateAge: 60 * 60 * 12,
+    // rememberMe=true ("Stay signed in for 30 days"): 30-day cookie + session,
+    // rolled forward once a day while in use. rememberMe=false: Better Auth
+    // issues a browser-session cookie and caps the DB session at 1 day.
+    expiresIn: 60 * 60 * 24 * 30,
+    updateAge: 60 * 60 * 24,
     cookieCache: { enabled: true, maxAge: 5 * 60 },
   },
 

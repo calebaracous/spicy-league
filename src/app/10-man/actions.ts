@@ -153,11 +153,17 @@ export async function castVote(id: string, candidateIds: [string, string]): Prom
     const [tm] = await tx.select().from(tenMans).where(eq(tenMans.id, id)).for("update");
     if (!tm || tm.state !== "voting") throw new Error("Voting is not open");
 
-    // Voter must be a signup
-    const signup = await tx.query.tenManSignups.findFirst({
-      where: and(eq(tenManSignups.tenManId, id), eq(tenManSignups.userId, userId)),
-    });
-    if (!signup) throw new Error("You are not in this 10-man");
+    // Voter and both candidates must be signups. Self-votes are allowed —
+    // volunteering to captain is a legitimate choice in a pickup game.
+    const signups = await tx
+      .select({ userId: tenManSignups.userId })
+      .from(tenManSignups)
+      .where(eq(tenManSignups.tenManId, id));
+    const signupIds = new Set(signups.map((s) => s.userId));
+    if (!signupIds.has(userId)) throw new Error("You are not in this 10-man");
+    if (!candidateIds.every((c) => signupIds.has(c))) {
+      throw new Error("Candidates must be in this 10-man");
+    }
 
     // Delete existing votes from this voter, insert fresh
     await tx
@@ -233,6 +239,10 @@ export async function submitPick(id: string, pickedUserId: string): Promise<void
     if (captainIds.has(pickedUserId) || pickedIds.has(pickedUserId)) {
       throw new Error("Player is not available");
     }
+    const inSignups = await tx.query.tenManSignups.findFirst({
+      where: and(eq(tenManSignups.tenManId, id), eq(tenManSignups.userId, pickedUserId)),
+    });
+    if (!inSignups) throw new Error("Player is not in this 10-man");
 
     const pickNumber = nextPickIdx + 1;
     await tx.insert(tenManPicks).values({

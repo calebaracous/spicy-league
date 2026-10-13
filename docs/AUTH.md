@@ -122,13 +122,14 @@ See `submitSignup`, `submitPick`, `reportMatch`, and everything in
   `src/lib/auth.ts`). The session cookie name is therefore
   `sl.session_token` — that's the one we `cookies().delete()` on sign-out in
   `src/app/profile/page.tsx`.
-- **Session expiry**: `expiresIn` = 1 day, `updateAge` = 12 hours (rolling:
-  an active session is extended once it's 12h old).
-- **Remember me** (checkbox on `/signin`): Better Auth has no separate
-  long-lived duration. Checked → persistent cookie with `maxAge = expiresIn`
-  (1 day, rolling). Unchecked → browser-session cookie that is *not*
-  refreshed. The checkbox label currently says "30 days", which the config
-  does not deliver — raise `session.expiresIn` if that's the intent.
+- **Session expiry**: `expiresIn` = 30 days, `updateAge` = 1 day (rolling:
+  an active session is pushed out to 30 days once it's a day old).
+- **Remember me** (checkbox on `/signin`, "Stay signed in for 30 days"):
+  Better Auth has no separate long-lived duration, so `expiresIn` *is*
+  the remember-me duration. Checked → persistent cookie with
+  `maxAge = expiresIn` (30 days, rolling). Unchecked → browser-session
+  cookie, not refreshed, and Better Auth caps the DB session at 1 day.
+  Email-verification auto sign-in uses the remembered (30-day) path.
 - **Cookie cache**: 5-minute in-memory cache on the session cookie so we're
   not hitting Postgres on every request — configured in `src/lib/auth.ts`.
 

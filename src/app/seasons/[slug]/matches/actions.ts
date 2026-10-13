@@ -16,6 +16,20 @@ async function getSeasonOrFail(slug: string) {
   return season;
 }
 
+// Un-confirming the final un-crowns the champion. Season state is left alone;
+// the admin moves it back with the generic transition if needed.
+async function clearChampionIfFinal(seasonId: string, matchId: string) {
+  const match = await db.query.matches.findFirst({
+    where: and(eq(matches.id, matchId), eq(matches.seasonId, seasonId)),
+    columns: { stage: true },
+  });
+  if (match?.stage !== "final") return;
+  await db
+    .update(seasons)
+    .set({ championTeamId: null, updatedAt: new Date() })
+    .where(eq(seasons.id, seasonId));
+}
+
 export async function reportMatch(slug: string, matchId: string, formData: FormData) {
   const session = await requireOnboarded();
   const season = await getSeasonOrFail(slug);
@@ -71,6 +85,7 @@ export async function confirmMatch(slug: string, matchId: string) {
     where: and(eq(matches.id, matchId), eq(matches.seasonId, season.id)),
   });
   if (!match) redirect(`/admin/seasons/${slug}/matches?error=not-found`);
+  if (!match.winnerTeamId) redirect(`/admin/seasons/${slug}/matches?error=no-winner`);
 
   await db
     .update(matches)
@@ -103,8 +118,11 @@ export async function confirmMatch(slug: string, matchId: string) {
       }
     }
   } else if (match.stage === "final") {
-    // Final confirmed → season is complete
-    await db.update(seasons).set({ state: "complete" }).where(eq(seasons.id, season.id));
+    // Final confirmed → season is complete, winner is champion
+    await db
+      .update(seasons)
+      .set({ state: "complete", championTeamId: match.winnerTeamId, updatedAt: new Date() })
+      .where(eq(seasons.id, season.id));
     revalidatePath(`/seasons/${slug}`);
   }
 
@@ -122,6 +140,7 @@ export async function disputeMatch(slug: string, matchId: string) {
     .update(matches)
     .set({ state: "disputed", winnerTeamId: null, homeScore: null, awayScore: null })
     .where(and(eq(matches.id, matchId), eq(matches.seasonId, season.id)));
+  await clearChampionIfFinal(season.id, matchId);
 
   revalidatePath(`/seasons/${slug}/matches/${matchId}`);
   revalidatePath(`/admin/seasons/${slug}/matches`);
@@ -144,6 +163,7 @@ export async function resetMatch(slug: string, matchId: string) {
       confirmedAt: null,
     })
     .where(and(eq(matches.id, matchId), eq(matches.seasonId, season.id)));
+  await clearChampionIfFinal(season.id, matchId);
 
   revalidatePath(`/seasons/${slug}/matches/${matchId}`);
   revalidatePath(`/admin/seasons/${slug}/matches`);

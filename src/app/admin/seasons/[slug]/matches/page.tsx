@@ -21,6 +21,8 @@ type SearchParams = Promise<{ saved?: string | number; error?: string }>;
 const ERROR_MESSAGES: Record<string, string> = {
   "already-generated": "A schedule has already been generated for this season.",
   "playoffs-already-seeded": "Playoff bracket has already been seeded.",
+  "no-winner": "That match has no reported winner yet, so it can't be confirmed.",
+  "not-found": "Match not found.",
 };
 
 const STATE_BADGE: Record<

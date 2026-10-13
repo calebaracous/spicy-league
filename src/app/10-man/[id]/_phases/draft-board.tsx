@@ -44,6 +44,7 @@ export function DraftBoard({
 
   const cap1 = captains.find((c) => c.captainOrder === 1);
   const cap2 = captains.find((c) => c.captainOrder === 2);
+  const onClockCaptain = captains.find((c) => c.userId === onTheClock?.captainUserId);
 
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
@@ -97,7 +98,7 @@ export function DraftBoard({
                   borderRadius: 9999,
                 }}
               >
-                Admin — pick for anyone
+                Admin — picking for {onClockCaptain?.displayName ?? "captain"}
               </span>
             ) : null}
             {isOnClockViewer && !isAdmin ? <YourTurnPill /> : null}

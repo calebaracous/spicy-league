@@ -65,7 +65,7 @@ src/
     rate-limit.ts       # Upstash sliding-window limiter (optional).
     env.ts              # Zod-validated env via @t3-oss/env-nextjs.
     utils.ts            # cn() — clsx + tailwind-merge.
-drizzle/                # Generated migrations (sequential 0000_… → 0009_ten_mans).
+drizzle/                # Migrations 0000_… → 0010_…. Not replayable from scratch — see DATA-MODEL.md.
 scripts/                # One-off dev scripts (test-season seeder, 0009 migration runner).
 docs/                   # You are here. docs/design/ holds design handoffs (not source of truth).
 .agents/                # Agent skills: Spicy League design-system reference, Neon skill.
@@ -73,11 +73,11 @@ docs/                   # You are here. docs/design/ holds design handoffs (not 
 
 ## Request lifecycle
 
-Everything is server-rendered on demand. Most DB-backed pages export
-`export const dynamic = "force-dynamic"`; the rest (`/profile`, `/admin/*`,
-`/users/[username]`, `/10-man/*`, auth pages) are dynamic anyway because
-they read `headers()`/cookies via `auth()` or `searchParams`. Static:
-`/history`, `/terms`, `/privacy`. There is no ISR, no route-level cache, no
+Everything is server-rendered on demand. **Every route is dynamic** —
+the root layout renders `SiteHeader`, which calls `auth()` (reads
+`headers()`), so even `/history`, `/terms` and `/privacy` render per
+request. Most DB-backed pages also export
+`export const dynamic = "force-dynamic"` explicitly. There is no ISR, no route-level cache, no
 `fetch` caching for app data (`riotFetch` uses `next: { revalidate: 0 }`;
 only Data Dragon is cached for 24h).
 

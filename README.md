@@ -55,9 +55,11 @@ npm install
 Copy `.env.example` to `.env.local` and fill in the required values (see [Environment variables](#environment-variables) below).
 
 ```bash
-npm run db:migrate   # apply migrations to your Neon branch
+npm run db:push      # sync the schema to a fresh Neon branch (see note)
 npm run dev          # start dev server at http://localhost:3000
 ```
+
+Note: the migration history in `drizzle/` can't build a working database from scratch, so use `db:push` for a new database. Then run the `ten_mans_active_uniq` index statement at the bottom of `drizzle/0009_ten_mans.sql` by hand. For existing databases, see the migration notes in [docs/DATA-MODEL.md](docs/DATA-MODEL.md) before running `db:migrate`.
 
 The app validates env vars at boot via `@t3-oss/env-nextjs`. Set `SKIP_ENV_VALIDATION=1` to skip this (useful in CI).
 

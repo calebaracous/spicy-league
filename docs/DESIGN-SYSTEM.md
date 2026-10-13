@@ -128,7 +128,7 @@ When touching existing forms / admin: keep using shadcn.
 | `src/components/site-header.tsx` | Server component. Calls `auth()`, builds the live pill (season or 10-man). |
 | `src/components/site-header-client.tsx` | Sticky nav: live pill, scroll-triggered blur+border, mobile hamburger overlay, session-aware actions. |
 | `src/components/site-footer.tsx` | Footer: nav links + Terms / Privacy. |
-| `src/app/_sections/*` | Home-page sections: Hero + one of Signup / Draft / Live / Upcoming / OffSeason + PastSeasonsStrip. (`about`, `how-it-works`, `latest-seasons`, `call-to-action` are unused leftovers.) |
+| `src/app/_sections/*` | Home-page sections: Hero + one of Signup / Draft / Live / Upcoming / OffSeason + PastSeasonsStrip. |
 | `src/app/page.tsx` | Picks the section from `getHomepageData()` (`src/lib/homepage.ts`). |
 
 ## Conventions

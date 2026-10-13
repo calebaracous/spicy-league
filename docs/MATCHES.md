@@ -65,24 +65,27 @@ All transitions are server actions in
 - Sets `state = 'reported'`, stamps `reportedBy` + `reportedAt`.
 
 ### `confirmMatch(slug, matchId)` — admin only
-- Sets `state = 'confirmed'`, stamps `confirmedAt`. Does not require the
-  match to be `reported` first, and doesn't check `winnerTeamId` is set.
+- Rejects with `no-winner` if `winnerTeamId` is null (the admin UI only
+  offers Confirm on `reported` matches, which always have one).
+- Sets `state = 'confirmed'`, stamps `confirmedAt`.
 - **Branches on stage**:
   - If the match is a **semi**: check both semis are now confirmed with
     winners. If so, create the final as `round=201, stage='final',
     home=semi1.winner, away=semi2.winner`. Idempotent (bails if final
     already exists).
   - If the match is the **final**: set the enclosing `seasons.state` to
-    `complete`. The season is now over. It does **not** write
-    `seasons.championTeamId`.
+    `complete` and `seasons.championTeamId` to the winner. The season is
+    now over.
 
 ### `disputeMatch(slug, matchId)` — admin only
 Resets `winnerTeamId`, `homeScore`, `awayScore` to null and sets
 `state = 'disputed'`. Does not delete; waits for admin arbitration.
+On the final, also clears `seasons.championTeamId`.
 
 ### `resetMatch(slug, matchId)` — admin only
 Full reset: wipes all reporting fields and returns the match to
 `scheduled`. Escape hatch.
+On the final, also clears `seasons.championTeamId`.
 
 ## Standings + tiebreakers
 
@@ -131,11 +134,11 @@ const finalMatch = await db.query.matches.findFirst({
 const champ = await db.query.teams.findFirst({ where: teams.id=finalMatch.winnerTeamId });
 ```
 
-`seasons.championTeamId` **is not populated** — the season page derives
-the champion via the final match. But the home page
-(`src/lib/homepage.ts`: past-seasons strip and off-season podium) *reads*
-`championTeamId`, so it shows no champion. Either populate it in
-`confirmMatch` or switch the home page to the final-match derivation.
+`seasons.championTeamId` is written by `confirmMatch` on the final and
+cleared by `disputeMatch` / `resetMatch` on the final (via
+`clearChampionIfFinal`; season `state` is left as-is). The home page
+(`src/lib/homepage.ts`: past-seasons strip, off-season podium) reads it;
+the season page above still derives from the final match.
 
 ## Round ordering
 

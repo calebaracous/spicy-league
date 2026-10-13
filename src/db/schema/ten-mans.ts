@@ -16,16 +16,16 @@ export const tenMans = pgTable("ten_mans", {
     .primaryKey()
     .$defaultFn(() => crypto.randomUUID()),
   state: tenManStateEnum("state").notNull().default("signups"),
-  createdBy: text("created_by")
-    .notNull()
-    .references(() => users.id, { onDelete: "set null" }),
+  createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   signupsClosedAt: timestamp("signups_closed_at", { mode: "date" }),
   draftStartedAt: timestamp("draft_started_at", { mode: "date" }),
   readyAt: timestamp("ready_at", { mode: "date" }),
   completedAt: timestamp("completed_at", { mode: "date" }),
   lobbyCode: text("lobby_code"),
-  winnerCaptainUserId: text("winner_captain_user_id").references(() => users.id),
+  winnerCaptainUserId: text("winner_captain_user_id").references(() => users.id, {
+    onDelete: "set null",
+  }),
   durationLabel: text("duration_label"),
 });
 
@@ -107,10 +107,10 @@ export const tenManPicks = pgTable(
     pickNumber: integer("pick_number").notNull(),
     captainUserId: text("captain_user_id")
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, { onDelete: "cascade" }),
     pickedUserId: text("picked_user_id")
       .notNull()
-      .references(() => users.id),
+      .references(() => users.id, { onDelete: "cascade" }),
     pickedAt: timestamp("picked_at", { mode: "date" }).defaultNow().notNull(),
   },
   (t) => [
