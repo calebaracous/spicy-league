@@ -3,7 +3,14 @@ import { and, eq } from "drizzle-orm";
 
 import * as schema from "../../src/db/schema";
 import { db, getDraft, getPicks, getTeams, userIdsByUsername } from "./support/db";
-import { adminDraft, anonymousPage, board, signedInPage, SSE_TIMEOUT } from "./support/pages";
+import {
+  adminDraft,
+  anonymousPage,
+  board,
+  closeContexts,
+  signedInPage,
+  SSE_TIMEOUT,
+} from "./support/pages";
 import { admin, player, seedDraftSeason } from "./support/seed";
 
 /**
@@ -12,6 +19,8 @@ import { admin, player, seedDraftSeason } from "./support/seed";
  * so in an annotation; `test.fail` marks a confirmed bug — the test asserts
  * the correct behaviour and is expected to fail until the bug is fixed.
  */
+
+test.afterEach(closeContexts);
 
 const range = (from: number, to: number) =>
   Array.from({ length: to - from + 1 }, (_, i) => from + i);
@@ -25,7 +34,7 @@ test("1 captain: the draft cannot be started", async ({ browser }) => {
   });
   const adminPage = await signedInPage(browser, admin().username);
   await adminDraft.click(adminPage, slug, "Start draft");
-  await expect(adminPage.getByRole("alert")).toContainText(
+  await expect(board.alert(adminPage)).toContainText(
     "You need at least 2 captains to start the draft.",
   );
   expect(await getDraft(slug)).toBeUndefined();

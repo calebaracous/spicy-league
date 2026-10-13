@@ -1,13 +1,26 @@
-import { expect, type Browser, type Page } from "@playwright/test";
+import { expect, type Browser, type BrowserContext, type Page } from "@playwright/test";
 
 import { run } from "./seed";
 
 /** Live-update poll is 2s; allow a few cycles plus network. */
 export const SSE_TIMEOUT = 10_000;
 
+// Contexts opened by these helpers; closed by `closeContexts()` after each test.
+const opened: BrowserContext[] = [];
+
+export async function closeContexts(): Promise<void> {
+  await Promise.all(opened.splice(0).map((c) => c.close().catch(() => {})));
+}
+
+async function newContext(browser: Browser): Promise<BrowserContext> {
+  const context = await browser.newContext();
+  opened.push(context);
+  return context;
+}
+
 /** Fresh browser context signed in as `username` via the real /signin form. */
 export async function signedInPage(browser: Browser, username: string): Promise<Page> {
-  const context = await browser.newContext();
+  const context = await newContext(browser);
   const page = await context.newPage();
   await page.goto("/signin");
   await page.getByLabel("Username").fill(username);
@@ -18,7 +31,7 @@ export async function signedInPage(browser: Browser, username: string): Promise<
 }
 
 export async function anonymousPage(browser: Browser): Promise<Page> {
-  const context = await browser.newContext();
+  const context = await newContext(browser);
   return context.newPage();
 }
 
@@ -63,7 +76,8 @@ export const board = {
 
   poolHeading: (page: Page) => page.getByText(/^Available pool \(\d+\)$/),
 
-  alert: (page: Page) => page.getByRole("alert"),
+  // The app's <Alert>, not Next's route announcer (which also has role=alert).
+  alert: (page: Page) => page.locator('[data-slot="alert"]'),
 };
 
 // ── Admin draft controls (/admin/seasons/[slug]/draft) ───────────────────────
