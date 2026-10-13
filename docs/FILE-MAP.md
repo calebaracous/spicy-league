@@ -31,7 +31,7 @@ Trivial shadcn primitives get a single entry at the bottom.
 
 - `src/app/layout.tsx` — `<html>`, Geist + Geist Mono fonts, SiteHeader, main, SiteFooter. Declares `metadata.icons`/`manifest`/`openGraph` and a dark `viewport.themeColor`.
 - `src/app/template.tsx` — per-route `animate-page` fade wrapper.
-- `src/app/page.tsx` — home; calls `getHomepageData()` and renders Hero + exactly one state section + `PastSeasonsStrip`. Hero label map `HERO_LABELS` lives here.
+- `src/app/page.tsx` — home; calls `getHomepageData()` and renders Hero + exactly one state section + `PastSeasonsStrip`. Hero label: `LIVE_STATE_COPY` for live states, `HERO_LABELS` (upcoming / off-season) otherwise.
 - `src/app/globals.css` — design tokens (freelance hex + shadcn OKLCH), typography, animations, `.tint-subtle-warm`, `.legal-prose`. See [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md).
 
 ## Home-page sections (`src/app/_sections/`)

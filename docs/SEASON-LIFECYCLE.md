@@ -99,7 +99,9 @@ live state (`signups_open` … `playoffs`) and maps it to one of six layouts:
 | `group_stage`, `playoffs` | `live` — next scheduled match + top 3 (LoL) | `live-section.tsx` |
 | no live season | `off_season` — last complete season + podium | `off-season-section.tsx` |
 
-Hero eyebrow labels come from `HERO_LABELS` in `src/app/page.tsx`; the hero
+The hero eyebrow label is the season's `LIVE_STATE_COPY` entry (same as the
+header pill) for live states, or `HERO_LABELS` in `src/app/page.tsx` for
+`upcoming` / `off_season`. The hero
 CTA href comes from `liveSeasonHref()` in `src/lib/live-season.ts`
 (signup page while `signups_open`, draft page while `drafting`, else the
 season page).
@@ -108,8 +110,8 @@ season page).
 
 `src/components/site-header.tsx` shows a pill for the newest live season
 using `LIVE_STATE_COPY` in `src/lib/live-season.ts` (`SIGNUPS OPEN`,
-`CAPTAINS INCOMING`, `DRAFT PENDING`, `DRAFT LIVE`, `GROUP STAGE LIVE`,
-`PLAYOFFS LIVE`). If no season is live it falls back to an active 10-man
+`SIGNUPS CLOSED`, `CAPTAINS SELECTED`, `DRAFT IN PROGRESS`, `GROUP STAGE`,
+`PLAYOFFS`). If no season is live it falls back to an active 10-man
 (see [TEN-MAN.md](TEN-MAN.md)).
 
 ## Captain selection phase
