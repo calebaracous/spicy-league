@@ -17,8 +17,13 @@
   time. This keeps CI + first-time setup working without a DB.
 - Migrations: `drizzle-kit`. Scripts in `package.json`:
   - `npm run db:generate` — generate migration from current schema
-  - `npm run db:migrate` — apply pending migrations
-  - `npm run db:push` — skip migrations, push schema (dev only)
+  - `npm run db:migrate` — apply pending migrations (also how you build a
+    fresh DB — see [DATA-MODEL.md](DATA-MODEL.md) → Migrations)
+  - `npm run db:push` — skip migrations, push schema. Avoid: it can't
+    create the `ten_mans_active_uniq` partial index and leaves
+    `__drizzle_migrations` out of sync.
+  - `drizzle.config.ts` loads `DATABASE_URL` from `.env.local`; an
+    already-set env var wins.
   - `npm run db:studio` — open drizzle studio UI
 
 ## Better Auth + Resend (email)

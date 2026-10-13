@@ -5,78 +5,15 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1776251970850,
-      "tag": "0000_init",
+      "when": 1777163682000,
+      "tag": "0000_baseline",
       "breakpoints": true
     },
     {
       "idx": 1,
       "version": "7",
-      "when": 1776253006004,
-      "tag": "0001_seasons",
-      "breakpoints": true
-    },
-    {
-      "idx": 2,
-      "version": "7",
-      "when": 1776282896468,
-      "tag": "0002_rich_invisible_woman",
-      "breakpoints": true
-    },
-    {
-      "idx": 3,
-      "version": "7",
-      "when": 1776284406582,
-      "tag": "0003_grey_weapon_omega",
-      "breakpoints": true
-    },
-    {
-      "idx": 4,
-      "version": "7",
-      "when": 1776291717040,
-      "tag": "0004_hot_punisher",
-      "breakpoints": true
-    },
-    {
-      "idx": 5,
-      "version": "7",
-      "when": 1776292444915,
-      "tag": "0005_naive_starjammers",
-      "breakpoints": true
-    },
-    {
-      "idx": 6,
-      "version": "7",
-      "when": 1776306891896,
-      "tag": "0006_absurd_frog_thor",
-      "breakpoints": true
-    },
-    {
-      "idx": 7,
-      "version": "7",
-      "when": 1777163682691,
-      "tag": "0007_rename_display_name_to_username",
-      "breakpoints": true
-    },
-    {
-      "idx": 8,
-      "version": "7",
-      "when": 1777181964870,
-      "tag": "0008_multi_riot_accounts",
-      "breakpoints": true
-    },
-    {
-      "idx": 9,
-      "version": "7",
-      "when": 1747526400000,
-      "tag": "0009_ten_mans",
-      "breakpoints": true
-    },
-    {
-      "idx": 10,
-      "version": "7",
-      "when": 1791899077911,
-      "tag": "0010_ten_man_fks_champion_backfill",
+      "when": 1791901940848,
+      "tag": "0001_reconcile_live_schema",
       "breakpoints": true
     }
   ]

@@ -65,8 +65,8 @@ src/
     rate-limit.ts       # Upstash sliding-window limiter (optional).
     env.ts              # Zod-validated env via @t3-oss/env-nextjs.
     utils.ts            # cn() — clsx + tailwind-merge.
-drizzle/                # Migrations 0000_… → 0010_…. Not replayable from scratch — see DATA-MODEL.md.
-scripts/                # One-off dev scripts (test-season seeder, 0009 migration runner).
+drizzle/                # Squashed migrations: 0000_baseline + 0001_reconcile_live_schema. See DATA-MODEL.md.
+scripts/                # Dev scripts (test-season seeder).
 docs/                   # You are here. docs/design/ holds design handoffs (not source of truth).
 .agents/                # Agent skills: Spicy League design-system reference, Neon skill.
 ```

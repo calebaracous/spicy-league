@@ -10,7 +10,7 @@ Trivial shadcn primitives get a single entry at the bottom.
 - `PLANNING.md` — aspirational roadmap (not current state). See [ARCHITECTURE.md](ARCHITECTURE.md) for what's actually shipped.
 - `README.md` — human-facing overview + local setup.
 - `.env.example` — every env var with comments. See [ENV.md](ENV.md).
-- `drizzle.config.ts` — migration config. `schema: ./src/db/schema/index.ts`, snake_case.
+- `drizzle.config.ts` — migration config. `schema: ./src/db/schema/index.ts`, snake_case. Loads `.env.local` for `DATABASE_URL`.
 - `vercel.json` — cron: `0 6 * * *` → `/api/cron/refresh-stats`.
 - `next.config.ts` — Next config (stock, empty).
 - `eslint.config.mjs` — ESLint flat config.
@@ -26,7 +26,6 @@ Trivial shadcn primitives get a single entry at the bottom.
 ## Scripts
 
 - `scripts/seed-test-season.ts` — seeds `test-s1` LoL season with 4 captain + 16 bot accounts (re-runnable; cleans first). Run with `npx tsx --env-file=.env.local scripts/seed-test-season.ts`. Credentials are in the file header.
-- `scripts/run-migration-0009.mjs` — applier for `drizzle/0009_ten_mans.sql`, which `db:migrate` skips on DBs past 0008 (out-of-order timestamp); skips "already exists" errors.
 
 ## App root
 
@@ -130,7 +129,7 @@ Rendered by `src/app/page.tsx`:
 - `src/db/schema/stats.ts` — `accountLinks`, `riotStatSnapshots` (per account link), `leetifyStatSnapshots`.
 - `src/db/schema/ten-mans.ts` — `tenMans`, `tenManSignups`, `tenManVotes`, `tenManCaptains`, `tenManPicks`. `ten_man_state` enum.
 
-Migrations under `drizzle/0000…0010_*.sql` (+ `drizzle/meta/`). Read the migration traps in [DATA-MODEL.md](DATA-MODEL.md) before running them.
+Migrations: `drizzle/0000_baseline.sql` (full schema + partial index) and `drizzle/0001_reconcile_live_schema.sql` (idempotent fix-up for DBs from the pre-squash history), plus `drizzle/meta/`. See [DATA-MODEL.md](DATA-MODEL.md) → Migrations.
 
 ## Business logic (`src/lib`)
 
