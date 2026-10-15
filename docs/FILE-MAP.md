@@ -167,6 +167,8 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index) and `drizz
 - `src/components/site-header-client.tsx` — sticky nav (Seasons / History / 10-man / Admin), live pill, scroll blur, mobile hamburger overlay.
 - `src/components/site-footer.tsx` — async server component; nav links (Seasons / History / 10-man), session-aware Account links, Terms / Privacy, Riot "Legal Jibber Jabber" / Valve footage notice.
 - `src/components/legal-page.tsx` — `LegalPage` chrome for `/terms` + `/privacy`.
+- `src/components/use-turn-alert.ts` — client hooks: `useSnapshotStream` (SSE + connection status), `useTurnAlert` (title flash + chime on your pick), `useTurnSoundPref`.
+- `src/components/live-status.tsx` — `LiveStatusDot` ("Live" / "Reconnecting…") and `TurnSoundToggle`.
 
 ## UI primitives
 

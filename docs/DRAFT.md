@@ -87,13 +87,27 @@ snapshot from the DB on reconnect, so nothing is lost.
 `src/app/seasons/[slug]/draft/live-board.tsx`:
 
 ```ts
-const es = new EventSource(`/api/draft/${slug}/stream`);
-es.addEventListener("update", (e) => setSnap(JSON.parse(e.data)));
+const liveStatus = useSnapshotStream<Snapshot>(`/api/draft/${slug}/stream`, setSnap);
 ```
+
+`useSnapshotStream` (`src/components/use-turn-alert.ts`, shared with the
+10-man board) wraps the EventSource and returns `connecting | live |
+reconnecting`, shown by `<LiveStatusDot>` so a dropped stream is visible.
 
 Initial state is rendered server-side via `getDraftSnapshot` in
 `src/app/seasons/[slug]/draft/page.tsx` and handed to `<LiveBoard initial={…}>`.
 The client then hot-replaces it when SSE events arrive.
+
+**Your-turn alerts** (`useTurnAlert`, same file): while the viewer is the
+captain on the clock, a "Your pick" banner shows above the board, the tab
+title flashes when the tab is in the background, and — if the captain
+ticked "Chime on my pick" (`TurnSoundToggle`, stored in `localStorage`
+under `sl.turnSound`) — a short WebAudio chime plays when the turn passes
+to them. The 10-man draft board uses the same hooks.
+
+**Pool tools:** name filter, LoL role chips (primary/secondary match;
+`fill` players match every role) and a sort (LoL defaults to solo-queue
+rank via `rankScore`; also name / signup order).
 
 ## Submitting a pick
 

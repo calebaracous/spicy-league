@@ -1,6 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+
+import { LiveStatusDot } from "@/components/live-status";
+import { useSnapshotStream } from "@/components/use-turn-alert";
 
 import { CancelledBoard } from "./_phases/cancelled-board";
 import { CompleteBoard } from "./_phases/complete-board";
@@ -22,28 +25,21 @@ export function TenManLiveBoard({
   isAdmin: boolean;
 }) {
   const [snap, setSnap] = useState<TenManSnapshotClient>(initial);
-
-  // Subscribe to SSE
-  useEffect(() => {
-    const es = new EventSource(`/api/ten-man/${tenManId}/stream`);
-    es.addEventListener("update", (e) => {
-      try {
-        const data = JSON.parse((e as MessageEvent).data) as TenManSnapshotClient;
-        if (data) setSnap(data);
-      } catch {
-        // ignore parse errors
-      }
-    });
-    es.onerror = () => {
-      // Browser auto-reconnects
-    };
-    return () => es.close();
-  }, [tenManId]);
+  const liveStatus = useSnapshotStream<TenManSnapshotClient>(
+    `/api/ten-man/${tenManId}/stream`,
+    setSnap,
+  );
 
   const state = snap.tenMan.state;
+  const finished = state === "complete" || state === "cancelled";
 
   return (
     <div className="site-container" style={{ paddingTop: "2rem", paddingBottom: "6rem" }}>
+      {finished ? null : (
+        <div className="mb-3 flex justify-end">
+          <LiveStatusDot status={liveStatus} />
+        </div>
+      )}
       {state === "cancelled" ? (
         <CancelledBoard snap={snap} />
       ) : state === "signups" ? (

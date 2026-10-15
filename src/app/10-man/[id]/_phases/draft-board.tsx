@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 
+import { TurnSoundToggle } from "@/components/live-status";
+import { useTurnAlert, useTurnSoundPref } from "@/components/use-turn-alert";
+
 import { Button } from "@/components/ui/button";
 import { SnakeOrderStrip } from "@/components/ui/snake-order-strip";
 import { SectionLabel } from "@/components/ui/section-label";
@@ -37,6 +40,9 @@ export function DraftBoard({
 
   const isOnClockViewer = !complete && viewerUserId && onTheClock?.captainUserId === viewerUserId;
   const canPick = !complete && (isAdmin || Boolean(isOnClockViewer));
+  const isViewerCaptain = captains.some((c) => c.userId === viewerUserId);
+  const [soundOn] = useTurnSoundPref();
+  useTurnAlert(Boolean(isOnClockViewer), soundOn);
 
   function handlePick(pickedUserId: string) {
     run(() => submitPick(tenManId, pickedUserId, picks.length + 1));
@@ -101,6 +107,7 @@ export function DraftBoard({
                 Admin — picking for {onClockCaptain?.displayName ?? "captain"}
               </span>
             ) : null}
+            {isViewerCaptain && !complete ? <TurnSoundToggle /> : null}
             {isOnClockViewer && !isAdmin ? <YourTurnPill /> : null}
           </div>
         </div>
