@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { SectionLabel } from "@/components/ui/section-label";
 import { VsDivider } from "@/components/ui/vs-divider";
 import { reportResult } from "../../actions";
-import { Avatar, PhaseBanner } from "./shared";
+import { ActionError, Avatar, PhaseBanner, useTenManAction } from "./shared";
 import type { TenManSnapshotClient, CaptainEntry, PickEntry } from "./types";
 
 export function ReadyBoard({
@@ -19,7 +19,18 @@ export function ReadyBoard({
   isAdmin: boolean;
 }) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [copied, setCopied] = useState(false);
   const { captains, picks, tenMan } = snap;
+
+  function copyLobbyCode() {
+    navigator.clipboard.writeText(tenMan.lobbyCode ?? "").then(
+      () => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      },
+      () => {},
+    );
+  }
 
   const cap1 = captains.find((c) => c.captainOrder === 1);
   const cap2 = captains.find((c) => c.captainOrder === 2);
@@ -46,15 +57,8 @@ export function ReadyBoard({
         right={right}
       />
 
-      {/* Teams side-by-side */}
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: "1fr auto 1fr",
-          gap: 20,
-          alignItems: "stretch",
-        }}
-      >
+      {/* Teams side-by-side (stacked on phones) */}
+      <div className="grid items-stretch gap-5 md:grid-cols-[1fr_auto_1fr]">
         {cap1 ? (
           <TeamRoster
             captain={cap1}
@@ -122,9 +126,10 @@ export function ReadyBoard({
             variant="outline"
             size="sm"
             className="rounded-full"
-            onClick={() => navigator.clipboard.writeText(tenMan.lobbyCode ?? "")}
+            onClick={copyLobbyCode}
+            aria-live="polite"
           >
-            Copy
+            {copied ? "Copied" : "Copy"}
           </Button>
         </div>
       </div>
@@ -197,7 +202,7 @@ export function TeamRoster({
         }}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0, flex: 1 }}>
-          <SectionLabel style={{ color: isWinner ? "var(--accent)" : "var(--muted)" }}>
+          <SectionLabel style={{ color: isWinner ? "var(--accent-text)" : "var(--muted)" }}>
             {label}
           </SectionLabel>
           <span
@@ -280,7 +285,7 @@ function RosterRow({
       <span
         style={{
           fontSize: 10,
-          color: isCaptain ? "var(--accent)" : "var(--muted)",
+          color: isCaptain ? "var(--accent-text)" : "var(--muted)",
           fontFamily: "var(--font-geist-mono)",
           width: 16,
         }}
@@ -331,17 +336,42 @@ function ResultModal({
 }) {
   const [winner, setWinner] = useState<string | null>(null);
   const [duration, setDuration] = useState("");
-  const [pending, startTransition] = useTransition();
+  const { pending, error, run } = useTenManAction();
+  const titleId = useId();
+  const durationId = useId();
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // Latest onClose without re-running the mount effect (the parent re-renders
+  // on every SSE snapshot, which would otherwise steal focus back).
+  const onCloseRef = useRef(onClose);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+  });
+
+  // Dialog basics: focus moves in on open, Escape closes, focus returns after.
+  useEffect(() => {
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    dialogRef.current?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onCloseRef.current();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      previouslyFocused?.focus();
+    };
+  }, []);
 
   function handleSubmit() {
     if (!winner) return;
-    startTransition(async () => {
-      await reportResult(tenManId, {
-        winnerCaptainUserId: winner,
-        durationLabel: duration || undefined,
-      });
-      onClose();
-    });
+    run(
+      () =>
+        reportResult(tenManId, {
+          winnerCaptainUserId: winner,
+          durationLabel: duration || undefined,
+        }),
+      onClose,
+    );
   }
 
   const sides = ["BLUE SIDE", "RED SIDE"];
@@ -373,10 +403,16 @@ function ResultModal({
           borderRadius: 10,
         }}
         onClick={(e) => e.stopPropagation()}
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
+        tabIndex={-1}
       >
         <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
           <SectionLabel>REPORT RESULT</SectionLabel>
           <h2
+            id={titleId}
             style={{
               fontSize: 24,
               fontWeight: 500,
@@ -397,6 +433,8 @@ function ResultModal({
             return (
               <button
                 key={cap.userId}
+                type="button"
+                aria-pressed={selected}
                 onClick={() => setWinner(cap.userId)}
                 style={{
                   display: "flex",
@@ -415,7 +453,7 @@ function ResultModal({
               >
                 <Avatar name={cap.displayName} size={40} captain />
                 <span style={{ fontSize: 14, fontWeight: 500 }}>Team {cap.displayName}</span>
-                <SectionLabel style={{ color: selected ? "var(--accent)" : "var(--muted)" }}>
+                <SectionLabel style={{ color: selected ? "var(--accent-text)" : "var(--muted)" }}>
                   {sides[i]}
                 </SectionLabel>
               </button>
@@ -425,6 +463,7 @@ function ResultModal({
 
         <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
           <label
+            htmlFor={durationId}
             style={{
               fontSize: 11,
               color: "var(--muted)",
@@ -435,6 +474,7 @@ function ResultModal({
             Duration (optional)
           </label>
           <input
+            id={durationId}
             className="flex h-9 w-full rounded-md border px-3 py-1 text-sm"
             style={{
               background: "var(--bg)",
@@ -447,6 +487,8 @@ function ResultModal({
             onChange={(e) => setDuration(e.target.value)}
           />
         </div>
+
+        <ActionError message={error} />
 
         <div
           style={{

@@ -1,5 +1,6 @@
 import { Divider } from "@/components/ui/divider";
 import { LinkButton } from "@/components/ui/link-button";
+import { LocalTime } from "@/components/ui/local-time";
 import { PlayerCard } from "@/components/ui/player-card";
 import { Reveal } from "@/components/ui/reveal";
 import { SectionLabel } from "@/components/ui/section-label";
@@ -19,18 +20,6 @@ function matchLabel(round: number, stage: string): string {
   if (stage === "final") return "Final";
   if (stage === "semis") return "Semifinal";
   return `Group stage · Round ${round}`;
-}
-
-function formatScheduledAt(d: Date | null): string {
-  if (!d) return "TBD";
-  return d.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-    timeZoneName: "short",
-  });
 }
 
 export function LiveSection({ season, nextMatch, topPlayers }: LiveSectionProps) {
@@ -85,7 +74,7 @@ export function LiveSection({ season, nextMatch, topPlayers }: LiveSectionProps)
                   <span
                     className="flex h-14 w-14 items-center justify-center rounded-full text-lg font-semibold"
                     style={{
-                      color: "var(--accent)",
+                      color: "var(--accent-text)",
                       border: "2px solid var(--accent)",
                     }}
                   >
@@ -114,7 +103,11 @@ export function LiveSection({ season, nextMatch, topPlayers }: LiveSectionProps)
                   {matchLabel(nextMatch.round, nextMatch.stage)}
                 </span>
                 <span className="font-mono" style={{ color: "var(--text)" }}>
-                  {formatScheduledAt(nextMatch.scheduledAt)}
+                  {nextMatch.scheduledAt ? (
+                    <LocalTime date={nextMatch.scheduledAt} preset="weekday-datetime" />
+                  ) : (
+                    "TBD"
+                  )}
                 </span>
               </div>
             </div>
@@ -140,7 +133,7 @@ export function LiveSection({ season, nextMatch, topPlayers }: LiveSectionProps)
         <Reveal className="mb-14 flex flex-col gap-4">
           <SectionLabel>TOP-RANKED PLAYERS</SectionLabel>
           <h2 className="text-heading" style={{ color: "var(--text)" }}>
-            Highest-ranked <span style={{ color: "var(--accent)" }}>players</span>
+            Highest-ranked <span style={{ color: "var(--accent-text)" }}>players</span>
           </h2>
           <p
             className="text-sm leading-relaxed"
@@ -162,7 +155,7 @@ export function LiveSection({ season, nextMatch, topPlayers }: LiveSectionProps)
           <Reveal>
             <p className="text-sm" style={{ color: "var(--muted)" }}>
               No rank data available. Current results are on the{" "}
-              <a href={matchesHref} style={{ color: "var(--accent)" }}>
+              <a href={matchesHref} style={{ color: "var(--accent-text)" }}>
                 standings page
               </a>
               .

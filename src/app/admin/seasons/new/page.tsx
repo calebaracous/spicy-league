@@ -6,9 +6,12 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LocalDateTimeInput } from "@/components/ui/local-time";
 import { Textarea } from "@/components/ui/textarea";
 import { GAME_LABELS } from "@/lib/seasons";
 import { cn } from "@/lib/utils";
+
+export const metadata = { title: "New season · Admin" };
 
 type SearchParams = Promise<{ error?: string }>;
 
@@ -22,7 +25,7 @@ export default async function NewSeasonPage({ searchParams }: { searchParams: Se
   const errorMessage = error ? ERROR_MESSAGES[error] : null;
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-6 py-12">
+    <div className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-6 py-12">
       <header className="space-y-1">
         <Link href="/admin" className="text-muted-foreground text-xs hover:underline">
           ← Back to admin
@@ -113,17 +116,20 @@ export default async function NewSeasonPage({ searchParams }: { searchParams: Se
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-1.5">
                 <Label htmlFor="signupOpensAt">Signups open</Label>
-                <Input id="signupOpensAt" name="signupOpensAt" type="datetime-local" />
+                <LocalDateTimeInput id="signupOpensAt" name="signupOpensAt" />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="signupClosesAt">Signups close</Label>
-                <Input id="signupClosesAt" name="signupClosesAt" type="datetime-local" />
+                <LocalDateTimeInput id="signupClosesAt" name="signupClosesAt" />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="seasonStartAt">Season starts</Label>
-                <Input id="seasonStartAt" name="seasonStartAt" type="datetime-local" />
+                <LocalDateTimeInput id="seasonStartAt" name="seasonStartAt" />
               </div>
             </div>
+            <p className="text-muted-foreground -mt-2 text-xs">
+              Times are entered and shown in your local timezone.
+            </p>
             <div className="flex justify-end gap-2 pt-2">
               <Link href="/admin" className={cn(buttonVariants({ variant: "outline" }))}>
                 Cancel
@@ -133,6 +139,6 @@ export default async function NewSeasonPage({ searchParams }: { searchParams: Se
           </form>
         </CardContent>
       </Card>
-    </main>
+    </div>
   );
 }

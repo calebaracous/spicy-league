@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 
 import { LogoMark } from "@/components/ui/logo-mark";
+import { signInHref } from "@/lib/safe-redirect";
 import { cn } from "@/lib/utils";
 
 const navLinks = [
@@ -43,12 +44,26 @@ export function SiteHeaderClient({
 
   useEffect(() => {
     document.body.style.overflow = menuOpen ? "hidden" : "";
+    if (!menuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
     return () => {
       document.body.style.overflow = "";
+      window.removeEventListener("keydown", onKey);
     };
   }, [menuOpen]);
 
+  // Close the menu on any navigation (incl. back/forward), not just link taps.
+  const [menuPath, setMenuPath] = useState(pathname);
+  if (menuPath !== pathname) {
+    setMenuPath(pathname);
+    setMenuOpen(false);
+  }
+
   const closeMenu = () => setMenuOpen(false);
+  const signInLink = signInHref(pathname);
 
   const adminLink = user?.role === "admin" ? [{ href: "/admin", label: "Admin" }] : [];
   const allLinks = [...navLinks, ...adminLink];
@@ -77,7 +92,7 @@ export function SiteHeaderClient({
           >
             <LogoMark size={22} />
             <span>
-              Spicy League<span style={{ color: "var(--accent)" }}>.</span>
+              Spicy League<span style={{ color: "var(--accent-text)" }}>.</span>
             </span>
           </Link>
 
@@ -87,7 +102,7 @@ export function SiteHeaderClient({
               href={livePill.href}
               className="absolute top-1/2 left-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-medium tracking-wider uppercase transition-opacity hover:opacity-80 sm:inline-flex sm:text-xs"
               style={{
-                color: "var(--accent)",
+                color: "var(--accent-text)",
                 borderColor: "var(--border)",
                 backgroundColor: "rgba(10,10,10,0.4)",
               }}
@@ -114,6 +129,7 @@ export function SiteHeaderClient({
                 <Link
                   key={href}
                   href={href}
+                  aria-current={active ? "page" : undefined}
                   className={cn(
                     "relative text-sm transition-opacity",
                     active ? "font-medium opacity-100" : "opacity-50 hover:opacity-100",
@@ -145,7 +161,7 @@ export function SiteHeaderClient({
               </Link>
             ) : (
               <Link
-                href="/signin"
+                href={signInLink}
                 className="inline-flex items-center justify-center rounded-full px-4 py-1.5 text-sm font-medium tracking-tight transition-opacity hover:opacity-80"
                 style={{
                   backgroundColor: "var(--accent)",
@@ -164,6 +180,7 @@ export function SiteHeaderClient({
             onClick={() => setMenuOpen((v) => !v)}
             aria-label={menuOpen ? "Close menu" : "Open menu"}
             aria-expanded={menuOpen}
+            aria-controls="mobile-menu"
           >
             <span
               className={cn(
@@ -190,24 +207,41 @@ export function SiteHeaderClient({
         </div>
       </header>
 
-      {/* Mobile overlay menu */}
+      {/* Mobile overlay menu. `inert` while closed so its links aren't
+          invisible tab stops. */}
       <div
+        id="mobile-menu"
+        inert={!menuOpen}
         className={cn(
           "fixed inset-0 z-40 flex flex-col items-center justify-center gap-10 md:hidden",
           "transition-all duration-300",
           menuOpen ? "pointer-events-auto opacity-100" : "pointer-events-none opacity-0",
         )}
         style={{ backgroundColor: "var(--bg)" }}
-        aria-hidden={!menuOpen}
       >
+        {livePill ? (
+          <Link
+            href={livePill.href}
+            onClick={closeMenu}
+            className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium tracking-wider uppercase"
+            style={{ color: "var(--accent-text)", borderColor: "var(--border)" }}
+          >
+            <span
+              className="inline-flex h-1.5 w-1.5 rounded-full"
+              style={{ backgroundColor: "var(--accent)" }}
+            />
+            {livePill.label}
+          </Link>
+        ) : null}
         <Link
           href="/"
           onClick={closeMenu}
+          aria-current={pathname === "/" ? "page" : undefined}
           className={cn(
             "text-3xl font-medium tracking-tight transition-opacity",
-            pathname === "/" ? "opacity-100" : "opacity-40 hover:opacity-100",
+            pathname === "/" ? "opacity-100" : "opacity-50 hover:opacity-100",
           )}
-          style={{ color: pathname === "/" ? "var(--accent)" : "var(--text)" }}
+          style={{ color: "var(--text)" }}
         >
           Home
         </Link>
@@ -218,11 +252,12 @@ export function SiteHeaderClient({
               key={href}
               href={href}
               onClick={closeMenu}
+              aria-current={active ? "page" : undefined}
               className={cn(
                 "text-3xl font-medium tracking-tight transition-opacity",
-                active ? "opacity-100" : "opacity-40 hover:opacity-100",
+                active ? "opacity-100" : "opacity-50 hover:opacity-100",
               )}
-              style={{ color: active ? "var(--accent)" : "var(--text)" }}
+              style={{ color: "var(--text)" }}
             >
               {label}
             </Link>
@@ -232,17 +267,17 @@ export function SiteHeaderClient({
           <Link
             href="/profile"
             onClick={closeMenu}
-            className="text-3xl font-medium tracking-tight transition-opacity hover:opacity-100"
-            style={{ color: "var(--text)", opacity: 0.7 }}
+            className="text-3xl font-medium tracking-tight opacity-70 transition-opacity hover:opacity-100"
+            style={{ color: "var(--text)" }}
           >
             {user.name ?? "Profile"}
           </Link>
         ) : (
           <Link
-            href="/signin"
+            href={signInLink}
             onClick={closeMenu}
             className="text-3xl font-medium tracking-tight transition-opacity"
-            style={{ color: "var(--accent)" }}
+            style={{ color: "var(--accent-text)" }}
           >
             Sign in
           </Link>

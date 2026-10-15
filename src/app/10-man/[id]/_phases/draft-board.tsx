@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import { SnakeOrderStrip } from "@/components/ui/snake-order-strip";
 import { SectionLabel } from "@/components/ui/section-label";
 import { submitPick } from "../../actions";
-import { Avatar } from "./shared";
+import { ActionError, Avatar, useTenManAction } from "./shared";
 import type { TenManSnapshotClient, CaptainEntry, PickEntry } from "./types";
 
 export function DraftBoard({
@@ -22,7 +22,7 @@ export function DraftBoard({
 }) {
   const { captains, picks, signups, onTheClock } = snap;
   const [filter, setFilter] = useState("");
-  const [pending, startTransition] = useTransition();
+  const { pending, error, run } = useTenManAction();
 
   const complete = picks.length >= 8;
   const currentPickNum = complete ? 9 : (onTheClock?.pickNumber ?? picks.length + 1);
@@ -39,7 +39,7 @@ export function DraftBoard({
   const canPick = !complete && (isAdmin || Boolean(isOnClockViewer));
 
   function handlePick(pickedUserId: string) {
-    startTransition(() => submitPick(tenManId, pickedUserId, picks.length + 1));
+    run(() => submitPick(tenManId, pickedUserId, picks.length + 1));
   }
 
   const cap1 = captains.find((c) => c.captainOrder === 1);
@@ -72,9 +72,9 @@ export function DraftBoard({
           <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
             <SectionLabel>DRAFT</SectionLabel>
             <div style={{ display: "flex", alignItems: "baseline", gap: 12 }}>
-              <span style={{ fontSize: 20, fontWeight: 500, color: "var(--text)" }}>
+              <h1 style={{ fontSize: 20, fontWeight: 500, color: "var(--text)" }}>
                 {complete ? "Draft complete" : `Pick ${currentPickNum} of 8`}
-              </span>
+              </h1>
               {!complete && onTheClock ? (
                 <span style={{ fontSize: 13, color: "var(--muted)" }}>
                   On the clock:{" "}
@@ -108,8 +108,10 @@ export function DraftBoard({
         <SnakeOrderStrip currentPick={complete ? undefined : currentPickNum} />
       </div>
 
-      {/* Live board: left = teams, right = pool */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 2fr", gap: 20 }}>
+      <ActionError message={error} />
+
+      {/* Live board: left = teams, right = pool (stacked on phones) */}
+      <div className="grid gap-5 md:grid-cols-[1fr_2fr]">
         {/* Teams */}
         <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
           {[cap1, cap2].filter(Boolean).map((cap) => (
@@ -156,6 +158,7 @@ export function DraftBoard({
             </span>
           </div>
           <input
+            aria-label="Filter available players by name"
             className="flex h-9 w-full rounded-md border px-3 py-1 text-sm"
             style={{
               background: "var(--bg)",
@@ -402,7 +405,7 @@ function YourTurnPill() {
         padding: "6px 12px",
         borderRadius: 9999,
         border: "1px solid var(--accent)",
-        color: "var(--accent)",
+        color: "var(--accent-text)",
         fontSize: 12,
         fontWeight: 500,
       }}

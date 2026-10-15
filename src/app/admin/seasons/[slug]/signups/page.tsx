@@ -9,9 +9,13 @@ import { seasonSignups, seasonCaptains } from "@/db/schema/seasons";
 import { users } from "@/db/schema/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { LocalTime } from "@/components/ui/local-time";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { seasonPageMetadata } from "@/lib/season-meta";
 import { GAME_LABELS } from "@/lib/seasons";
+
+export const generateMetadata = seasonPageMetadata("Signups · Admin");
 
 type Params = Promise<{ slug: string }>;
 type SearchParams = Promise<{ saved?: string; error?: string; role?: string }>;
@@ -110,7 +114,7 @@ export default async function AdminSignupsPage({
   const lolRoles = ["top", "jungle", "mid", "adc", "support", "fill"];
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 space-y-6 px-6 py-12">
+    <div className="mx-auto w-full max-w-5xl flex-1 space-y-6 px-6 py-12">
       <header className="space-y-1">
         <Link
           href={`/admin/seasons/${slug}`}
@@ -201,7 +205,7 @@ export default async function AdminSignupsPage({
               <div className="pt-2">
                 <Link
                   href={`/admin/seasons/${slug}/draft`}
-                  className="text-primary text-xs underline-offset-4 hover:underline"
+                  className="text-accent-text text-xs underline-offset-4 hover:underline"
                 >
                   → Manage draft
                 </Link>
@@ -283,7 +287,7 @@ export default async function AdminSignupsPage({
                           {s.notes ?? "—"}
                         </td>
                         <td className="text-muted-foreground py-2 pr-4 text-xs whitespace-nowrap">
-                          {s.createdAt.toLocaleDateString()}
+                          <LocalTime date={s.createdAt} preset="date-short" />
                         </td>
                         <td className="py-2">
                           {!isCaptain ? (
@@ -303,6 +307,6 @@ export default async function AdminSignupsPage({
           )}
         </CardContent>
       </Card>
-    </main>
+    </div>
   );
 }

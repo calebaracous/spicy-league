@@ -37,7 +37,7 @@ export function Hero({ liveHref, liveLabel, game }: HeroProps) {
         >
           Captains-draft
           <br />
-          <span style={{ color: "var(--accent)" }}>tournaments</span> for LoL and CS2
+          <span style={{ color: "var(--accent-text)" }}>tournaments</span> for LoL and CS2
         </h1>
 
         <p

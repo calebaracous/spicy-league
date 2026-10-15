@@ -39,7 +39,9 @@ Trivial shadcn primitives get a single entry at the bottom.
 
 ## App root
 
-- `src/app/layout.tsx` — `<html>`, Geist + Geist Mono fonts, SiteHeader, main, SiteFooter. Declares `metadata.icons`/`manifest`/`openGraph` and a dark `viewport.themeColor`.
+- `src/app/layout.tsx` — `<html>`, Geist + Geist Mono fonts, skip link, SiteHeader, `<main id="main">` (the only `<main>`), SiteFooter. Declares `metadata.icons`/`manifest`/`openGraph` and a dark `viewport.themeColor`.
+- `src/app/error.tsx` — root error boundary (client). "Try again" calls `unstable_retry()`.
+- `src/app/not-found.tsx` — 404 for `notFound()` and unmatched URLs.
 - `src/app/template.tsx` — per-route `animate-page` fade wrapper.
 - `src/app/page.tsx` — home; calls `getHomepageData()` and renders Hero + exactly one state section + `PastSeasonsStrip`. Hero label: `LIVE_STATE_COPY` for live states, `HERO_LABELS` (upcoming / off-season) otherwise.
 - `src/app/globals.css` — design tokens (freelance hex + shadcn OKLCH), typography, animations, `.tint-subtle-warm`, `.legal-prose`. See [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md).
@@ -77,7 +79,8 @@ Rendered by `src/app/page.tsx`:
 - `[id]/page.tsx` — server-fetches snapshot, renders live board.
 - `[id]/live-board.tsx` — client; SSE-subscribes to `/api/ten-man/[id]/stream`, switches on state.
 - `[id]/_phases/signup-board.tsx`, `voting-board.tsx`, `draft-board.tsx`, `ready-board.tsx` (exports `TeamRoster`), `complete-board.tsx` — one per phase.
-- `[id]/_phases/shared.tsx` — `Avatar`, `PhaseBanner`. `[id]/_phases/types.ts` — `TenManSnapshotClient`.
+- `[id]/_phases/cancelled-board.tsx` — terminal banner for `cancelled`.
+- `[id]/_phases/shared.tsx` — `Avatar`, `PhaseBanner`, `useTenManAction` (runs an action, keeps its `{ error }`), `ActionError`. `[id]/_phases/types.ts` — `TenManSnapshotClient`.
 
 ## Admin pages
 
@@ -123,7 +126,7 @@ Rendered by `src/app/page.tsx`:
 
 ## Auth / session
 
-- `src/auth.ts` — app-level `auth()` wrapper returning `AppSession | null`. Also exports `signOut()` server helper.
+- `src/auth.ts` — app-level `auth()` wrapper (request-cached via `React.cache`) returning `AppSession | null`. Also exports `signOut()` server helper.
 - `src/lib/auth.ts` — Better Auth config. Drizzle adapter, Resend email templates, session cookie settings, user additional fields, `nextCookies()` plugin.
 - `src/lib/auth-client.ts` — Better Auth React client. Exports `authClient`, `signIn`, `signUp`, `signOut`, `useSession`.
 - `src/lib/auth-helpers.ts` — `getSession`, `requireAuth`, `requireAdmin`, `requireOnboarded`. Redirect-on-failure.
@@ -155,12 +158,14 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index) and `drizz
 - `src/lib/riot-api.ts` — Riot API client. `getAccountByRiotId`, `getRankEntries`, `getTopChampions`, `getChampionName` (Data Dragon).
 - `src/lib/stat-refresh.ts` — `refreshRiotStats(userId)` (all of a user's Riot links), `refreshAllRiotStats` (every Riot link); per-link delete-then-insert, 1200ms sleep between links.
 - `src/lib/rate-limit.ts` — Upstash sliding-window. Specs: `magicLink` (unused), `statRefresh`. Fails open if Upstash env missing.
+- `src/lib/safe-redirect.ts` — `safeCallbackUrl` (same-origin paths only) + `signInHref(path)` for sign-in links that return the user.
+- `src/lib/season-meta.ts` — `getSeasonName` (request-cached) + `seasonPageMetadata("Page")` for season sub-page `<title>`s.
 
 ## Site chrome
 
 - `src/components/site-header.tsx` — server; calls `auth()`, `getLiveSeason()`, `getActiveTenMan()`; builds the live pill (season first, else 10-man).
 - `src/components/site-header-client.tsx` — sticky nav (Seasons / History / 10-man / Admin), live pill, scroll blur, mobile hamburger overlay.
-- `src/components/site-footer.tsx` — footer: nav links + Terms / Privacy + Riot "Legal Jibber Jabber" / Valve footage notice.
+- `src/components/site-footer.tsx` — async server component; nav links (Seasons / History / 10-man), session-aware Account links, Terms / Privacy, Riot "Legal Jibber Jabber" / Valve footage notice.
 - `src/components/legal-page.tsx` — `LegalPage` chrome for `/terms` + `/privacy`.
 
 ## UI primitives
@@ -177,7 +182,9 @@ Freelance-style (hex tokens):
 - `src/components/ui/player-card.tsx` — username + optional role/rank row card. Home sections.
 - `src/components/ui/captain-badge.tsx` — red-tinted name chip. Home draft section.
 - `src/components/ui/snake-order-strip.tsx` — 8-cell C1/C2 pick-order strip + `SNAKE_ORDER`. 10-man draft.
-- `src/components/ui/vs-divider.tsx` — vertical "VS" separator. 10-man ready/complete.
+- `src/components/ui/vs-divider.tsx` — "VS" separator (vertical at md+, horizontal when teams stack). 10-man ready/complete.
+- `src/components/ui/local-time.tsx` — client; `LocalTime` (formats a date in the viewer's timezone), `LocalDateTimeInput` (datetime-local that submits UTC ISO), `useHydrated`.
+- `src/components/ui/confirm-submit-button.tsx` — client; submit `Button` that `confirm()`s first. Destructive admin forms.
 
 shadcn (OKLCH tokens):
 - `alert.tsx`, `badge.tsx`, `button.tsx`, `card.tsx`, `input.tsx`, `label.tsx`, `select.tsx`, `separator.tsx`, `sonner.tsx`, `textarea.tsx` — standard shadcn generators under `src/components/ui/`.

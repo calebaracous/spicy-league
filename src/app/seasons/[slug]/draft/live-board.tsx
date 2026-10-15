@@ -214,6 +214,7 @@ export function LiveBoard({
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               placeholder="Filter by name…"
+              aria-label="Filter the available pool by name"
               className="border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
             />
             {filtered.length === 0 ? (

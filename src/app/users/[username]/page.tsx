@@ -8,6 +8,7 @@ import { users } from "@/db/schema/auth";
 import { accountLinks, riotStatSnapshots } from "@/db/schema/stats";
 import { getChampionName } from "@/lib/riot-api";
 import { Card, CardContent } from "@/components/ui/card";
+import { LocalTime } from "@/components/ui/local-time";
 import { Separator } from "@/components/ui/separator";
 
 type Props = { params: Promise<{ username: string }> };
@@ -130,7 +131,7 @@ export default async function PublicProfilePage({ params }: Props) {
           )}
           {lastRefreshed ? (
             <p className="text-muted-foreground text-xs">
-              Updated {lastRefreshed.toLocaleDateString()}
+              Updated <LocalTime date={lastRefreshed} preset="date-short" />
             </p>
           ) : null}
         </div>
@@ -140,7 +141,7 @@ export default async function PublicProfilePage({ params }: Props) {
           href={user.opggUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-primary inline-block text-sm font-medium underline-offset-4 hover:underline"
+          className="text-accent-text inline-block text-sm font-medium underline-offset-4 hover:underline"
         >
           Full stats on OP.GG →
         </Link>
@@ -173,7 +174,7 @@ export default async function PublicProfilePage({ params }: Props) {
           href={leetifyLink.externalHandle ?? leetifyLink.externalId}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-primary text-sm font-medium underline-offset-4 hover:underline"
+          className="text-accent-text text-sm font-medium underline-offset-4 hover:underline"
         >
           Full stats on Leetify →
         </Link>
@@ -182,7 +183,7 @@ export default async function PublicProfilePage({ params }: Props) {
   );
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-6 py-12">
+    <div className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-6 py-12">
       <header className="space-y-0.5">
         <h1 className="font-mono text-4xl font-bold tracking-tight">{displayName}</h1>
         <p className="text-muted-foreground text-sm">@{user.username}</p>
@@ -204,6 +205,6 @@ export default async function PublicProfilePage({ params }: Props) {
           </CardContent>
         </Card>
       ) : null}
-    </main>
+    </div>
   );
 }

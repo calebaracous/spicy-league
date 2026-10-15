@@ -1,5 +1,6 @@
 import { Divider } from "@/components/ui/divider";
 import { LinkButton } from "@/components/ui/link-button";
+import { LocalTime } from "@/components/ui/local-time";
 import { Reveal } from "@/components/ui/reveal";
 import { SectionLabel } from "@/components/ui/section-label";
 import { TintedSection } from "@/components/ui/tinted-section";
@@ -11,17 +12,12 @@ interface UpcomingSectionProps {
   season: Season;
 }
 
-function formatDate(d: Date | null | undefined): string {
-  if (!d) return "TBD";
-  return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-}
-
 export function UpcomingSection({ season }: UpcomingSectionProps) {
   const dates = [
-    { label: "Signups open", value: formatDate(season.signupOpensAt) },
-    { label: "Signups close", value: formatDate(season.signupClosesAt) },
-    { label: "Tournament start", value: formatDate(season.seasonStartAt) },
-  ].filter((d) => d.value !== "TBD");
+    { label: "Signups open", value: season.signupOpensAt },
+    { label: "Signups close", value: season.signupClosesAt },
+    { label: "Tournament start", value: season.seasonStartAt },
+  ].filter((d): d is { label: string; value: Date } => d.value !== null);
 
   return (
     <>
@@ -47,7 +43,7 @@ export function UpcomingSection({ season }: UpcomingSectionProps) {
               className="flex flex-col gap-4 rounded-2xl p-8"
               style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
             >
-              <SectionLabel className="opacity-50">FORMAT</SectionLabel>
+              <SectionLabel style={{ color: "var(--muted)" }}>FORMAT</SectionLabel>
               <div className="flex flex-col gap-3 text-sm leading-relaxed">
                 <div>
                   <span style={{ color: "var(--muted)" }}>Game: </span>
@@ -69,7 +65,7 @@ export function UpcomingSection({ season }: UpcomingSectionProps) {
                 className="flex flex-col gap-3 rounded-2xl p-8"
                 style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
               >
-                <SectionLabel className="opacity-50">KEY DATES</SectionLabel>
+                <SectionLabel style={{ color: "var(--muted)" }}>KEY DATES</SectionLabel>
                 {dates.map(({ label, value }) => (
                   <div
                     key={label}
@@ -78,7 +74,7 @@ export function UpcomingSection({ season }: UpcomingSectionProps) {
                   >
                     <span style={{ color: "var(--muted)" }}>{label}</span>
                     <span className="font-mono" style={{ color: "var(--text)" }}>
-                      {value}
+                      <LocalTime date={value} preset="weekday-datetime" />
                     </span>
                   </div>
                 ))}
@@ -94,7 +90,7 @@ export function UpcomingSection({ season }: UpcomingSectionProps) {
         <Reveal className="flex max-w-xl flex-col gap-4">
           <SectionLabel>ACCOUNTS</SectionLabel>
           <h2 className="text-heading" style={{ color: "var(--text)" }}>
-            Signups <span style={{ color: "var(--accent)" }}>not yet open</span>
+            Signups <span style={{ color: "var(--accent-text)" }}>not yet open</span>
           </h2>
           <p className="text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
             An account is required to sign up for a season. Players who link a Riot account have

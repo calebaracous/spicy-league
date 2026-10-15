@@ -1,6 +1,63 @@
 "use client";
 
+import { useState, useTransition } from "react";
+
 import { SectionLabel } from "@/components/ui/section-label";
+import type { TenManActionResult } from "../../actions";
+
+/**
+ * Runs a 10-man server action in a transition and keeps its `{ error }` (or a
+ * network failure) as inline state, so a lost race shows a message instead of
+ * crashing the board.
+ */
+export function useTenManAction() {
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function run<T extends TenManActionResult>(
+    action: () => Promise<T>,
+    onDone?: (result: T) => void,
+    onError?: () => void,
+  ) {
+    setError(null);
+    startTransition(async () => {
+      try {
+        const result = await action();
+        if (result?.error) {
+          setError(result.error);
+          onError?.();
+        } else {
+          onDone?.(result);
+        }
+      } catch {
+        setError("Something went wrong. Refresh the page and try again.");
+        onError?.();
+      }
+    });
+  }
+
+  return { pending, error, run };
+}
+
+/** Inline error line for a failed 10-man action. Announced to screen readers. */
+export function ActionError({ message }: { message: string | null }) {
+  if (!message) return null;
+  return (
+    <p
+      role="alert"
+      style={{
+        fontSize: 13,
+        color: "var(--accent-text)",
+        padding: "10px 14px",
+        border: "1px solid rgba(185, 28, 28, 0.4)",
+        background: "rgba(185, 28, 28, 0.08)",
+        borderRadius: 8,
+      }}
+    >
+      {message}
+    </p>
+  );
+}
 
 /** Initials avatar circle */
 export function Avatar({
@@ -32,7 +89,7 @@ export function Avatar({
         justifyContent: "center",
         fontSize: size < 36 ? 11 : 13,
         fontWeight: 600,
-        color: captain ? "var(--accent)" : "var(--muted)",
+        color: captain ? "var(--accent-text)" : "var(--muted)",
         flexShrink: 0,
         letterSpacing: "0.03em",
       }}
@@ -69,8 +126,11 @@ export function PhaseBanner({
         flexWrap: "wrap",
       }}
     >
-      {/* Left: label + title */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0, flex: 1 }}>
+      {/* Left: label + title. A real flex-basis so on narrow screens the row
+          wraps (progress + actions drop below) instead of crushing the title. */}
+      <div
+        style={{ display: "flex", flexDirection: "column", gap: 4, minWidth: 0, flex: "1 1 220px" }}
+      >
         <SectionLabel>{phaseLabel}</SectionLabel>
         <div
           style={{
@@ -80,7 +140,7 @@ export function PhaseBanner({
             flexWrap: "wrap",
           }}
         >
-          <span style={{ fontSize: 20, fontWeight: 500, color: "var(--text)" }}>{title}</span>
+          <h1 style={{ fontSize: 20, fontWeight: 500, color: "var(--text)" }}>{title}</h1>
           {sub ? <span style={{ fontSize: 13, color: "var(--muted)" }}>{sub}</span> : null}
         </div>
       </div>
@@ -110,7 +170,11 @@ export function PhaseBanner({
       ) : null}
 
       {/* Right: action buttons */}
-      {right ? <div style={{ display: "flex", gap: 10, alignItems: "center" }}>{right}</div> : null}
+      {right ? (
+        <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+          {right}
+        </div>
+      ) : null}
     </div>
   );
 }

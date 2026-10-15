@@ -21,7 +21,7 @@ export function PlayerCard({ username, rank, role }: PlayerCardProps) {
         )}
       </div>
       {rank && (
-        <span className="text-xs font-medium" style={{ color: "var(--accent)" }}>
+        <span className="text-xs font-medium" style={{ color: "var(--accent-text)" }}>
           {rank}
         </span>
       )}

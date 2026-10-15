@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { safeCallbackUrl } from "@/lib/safe-redirect";
 
 export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
   const router = useRouter();
@@ -26,7 +27,7 @@ export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
         setError(result.error);
         return;
       }
-      router.push(callbackUrl ?? "/profile");
+      router.push(safeCallbackUrl(callbackUrl));
       router.refresh();
     });
   }

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { headers } from "next/headers";
+import { cache } from "react";
 
 import { auth as betterAuth } from "@/lib/auth";
 
@@ -14,7 +15,9 @@ export type AppSession = {
   };
 };
 
-export async function auth(): Promise<AppSession | null> {
+// cache(): the header, footer and page all call auth() — one session lookup
+// per request instead of three.
+export const auth = cache(async function auth(): Promise<AppSession | null> {
   const session = await betterAuth.api.getSession({
     headers: await headers(),
   });
@@ -29,7 +32,7 @@ export async function auth(): Promise<AppSession | null> {
       role: ((session.user as { role?: string }).role ?? "user") as "user" | "admin",
     },
   };
-}
+});
 
 export async function signOut(): Promise<void> {
   await betterAuth.api.signOut({ headers: await headers() });

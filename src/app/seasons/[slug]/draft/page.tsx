@@ -7,6 +7,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { GAME_LABELS } from "@/lib/seasons";
 import { getDraftSnapshot } from "@/lib/draft";
+import { seasonPageMetadata } from "@/lib/season-meta";
 
 type Params = Promise<{ slug: string }>;
 type SearchParams = Promise<{ error?: string }>;
@@ -26,10 +27,7 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 export const dynamic = "force-dynamic";
 
-export async function generateMetadata({ params }: { params: Params }) {
-  const { slug } = await params;
-  return { title: `Draft · ${slug}` };
-}
+export const generateMetadata = seasonPageMetadata("Draft");
 
 export default async function DraftPage({
   params,
@@ -56,7 +54,7 @@ export default async function DraftPage({
   const season = await db.query.seasons.findFirst({ where: eq(seasons.slug, slug) });
 
   return (
-    <main className="mx-auto w-full max-w-6xl flex-1 space-y-6 px-6 py-12">
+    <div className="mx-auto w-full max-w-6xl flex-1 space-y-6 px-6 py-12">
       <header className="space-y-2">
         <Link href={`/seasons/${slug}`} className="text-muted-foreground text-xs hover:underline">
           ← Back to season
@@ -79,6 +77,6 @@ export default async function DraftPage({
         viewerUserId={viewerUserId}
         isAdmin={isAdmin}
       />
-    </main>
+    </div>
   );
 }

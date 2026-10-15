@@ -11,8 +11,13 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { LocalTime } from "@/components/ui/local-time";
 import { Textarea } from "@/components/ui/textarea";
+import { seasonPageMetadata } from "@/lib/season-meta";
 import { GAME_LABELS } from "@/lib/seasons";
+import { signInHref } from "@/lib/safe-redirect";
+
+export const generateMetadata = seasonPageMetadata("Sign up");
 
 type Params = Promise<{ slug: string }>;
 type SearchParams = Promise<{ error?: string }>;
@@ -80,12 +85,12 @@ export default async function SignupPage({
 
   if (!session?.user) {
     return (
-      <main className="mx-auto w-full max-w-xl flex-1 px-6 py-12">
+      <div className="mx-auto w-full max-w-xl flex-1 px-6 py-12">
         <Alert>
           <AlertDescription>
             You need to{" "}
             <Link
-              href={`/signin?callbackUrl=/seasons/${slug}/signup`}
+              href={signInHref(`/seasons/${slug}/signup`)}
               className="underline underline-offset-2"
             >
               sign in
@@ -93,13 +98,13 @@ export default async function SignupPage({
             before signing up.
           </AlertDescription>
         </Alert>
-      </main>
+      </div>
     );
   }
 
   if (!session.user.username) {
     return (
-      <main className="mx-auto w-full max-w-xl flex-1 px-6 py-12">
+      <div className="mx-auto w-full max-w-xl flex-1 px-6 py-12">
         <Alert>
           <AlertDescription>
             You need to{" "}
@@ -109,38 +114,50 @@ export default async function SignupPage({
             before signing up.
           </AlertDescription>
         </Alert>
-      </main>
+      </div>
     );
   }
 
   if (alreadySignedUp) {
     return (
-      <main className="mx-auto w-full max-w-xl flex-1 space-y-4 px-6 py-12">
+      <div className="mx-auto w-full max-w-xl flex-1 space-y-4 px-6 py-12">
         <Link href={`/seasons/${slug}`} className="text-muted-foreground text-xs hover:underline">
           ← Back to season
         </Link>
         <Alert>
           <AlertDescription>You&apos;re already signed up for {season.name}.</AlertDescription>
         </Alert>
-      </main>
+      </div>
     );
   }
 
   if (!isOpen) {
     return (
-      <main className="mx-auto w-full max-w-xl flex-1 space-y-4 px-6 py-12">
+      <div className="mx-auto w-full max-w-xl flex-1 space-y-4 px-6 py-12">
         <Link href={`/seasons/${slug}`} className="text-muted-foreground text-xs hover:underline">
           ← Back to season
         </Link>
         <Alert>
-          <AlertDescription>Signups are not currently open.</AlertDescription>
+          <AlertDescription>
+            {season.signupOpensAt && now < season.signupOpensAt ? (
+              <>
+                Signups open <LocalTime date={season.signupOpensAt} />.
+              </>
+            ) : season.signupClosesAt && now > season.signupClosesAt ? (
+              <>
+                Signups closed <LocalTime date={season.signupClosesAt} />.
+              </>
+            ) : (
+              "Signups are not currently open."
+            )}
+          </AlertDescription>
         </Alert>
-      </main>
+      </div>
     );
   }
 
   return (
-    <main className="mx-auto w-full max-w-xl flex-1 space-y-6 px-6 py-12">
+    <div className="mx-auto w-full max-w-xl flex-1 space-y-6 px-6 py-12">
       <header className="space-y-1">
         <Link href={`/seasons/${slug}`} className="text-muted-foreground text-xs hover:underline">
           ← Back to season
@@ -167,7 +184,16 @@ export default async function SignupPage({
               <>
                 <div className="space-y-1.5">
                   <Label htmlFor="primaryRole">Primary role</Label>
-                  <select id="primaryRole" name="primaryRole" required className={selectClass}>
+                  <select
+                    id="primaryRole"
+                    name="primaryRole"
+                    required
+                    defaultValue=""
+                    className={selectClass}
+                  >
+                    <option value="" disabled>
+                      Choose a role…
+                    </option>
                     {LOL_ROLES.map((r) => (
                       <option key={r.value} value={r.value}>
                         {r.label}
@@ -177,7 +203,13 @@ export default async function SignupPage({
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="secondaryRole">Secondary role</Label>
-                  <select id="secondaryRole" name="secondaryRole" required className={selectClass}>
+                  <select
+                    id="secondaryRole"
+                    name="secondaryRole"
+                    required
+                    defaultValue="fill"
+                    className={selectClass}
+                  >
                     {LOL_ROLES.map((r) => (
                       <option key={r.value} value={r.value}>
                         {r.label}
@@ -228,6 +260,6 @@ export default async function SignupPage({
           </form>
         </CardContent>
       </Card>
-    </main>
+    </div>
   );
 }

@@ -8,12 +8,16 @@ import { db } from "@/db/client";
 import { teams } from "@/db/schema/drafts";
 import { matches } from "@/db/schema/matches";
 import { seasons } from "@/db/schema/seasons";
+import { seasonPageMetadata } from "@/lib/season-meta";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+
+export const generateMetadata = seasonPageMetadata("Matches · Admin");
 
 type Params = Promise<{ slug: string }>;
 type SearchParams = Promise<{ saved?: string | number; error?: string }>;
@@ -84,7 +88,7 @@ export default async function AdminMatchesPage({
     season.state === "playoffs" && playoffMatches.length === 0 && groupMatches.length > 0;
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 space-y-6 px-6 py-12">
+    <div className="mx-auto w-full max-w-5xl flex-1 space-y-6 px-6 py-12">
       <header className="space-y-1">
         <Link
           href={`/admin/seasons/${slug}`}
@@ -161,7 +165,9 @@ export default async function AdminMatchesPage({
               </CardHeader>
               <CardContent>
                 <form action={seedPlayoffsWithSlug}>
-                  <Button type="submit">Seed playoffs (top 4)</Button>
+                  <ConfirmSubmitButton confirmMessage="Seed the playoffs from current standings? This can only be done once.">
+                    Seed playoffs (top 4)
+                  </ConfirmSubmitButton>
                 </form>
               </CardContent>
             </Card>
@@ -236,27 +242,27 @@ export default async function AdminMatchesPage({
                                       </Button>
                                     </form>
                                     <form action={disputeWithSlug.bind(null, m.id)}>
-                                      <Button
-                                        type="submit"
+                                      <ConfirmSubmitButton
+                                        confirmMessage="Mark this result as disputed?"
                                         size="sm"
                                         variant="ghost"
                                         className="text-destructive hover:text-destructive"
                                       >
                                         Dispute
-                                      </Button>
+                                      </ConfirmSubmitButton>
                                     </form>
                                   </>
                                 ) : null}
                                 {m.state === "disputed" || m.state === "confirmed" ? (
                                   <form action={resetWithSlug.bind(null, m.id)}>
-                                    <Button
-                                      type="submit"
+                                    <ConfirmSubmitButton
+                                      confirmMessage="Reset this match? Its result is cleared and it goes back to scheduled."
                                       size="sm"
                                       variant="ghost"
                                       className="text-muted-foreground"
                                     >
                                       Reset
-                                    </Button>
+                                    </ConfirmSubmitButton>
                                   </form>
                                 ) : null}
                               </div>
@@ -347,27 +353,27 @@ export default async function AdminMatchesPage({
                                           </Button>
                                         </form>
                                         <form action={disputeWithSlug.bind(null, m.id)}>
-                                          <Button
-                                            type="submit"
+                                          <ConfirmSubmitButton
+                                            confirmMessage="Mark this result as disputed?"
                                             size="sm"
                                             variant="ghost"
                                             className="text-destructive hover:text-destructive"
                                           >
                                             Dispute
-                                          </Button>
+                                          </ConfirmSubmitButton>
                                         </form>
                                       </>
                                     ) : null}
                                     {m.state === "disputed" || m.state === "confirmed" ? (
                                       <form action={resetWithSlug.bind(null, m.id)}>
-                                        <Button
-                                          type="submit"
+                                        <ConfirmSubmitButton
+                                          confirmMessage="Reset this match? Its result is cleared and it goes back to scheduled."
                                           size="sm"
                                           variant="ghost"
                                           className="text-muted-foreground"
                                         >
                                           Reset
-                                        </Button>
+                                        </ConfirmSubmitButton>
                                       </form>
                                     ) : null}
                                   </div>
@@ -384,6 +390,6 @@ export default async function AdminMatchesPage({
           ) : null}
         </div>
       )}
-    </main>
+    </div>
   );
 }

@@ -99,8 +99,13 @@ See `submitSignup`, `submitPick`, `reportMatch`, and everything in
   4. Returns `{ ok: true }` or `{ error }`. Unknown user and bad password
      both return the same generic message. `EMAIL_NOT_VERIFIED` maps to a
      "verify your email" message.
-- On `ok`, the client does `router.push(callbackUrl ?? "/profile")` +
-  `router.refresh()`.
+- On `ok`, the client does `router.push(safeCallbackUrl(callbackUrl))` +
+  `router.refresh()`. `callbackUrl` is user-controlled, so
+  `safeCallbackUrl` (`src/lib/safe-redirect.ts`) only allows same-origin
+  paths (no `//host`, no auth pages) and falls back to `/profile`. The page
+  also uses it to redirect already-signed-in visitors. Build sign-in links
+  with `signInHref(path)` so users land back where they were — the header's
+  "Sign in" button passes the current pathname.
 
 ## Signup flow
 

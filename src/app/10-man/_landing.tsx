@@ -1,10 +1,11 @@
 "use client";
 
-import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
+import { LocalTime } from "@/components/ui/local-time";
 import { SectionLabel } from "@/components/ui/section-label";
+import { ActionError, useTenManAction } from "./[id]/_phases/shared";
 import { start10Man } from "./actions";
 
 const STEPS = [
@@ -32,12 +33,11 @@ type HistoryEntry = {
 
 export function TenManLanding({ isAdmin, history }: { isAdmin: boolean; history: HistoryEntry[] }) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const { pending, error, run } = useTenManAction();
 
   function handleStart() {
-    startTransition(async () => {
-      const result = await start10Man();
-      router.push(`/10-man/${result.id}`);
+    run(start10Man, (res) => {
+      if (res.id) router.push(`/10-man/${res.id}`);
     });
   }
 
@@ -58,7 +58,7 @@ export function TenManLanding({ isAdmin, history }: { isAdmin: boolean; history:
           >
             10-man
             <br />
-            <span style={{ color: "var(--accent)" }}>pickup matches</span>
+            <span style={{ color: "var(--accent-text)" }}>pickup matches</span>
           </h1>
           <p
             style={{
@@ -105,17 +105,13 @@ export function TenManLanding({ isAdmin, history }: { isAdmin: boolean; history:
               </>
             )}
           </div>
+          <ActionError message={error} />
         </div>
 
         {/* How-it-works strip */}
         <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(4, 1fr)",
-            gap: 16,
-            paddingTop: "1rem",
-            borderTop: "1px solid var(--border)",
-          }}
+          className="grid grid-cols-2 gap-4 md:grid-cols-4"
+          style={{ paddingTop: "1rem", borderTop: "1px solid var(--border)" }}
         >
           {STEPS.map((step) => (
             <div
@@ -125,7 +121,7 @@ export function TenManLanding({ isAdmin, history }: { isAdmin: boolean; history:
               <span
                 style={{
                   fontSize: 13,
-                  color: "var(--accent)",
+                  color: "var(--accent-text)",
                   fontFamily: "var(--font-geist-mono)",
                 }}
               >
@@ -168,9 +164,7 @@ export function TenManLanding({ isAdmin, history }: { isAdmin: boolean; history:
 
 function HistoryRow({ entry, first }: { entry: HistoryEntry; first: boolean }) {
   const idSuffix = entry.id.split("-")[0] ?? entry.id.substring(0, 8);
-  const date = entry.completedAt
-    ? new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(entry.completedAt)
-    : "—";
+  const date = entry.completedAt ? <LocalTime date={entry.completedAt} preset="date-short" /> : "—";
 
   return (
     <div
@@ -232,7 +226,7 @@ function HistoryRow({ entry, first }: { entry: HistoryEntry; first: boolean }) {
       >
         W
       </span>
-      <span style={{ fontSize: 14, color: "var(--accent)" }}>→</span>
+      <span style={{ fontSize: 14, color: "var(--accent-text)" }}>→</span>
     </div>
   );
 }

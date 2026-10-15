@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState } from "react";
 
 import { castVote } from "../../actions";
-import { Avatar, PhaseBanner } from "./shared";
+import { ActionError, Avatar, PhaseBanner, useTenManAction } from "./shared";
 import type { TenManSnapshotClient } from "./types";
 
 export function VotingBoard({
@@ -28,7 +28,7 @@ export function VotingBoard({
     .filter((v) => v.voterUserId === viewerUserId)
     .map((v) => v.candidateUserId);
   const [yourVotes, setYourVotes] = useState<string[]>(serverVotes);
-  const [pending, startTransition] = useTransition();
+  const { pending, error, run } = useTenManAction();
 
   const isSignup = viewerUserId ? signups.some((s) => s.userId === viewerUserId) : false;
 
@@ -44,14 +44,12 @@ export function VotingBoard({
     setYourVotes(next);
 
     if (next.length === 2) {
-      startTransition(async () => {
-        try {
-          await castVote(tenManId, [next[0]!, next[1]!]);
-        } catch {
-          // revert to server state
-          setYourVotes(serverVotes);
-        }
-      });
+      // On failure, revert to what the server has.
+      run(
+        () => castVote(tenManId, [next[0]!, next[1]!]),
+        undefined,
+        () => setYourVotes(serverVotes),
+      );
     }
   }
 
@@ -73,7 +71,7 @@ export function VotingBoard({
             style={{
               fontSize: 14,
               fontFamily: "var(--font-geist-mono)",
-              color: yourVotes.length === 2 ? "var(--accent)" : "var(--text)",
+              color: yourVotes.length === 2 ? "var(--accent-text)" : "var(--text)",
             }}
           >
             {yourVotes.length}/2
@@ -92,6 +90,8 @@ export function VotingBoard({
         progress={progress}
         right={right}
       />
+
+      <ActionError message={error} />
 
       {/* Tap-cards variant */}
       <div
@@ -140,7 +140,7 @@ export function VotingBoard({
                   padding: "3px 8px",
                   borderRadius: 9999,
                   background: votes > 0 ? "rgba(185,28,28,0.12)" : "rgba(255,255,255,0.04)",
-                  color: votes > 0 ? "var(--accent)" : "var(--muted)",
+                  color: votes > 0 ? "var(--accent-text)" : "var(--muted)",
                   fontSize: 11,
                   fontFamily: "var(--font-geist-mono)",
                   fontWeight: 500,
@@ -159,7 +159,7 @@ export function VotingBoard({
                     top: 12,
                     left: 12,
                     fontSize: 10,
-                    color: "var(--accent)",
+                    color: "var(--accent-text)",
                     letterSpacing: "0.12em",
                     textTransform: "uppercase",
                   }}
@@ -208,7 +208,7 @@ export function VotingBoard({
               <span
                 style={{
                   fontSize: 12,
-                  color: isYourVote ? "var(--accent)" : "var(--muted)",
+                  color: isYourVote ? "var(--accent-text)" : "var(--muted)",
                   fontWeight: 500,
                   textAlign: "center",
                 }}

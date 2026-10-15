@@ -15,13 +15,13 @@ export function OffSeasonSection({ lastSeason, podium }: OffSeasonSectionProps) 
   return (
     <TintedSection tint="subtle-warm" backdrop={backdropClip(lastSeason?.game ?? "lol", 1)}>
       <Reveal className="mb-14 flex flex-col gap-4">
-        <SectionLabel className="opacity-50">OFF-SEASON</SectionLabel>
+        <SectionLabel style={{ color: "var(--muted)" }}>OFF-SEASON</SectionLabel>
         <h2 className="text-heading" style={{ color: "var(--text)" }}>
-          No season in progress<span style={{ color: "var(--accent)" }}>.</span>
+          No season in progress<span style={{ color: "var(--accent-text)" }}>.</span>
         </h2>
         <p className="text-sm leading-relaxed" style={{ color: "var(--muted)", maxWidth: "52ch" }}>
-          The next season has not been announced. Final results from the most recent season are
-          below.
+          The next season has not been announced.
+          {lastSeason ? " Final results from the most recent season are below." : null}
         </p>
       </Reveal>
 
@@ -53,7 +53,7 @@ export function OffSeasonSection({ lastSeason, podium }: OffSeasonSectionProps) 
                     >
                       <div
                         className="font-mono text-[11px] font-semibold"
-                        style={{ color: p.rank === 1 ? "var(--accent)" : "var(--muted)" }}
+                        style={{ color: p.rank === 1 ? "var(--accent-text)" : "var(--muted)" }}
                       >
                         {p.rank === 1 ? "1st" : p.rank === 2 ? "2nd" : p.rank === 3 ? "3rd" : "4th"}
                       </div>
@@ -89,9 +89,10 @@ export function OffSeasonSection({ lastSeason, podium }: OffSeasonSectionProps) 
 
       {!lastSeason && (
         <Reveal>
-          <p className="text-sm" style={{ color: "var(--muted)" }}>
-            No past seasons on record yet.
-          </p>
+          {/* Seasons 1–11 predate the app and live on /history, not in the DB. */}
+          <LinkButton href="/history" variant="outline">
+            Browse past seasons →
+          </LinkButton>
         </Reveal>
       )}
     </TintedSection>

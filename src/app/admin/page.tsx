@@ -4,10 +4,13 @@ import Link from "next/link";
 import { db } from "@/db/client";
 import { seasons } from "@/db/schema/seasons";
 import { Badge } from "@/components/ui/badge";
+import { LocalTime } from "@/components/ui/local-time";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GAME_LABELS, SEASON_STATE_LABELS } from "@/lib/seasons";
 import { cn } from "@/lib/utils";
+
+export const metadata = { title: "Admin" };
 
 export default async function AdminPage() {
   const allSeasons = await db.query.seasons.findMany({
@@ -15,7 +18,7 @@ export default async function AdminPage() {
   });
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 space-y-6 px-6 py-12">
+    <div className="mx-auto w-full max-w-5xl flex-1 space-y-6 px-6 py-12">
       <header className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Admin</h1>
@@ -60,7 +63,8 @@ export default async function AdminPage() {
                       </Badge>
                     </div>
                     <p className="text-muted-foreground text-xs">
-                      {GAME_LABELS[season.game]} · created {season.createdAt.toLocaleDateString()}
+                      {GAME_LABELS[season.game]} · created{" "}
+                      <LocalTime date={season.createdAt} preset="date-short" />
                     </p>
                   </div>
                   <Badge variant={season.state === "draft" ? "secondary" : "default"}>
@@ -72,6 +76,6 @@ export default async function AdminPage() {
           </div>
         )}
       </section>
-    </main>
+    </div>
   );
 }

@@ -10,7 +10,7 @@ export function SectionLabel({ children, className, style }: SectionLabelProps) 
   return (
     <span
       className={cn("text-label inline-block", className)}
-      style={{ color: "var(--accent)", ...style }}
+      style={{ color: "var(--accent-text)", ...style }}
     >
       {children}
     </span>

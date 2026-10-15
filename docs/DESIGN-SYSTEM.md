@@ -27,13 +27,26 @@ Dark background + cream text + dark red accent. Black and dark-red pair
 | `--surface` | `#111111` | cards |
 | `--border` | `#1F1F1F` | 1px dividers, card outlines |
 | `--text` | `#F5F0E8` | body copy |
-| `--muted` | `#6B6B6B` | secondary text, subtle UI |
-| `--accent` | `#B91C1C` | brand red — Tailwind red-700 |
+| `--muted` | `#858585` | secondary text, subtle UI (≥5:1 on `--bg`/`--surface`) |
+| `--accent` | `#B91C1C` | brand red — Tailwind red-700. **Fills, borders, dots** |
+| `--accent-text` | `#EF4444` | brand red **as text** (labels, links, highlights) |
 | `--accent-fg` | `#F5F0E8` | text on red accent |
 
-Shadcn-side mirror (kept for the primitives): `--destructive`,
-`--secondary`, `--ring` all tuned to the same red via
-`oklch(0.5 0.19 25)`.
+Contrast rules (WCAG AA): `--accent` is only 2.7:1 on `--bg`, so never use
+it for text — use `--accent-text` (`style={{ color: "var(--accent-text)" }}`
+or the `text-accent-text` utility). Don't fade text with `opacity`; use
+`--muted` for de-emphasis instead.
+
+Shadcn-side mirror (kept for the primitives): `--primary` is the brand red
+(`var(--accent)`), so default `<Button>`/`<Badge>` are red CTAs.
+`--secondary` and `--ring` use `oklch(0.5 0.19 25)`; `--destructive` is a
+lighter `oklch(0.64 0.21 25)` so destructive *text* passes contrast.
+
+**Name clash to know about:** shadcn's `muted`/`accent` mean *neutral hover
+and chip surfaces*, not the freelance grey text / brand red. In `@theme`,
+`bg-muted`/`hover:bg-accent` map to `--shadcn-muted`/`--shadcn-accent`
+(dark greys). The freelance `--muted`/`--accent` are only used through
+`var(...)` in inline styles.
 
 ## Typography
 
@@ -73,6 +86,15 @@ from `globals.css`.
 
 `.legal-prose` styles plain semantic HTML (h2/h3/p/ul/a/code) on
 `/terms` and `/privacy` via `LegalPage` (`src/components/legal-page.tsx`).
+
+## Base-layer rules
+
+Element-level defaults that utilities must be able to override (`a`, the
+`:focus-visible` outline) live in `@layer base` in `globals.css`. Unlayered
+CSS beats every Tailwind utility — the old unlayered `a { color: inherit }`
+silently disabled all `text-*` colors on links. The `h1`–`h6` weight /
+letter-spacing rules are still unlayered, so `font-bold`/`tracking-*` on
+headings have no effect (headings render at 500 by design).
 
 ## Animation utilities
 

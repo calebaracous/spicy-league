@@ -223,7 +223,7 @@ const SEASONS: Season[] = [
 
 export default function HistoryPage() {
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-6 py-12">
+    <div className="mx-auto w-full max-w-5xl flex-1 px-6 py-12">
       <header className="mb-12 space-y-2">
         <h1 className="text-4xl font-bold tracking-tight">History</h1>
         <p className="text-muted-foreground">All Spicy League seasons, most recent first.</p>
@@ -235,7 +235,7 @@ export default function HistoryPage() {
 
         <ol className="space-y-14">
           {SEASONS.map((season) => (
-            <li key={season.number} className="relative pl-14">
+            <li key={season.title} className="relative pl-14">
               {/* dot */}
               <div className="bg-primary border-background absolute top-1 left-3.5 h-3 w-3 -translate-x-1/2 rounded-full border-2" />
 
@@ -278,7 +278,7 @@ export default function HistoryPage() {
                             href={note.href}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-primary underline underline-offset-2 hover:opacity-80"
+                            className="text-accent-text underline underline-offset-2 hover:opacity-80"
                           >
                             {note.text}
                           </a>
@@ -315,6 +315,6 @@ export default function HistoryPage() {
           ))}
         </ol>
       </div>
-    </main>
+    </div>
   );
 }

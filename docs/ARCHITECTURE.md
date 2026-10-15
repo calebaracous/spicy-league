@@ -108,8 +108,13 @@ client components and return/throw instead:
 - `signInWithUsername` (`src/app/signin/actions.ts`) and `registerUser`
   (`src/app/signup/actions.ts`) return `{ error }` for the form to render
   (`registerUser` redirects only on success).
-- 10-man actions (`src/app/10-man/actions.ts`) throw `Error`s and run in
-  DB transactions. See [TEN-MAN.md](TEN-MAN.md).
+- 10-man actions (`src/app/10-man/actions.ts`) return `{ error }` for
+  expected failures (via `TenManError` + `run()`) and run in DB
+  transactions. See [TEN-MAN.md](TEN-MAN.md).
+
+Unexpected errors land in `src/app/error.tsx` (root error boundary, "Try
+again" via `unstable_retry`); `notFound()` and unmatched URLs render
+`src/app/not-found.tsx`. There is no `loading.tsx`.
 
 ## Conventions
 
@@ -134,6 +139,22 @@ client components and return/throw instead:
 - **Usernames** are captured at signup and are the sign-in identifier.
   `requireOnboarded()` redirects to `/signin` if missing (safety net —
   shouldn't fire for real accounts). Lowercased on write, unique at DB level.
+- **Dates/times**: never format with `toLocaleString()` in a server
+  component — Vercel's server runs in UTC. Render `<LocalTime date=…>`
+  (`src/components/ui/local-time.tsx`), which formats in the viewer's
+  timezone after hydration. Admin date fields use `<LocalDateTimeInput>`,
+  which submits a UTC ISO string (a bare `datetime-local` value would be
+  parsed in the server's timezone).
+- **Destructive admin buttons** (undo pick, reset/dispute match, lifecycle
+  moves, seed playoffs) use `ConfirmSubmitButton`
+  (`src/components/ui/confirm-submit-button.tsx`) inside the `<form>`.
+- **Page titles**: every route sets one (`metadata` or `generateMetadata`).
+  Season sub-pages use `seasonPageMetadata("Page")` from
+  `src/lib/season-meta.ts` → "Page · Season name".
+- **One `<main>`**: the root layout owns `<main id="main">` (skip-link
+  target). Pages render a `<div>` wrapper, never their own `<main>`.
+- **`auth()` is request-cached** (`React.cache` in `src/auth.ts`), so
+  header, footer and page can each call it without extra session lookups.
 
 ## Routing map
 

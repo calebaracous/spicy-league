@@ -34,7 +34,7 @@ index at the bottom of `drizzle/0000_baseline.sql`:
 `ten_mans_active_uniq ON ten_mans ((1)) WHERE state NOT IN ('complete','cancelled')`.
 It is *not* in the Drizzle schema (the DSL can't express it), so
 `db:generate` won't know about it. A second `start10Man()` while one is
-active fails with a unique-violation thrown to the client.
+active returns `{ error: "A 10-man is already running…" }`.
 
 ## Data model
 
@@ -59,8 +59,15 @@ LoL-only by product decision; there's no game column.
 ## Actions and guards
 
 All in `src/app/10-man/actions.ts`. Unlike the season actions, these
-**throw** on failure instead of redirecting (they're called from client
-components via `useTransition`, not from `<form action>`). Every
+**return `{ error }`** on expected failures instead of redirecting (they're
+called from client components, not from `<form action>`). Inside an action
+body, throw `TenManError("user-facing message")`; the `run()` wrapper turns
+it into `{ error }`. Don't let plain `Error`s escape for expected cases: a
+thrown server-action error crashes the board into `src/app/error.tsx` and
+its message is stripped in production. Auth guards still redirect. On the
+client, call actions through `useTenManAction()` (`_phases/shared.tsx`),
+which runs them in a transition and renders the error with `<ActionError>`.
+Every
 state-changing action except `start10Man`/`cancel10Man`/`reportResult` runs
 inside `db.transaction()` and takes `SELECT … FOR UPDATE` on the `ten_mans`
 row first — this is what serialises the "10th signup" and "10th voter" races.
@@ -114,15 +121,17 @@ switches on `snap.tenMan.state` to render one phase board from
 
 | State | Board |
 |---|---|
-| `signups`, `cancelled` | `signup-board.tsx` (join/leave, admin cancel) |
+| `signups` | `signup-board.tsx` (join/leave, admin cancel with confirm; signed-out viewers get a "Sign in to join" link back to the board) |
+| `cancelled` | `cancelled-board.tsx` (terminal banner + link back to `/10-man`) |
 | `voting` | `voting-board.tsx` (pick 2; auto-submits on second tap, reverts on error) |
 | `drafting` | `draft-board.tsx` (pool + `SnakeOrderStrip`; admins can pick at any time on behalf of the on-the-clock captain — the "Admin — picking for {captain}" pill names who) |
 | `ready` | `ready-board.tsx` (rosters, lobby code + copy, admin report-result form; exports `TeamRoster`) |
 | `complete` | `complete-board.tsx` (winner banner; admin "start another" → `start10Man`) |
 
 `_phases/types.ts` holds the client-serialisable `TenManSnapshotClient`
-(dates may arrive as strings). `_phases/shared.tsx` has `Avatar` and
-`PhaseBanner`.
+(dates may arrive as strings). `_phases/shared.tsx` has `Avatar`,
+`PhaseBanner` (its title is the board's `<h1>`), `useTenManAction` and
+`ActionError`. Board grids stack on phones and go side-by-side at `md`.
 
 ## Pages
 
@@ -145,8 +154,9 @@ switches on `snap.tenMan.state` to render one phase board from
 - …"Start" fails → an active 10-man already exists (partial unique index). Cancel it first.
 - …the lobby is stuck in `voting` → fewer than 10 distinct voters. Check `ten_man_votes`.
 - …captains look random → they were tied; the tie-break is `Math.random()`.
-- …a pick is rejected → the thrown message names the reason; the client
-  boards mostly swallow errors, so check the server log.
+- …a pick is rejected → the board shows the `TenManError` message inline
+  (`<ActionError>`). A generic "Something went wrong" means a non-`TenManError`
+  escaped — check the server log.
 - …deleting a user fails → check `0001_reconcile_live_schema` has been
   applied; before it, `ten_man_picks` and `ten_mans` FKs blocked user
   deletion. See [DATA-MODEL.md](DATA-MODEL.md) → Migrations.

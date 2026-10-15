@@ -7,8 +7,11 @@ import { teams } from "@/db/schema/drafts";
 import { matches } from "@/db/schema/matches";
 import { seasons } from "@/db/schema/seasons";
 import { Badge } from "@/components/ui/badge";
+import { seasonPageMetadata } from "@/lib/season-meta";
 import { GAME_LABELS } from "@/lib/seasons";
 import { computeStandings } from "@/lib/schedule";
+
+export const generateMetadata = seasonPageMetadata("Matches");
 
 type Params = Promise<{ slug: string }>;
 
@@ -59,7 +62,7 @@ export default async function MatchesPage({ params }: { params: Params }) {
   const rounds = [...new Set(groupMatches.map((m) => m.round))].sort((a, b) => a - b);
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 space-y-8 px-6 py-12">
+    <div className="mx-auto w-full max-w-3xl flex-1 space-y-8 px-6 py-12">
       <header className="space-y-2">
         <Link href={`/seasons/${slug}`} className="text-muted-foreground text-xs hover:underline">
           ← Back to season
@@ -214,6 +217,6 @@ export default async function MatchesPage({ params }: { params: Params }) {
           })}
         </section>
       ) : null}
-    </main>
+    </div>
   );
 }

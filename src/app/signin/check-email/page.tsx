@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
+export const metadata = { title: "Check your email" };
+
 type SearchParams = Promise<{ type?: string }>;
 
 export default async function CheckEmailPage({ searchParams }: { searchParams: SearchParams }) {
@@ -11,10 +13,12 @@ export default async function CheckEmailPage({ searchParams }: { searchParams: S
   const isReset = type === "reset";
 
   return (
-    <main className="flex flex-1 items-center justify-center px-6 py-16">
+    <div className="flex flex-1 items-center justify-center px-6 py-16">
       <Card className="w-full max-w-md">
         <CardHeader>
-          <CardTitle>Check your email</CardTitle>
+          <CardTitle className="text-lg">
+            <h1>Check your email</h1>
+          </CardTitle>
           <CardDescription>
             {isReset
               ? "We sent a password reset link to your inbox."
@@ -40,6 +44,6 @@ export default async function CheckEmailPage({ searchParams }: { searchParams: S
           </Link>
         </CardContent>
       </Card>
-    </main>
+    </div>
   );
 }

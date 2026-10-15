@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -9,11 +8,12 @@ import { SectionLabel } from "@/components/ui/section-label";
 import { VsDivider } from "@/components/ui/vs-divider";
 import { start10Man } from "../../actions";
 import { TeamRoster } from "./ready-board";
+import { ActionError, useTenManAction } from "./shared";
 import type { TenManSnapshotClient } from "./types";
 
 export function CompleteBoard({ snap, isAdmin }: { snap: TenManSnapshotClient; isAdmin: boolean }) {
   const { captains, picks, result } = snap;
-  const [pending, startTransition] = useTransition();
+  const { pending, error, run } = useTenManAction();
   const router = useRouter();
 
   const winnerCaptainId = result?.winnerCaptainUserId;
@@ -24,9 +24,8 @@ export function CompleteBoard({ snap, isAdmin }: { snap: TenManSnapshotClient; i
   const cap2 = captains.find((c) => c.captainOrder === 2);
 
   function handleRestart() {
-    startTransition(async () => {
-      const res = await start10Man();
-      router.push(`/10-man/${res.id}`);
+    run(start10Man, (res) => {
+      if (res.id) router.push(`/10-man/${res.id}`);
     });
   }
 
@@ -46,7 +45,7 @@ export function CompleteBoard({ snap, isAdmin }: { snap: TenManSnapshotClient; i
           width: "100%",
         }}
       >
-        <SectionLabel style={{ color: "var(--accent)" }}>10-MAN · COMPLETE</SectionLabel>
+        <SectionLabel style={{ color: "var(--accent-text)" }}>10-MAN · COMPLETE</SectionLabel>
         <h1
           style={{
             fontSize: "clamp(2.25rem, 5vw, 3.75rem)",
@@ -57,8 +56,8 @@ export function CompleteBoard({ snap, isAdmin }: { snap: TenManSnapshotClient; i
             color: "var(--text)",
           }}
         >
-          <span style={{ color: "var(--accent)" }}>{winner?.displayName ?? "?"}</span>&apos;s team
-          won
+          <span style={{ color: "var(--accent-text)" }}>{winner?.displayName ?? "?"}</span>&apos;s
+          team won
         </h1>
         <p style={{ fontSize: 15, lineHeight: 1.6, color: "var(--muted)", maxWidth: "46ch" }}>
           {winner?.displayName} def. {loser?.displayName}
@@ -68,13 +67,7 @@ export function CompleteBoard({ snap, isAdmin }: { snap: TenManSnapshotClient; i
 
       {/* Teams */}
       {cap1 && cap2 ? (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "1fr auto 1fr",
-            gap: 20,
-          }}
-        >
+        <div className="grid gap-5 md:grid-cols-[1fr_auto_1fr]">
           <TeamRoster
             captain={cap1}
             picks={picks.filter((p) => p.captainUserId === cap1.userId)}
@@ -135,6 +128,7 @@ export function CompleteBoard({ snap, isAdmin }: { snap: TenManSnapshotClient; i
             </Button>
           ) : null}
         </div>
+        <ActionError message={error} />
       </div>
     </div>
   );

@@ -56,6 +56,8 @@ test("season draft end to end", async ({ browser }) => {
 
   const transition = async (label: string, state: string) => {
     await adminPage.goto(`/admin/seasons/${slug}`);
+    // Lifecycle moves ask for confirmation (ConfirmSubmitButton).
+    adminPage.once("dialog", (d) => d.accept());
     await adminPage.getByRole("button", { name: `→ ${label}` }).click();
     await expect.poll(async () => (await getSeason(slug)).state).toBe(state);
   };

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 
+import { CancelledBoard } from "./_phases/cancelled-board";
 import { CompleteBoard } from "./_phases/complete-board";
 import { DraftBoard } from "./_phases/draft-board";
 import { ReadyBoard } from "./_phases/ready-board";
@@ -43,7 +44,9 @@ export function TenManLiveBoard({
 
   return (
     <div className="site-container" style={{ paddingTop: "2rem", paddingBottom: "6rem" }}>
-      {state === "signups" || state === "cancelled" ? (
+      {state === "cancelled" ? (
+        <CancelledBoard snap={snap} />
+      ) : state === "signups" ? (
         <SignupBoard
           snap={snap}
           tenManId={tenManId}

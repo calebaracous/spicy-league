@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { GAME_LABELS, SEASON_STATE_LABELS } from "@/lib/seasons";
 
+export const metadata = { title: "Seasons" };
+
 export const dynamic = "force-dynamic";
 
 export default async function SeasonsIndexPage() {
@@ -19,11 +21,15 @@ export default async function SeasonsIndexPage() {
   const past = publicSeasons.filter((s) => s.state === "complete");
 
   return (
-    <main className="mx-auto w-full max-w-4xl flex-1 space-y-10 px-6 py-12">
+    <div className="mx-auto w-full max-w-4xl flex-1 space-y-10 px-6 py-12">
       <header className="space-y-2">
         <h1 className="text-4xl font-bold tracking-tight">Seasons</h1>
         <p className="text-muted-foreground">
-          Every Spicy League season, from signups through championship.
+          Current and upcoming seasons, from signups through championship. Seasons 1–11 are in the{" "}
+          <Link href="/history" className="text-accent-text underline-offset-4 hover:underline">
+            season history
+          </Link>
+          .
         </p>
       </header>
 
@@ -37,7 +43,10 @@ export default async function SeasonsIndexPage() {
               <CardTitle>No active seasons</CardTitle>
             </CardHeader>
             <CardContent className="text-muted-foreground text-sm">
-              No season is currently in progress. New seasons are listed here when announced.
+              No season is currently in progress. New seasons are listed here when announced.{" "}
+              <Link href="/history" className="text-accent-text underline-offset-4 hover:underline">
+                Browse past seasons →
+              </Link>
             </CardContent>
           </Card>
         ) : (
@@ -84,6 +93,6 @@ export default async function SeasonsIndexPage() {
           </ul>
         </section>
       ) : null}
-    </main>
+    </div>
   );
 }

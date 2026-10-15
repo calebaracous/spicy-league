@@ -11,14 +11,18 @@ import {
 import { db } from "@/db/client";
 import { drafts } from "@/db/schema/drafts";
 import { seasons } from "@/db/schema/seasons";
+import { seasonPageMetadata } from "@/lib/season-meta";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { getDraftSnapshot, totalPicks } from "@/lib/draft";
 import { cn } from "@/lib/utils";
+
+export const generateMetadata = seasonPageMetadata("Draft · Admin");
 
 type Params = Promise<{ slug: string }>;
 type SearchParams = Promise<{ saved?: string; error?: string }>;
@@ -69,7 +73,7 @@ export default async function AdminDraftPage({
   const pickCount = snap?.picks.length ?? 0;
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-6 py-12">
+    <div className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-6 py-12">
       <header className="space-y-2">
         <Link
           href={`/admin/seasons/${slug}`}
@@ -137,13 +141,13 @@ export default async function AdminDraftPage({
             ) : null}
             {draft && draft.state !== "completed" && pickCount > 0 ? (
               <form action={undoWithSlug}>
-                <Button
-                  type="submit"
+                <ConfirmSubmitButton
+                  confirmMessage="Undo the last pick? The player goes back into the pool."
                   variant="ghost"
                   className="text-destructive hover:text-destructive"
                 >
                   Undo last pick
-                </Button>
+                </ConfirmSubmitButton>
               </form>
             ) : null}
           </div>
@@ -190,6 +194,6 @@ export default async function AdminDraftPage({
           </CardContent>
         </Card>
       ) : null}
-    </main>
+    </div>
   );
 }

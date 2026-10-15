@@ -11,15 +11,16 @@
   --surface: #111111;
   --border: #1f1f1f;
   --text: #f5f0e8;
-  --muted: #6b6b6b;
-  --accent: #b91c1c; /* dark red – the single brand colour */
+  --muted: #858585; /* ≥5:1 on --bg and --surface (WCAG AA body text) */
+  --accent: #b91c1c; /* dark red – the single brand colour. Fills, borders, dots. */
   --accent-fg: #f5f0e8;
+  /* Brand red for TEXT on dark surfaces. --accent is only 2.7:1 on --bg, so
+     red labels/links use this lighter step (≈5:1). */
+  --accent-text: #ef4444;
 
   /* Canonical aliases */
   --color-bg: var(--bg);
   --color-fg: var(--text);
-  --color-accent: var(--accent);
-  --color-muted: var(--muted);
   --color-border: var(--border);
   --color-surface: var(--surface);
 
@@ -52,15 +53,24 @@
   --popover: oklch(0.18 0 0);
   --popover-foreground: oklch(0.95 0 0);
 
-  --primary: oklch(0.14 0 0);
-  --primary-foreground: oklch(0.95 0 0);
+  /* Primary = the brand red, so default <Button>/<Badge> read as the main CTA.
+     (Was near-black, which rendered dark-on-dark.) */
+  --primary: var(--accent);
+  --primary-foreground: var(--accent-fg);
   --secondary: oklch(0.5 0.19 25); /* dark red, shadcn-side alias */
   --secondary-foreground: oklch(0.95 0 0);
 
-  --muted-foreground: oklch(0.62 0 0);
+  /* shadcn's "muted" / "accent" are neutral hover + chip surfaces — not the
+     freelance --muted (grey text) or --accent (brand red). Kept separate so
+     bg-muted / hover:bg-accent don't turn mid-grey or red. */
+  --shadcn-muted: oklch(0.22 0 0);
+  --shadcn-accent: oklch(0.24 0 0);
+  --muted-foreground: oklch(0.68 0 0);
   --accent-foreground: oklch(0.95 0 0);
 
-  --destructive: oklch(0.5 0.19 25);
+  --destructive: oklch(
+    0.64 0.21 25
+  ); /* lighter than the brand red so destructive TEXT passes contrast */
   --input: oklch(1 0 0 / 18%);
   --ring: oklch(0.5 0.19 25);
 
@@ -74,8 +84,8 @@
 
   --sidebar: oklch(0.16 0 0);
   --sidebar-foreground: oklch(0.95 0 0);
-  --sidebar-primary: oklch(0.14 0 0);
-  --sidebar-primary-foreground: oklch(0.95 0 0);
+  --sidebar-primary: var(--accent);
+  --sidebar-primary-foreground: var(--accent-fg);
   --sidebar-accent: oklch(0.22 0 0);
   --sidebar-accent-foreground: oklch(0.95 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
@@ -88,7 +98,7 @@
   --color-background: var(--bg);
   --color-foreground: var(--text);
   --color-surface: var(--surface);
-  --color-muted: var(--muted);
+  --color-accent-text: var(--accent-text);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
@@ -111,7 +121,8 @@
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
+  --color-accent: var(--shadcn-accent);
+  --color-muted: var(--shadcn-muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-secondary: var(--secondary);
@@ -162,9 +173,22 @@ h6 {
   line-height: 1.1;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
+/* In the base layer: unlayered, this beat every Tailwind text-* utility on
+   links (e.g. text-accent-text, text-muted-foreground were silently ignored). */
+@layer base {
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
+
+/* Visible keyboard focus on bespoke chrome (links, cards, plain buttons). In
+   the base layer so shadcn's `outline-none` + ring utilities still win. */
+@layer base {
+  :focus-visible {
+    outline: 2px solid var(--accent-text);
+    outline-offset: 2px;
+  }
 }
 
 ::selection {

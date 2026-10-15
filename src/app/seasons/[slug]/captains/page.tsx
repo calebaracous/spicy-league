@@ -7,7 +7,10 @@ import { seasons } from "@/db/schema/seasons";
 import { seasonCaptains } from "@/db/schema/seasons";
 import { users } from "@/db/schema/auth";
 import { Badge } from "@/components/ui/badge";
+import { seasonPageMetadata } from "@/lib/season-meta";
 import { GAME_LABELS } from "@/lib/seasons";
+
+export const generateMetadata = seasonPageMetadata("Captains");
 
 type Params = Promise<{ slug: string }>;
 
@@ -45,7 +48,7 @@ export default async function CaptainsPage({ params }: { params: Params }) {
     .orderBy(asc(seasonCaptains.captainOrder));
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 space-y-8 px-6 py-12">
+    <div className="mx-auto w-full max-w-2xl flex-1 space-y-8 px-6 py-12">
       <header className="space-y-2">
         <Link href={`/seasons/${slug}`} className="text-muted-foreground text-xs hover:underline">
           ← Back to season
@@ -78,6 +81,6 @@ export default async function CaptainsPage({ params }: { params: Params }) {
           ))}
         </ol>
       )}
-    </main>
+    </div>
   );
 }

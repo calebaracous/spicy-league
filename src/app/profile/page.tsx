@@ -21,9 +21,12 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LocalTime } from "@/components/ui/local-time";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
+
+export const metadata = { title: "Your profile" };
 
 type SearchParams = Promise<{ saved?: string; error?: string }>;
 
@@ -78,25 +81,40 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
     const nameRaw = (formData.get("name") ?? "").toString().trim();
     const bio = (formData.get("bio") ?? "").toString().slice(0, 500) || null;
     const pronouns = (formData.get("pronouns") ?? "").toString().slice(0, 40) || null;
-    const opggUrlRaw = (formData.get("opggUrl") ?? "").toString().trim() || null;
 
     if (!nameRaw) redirect("/profile?error=name-required");
     if (nameRaw.length > 50) redirect("/profile?error=name-too-long");
 
+    await db
+      .update(users)
+      .set({ name: nameRaw, bio, pronouns, updatedAt: new Date() })
+      .where(eq(users.id, session.user.id));
+
+    redirect("/profile?saved=1");
+  }
+
+  // Separate from saveProfile so each form only writes its own fields.
+  async function saveOpggUrl(formData: FormData) {
+    "use server";
+    const session = await requireOnboarded();
+    const opggUrlRaw = (formData.get("opggUrl") ?? "").toString().trim() || null;
+
     if (opggUrlRaw) {
+      // redirect() throws, so validate outside the try or the catch eats it.
+      let url: URL | null = null;
       try {
-        const url = new URL(opggUrlRaw);
-        if (!url.hostname.includes("op.gg")) {
-          redirect("/profile?error=opgg-host");
-        }
+        url = new URL(opggUrlRaw);
       } catch {
-        redirect("/profile?error=opgg-url");
+        url = null;
       }
+      if (!url || !/^https?:$/.test(url.protocol)) redirect("/profile?error=opgg-url");
+      const host = url.hostname.toLowerCase();
+      if (host !== "op.gg" && !host.endsWith(".op.gg")) redirect("/profile?error=opgg-host");
     }
 
     await db
       .update(users)
-      .set({ name: nameRaw, bio, pronouns, opggUrl: opggUrlRaw, updatedAt: new Date() })
+      .set({ opggUrl: opggUrlRaw, updatedAt: new Date() })
       .where(eq(users.id, session.user.id));
 
     redirect("/profile?saved=1");
@@ -113,7 +131,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
   const errorMessage = error ? (ERROR_MESSAGES[error] ?? null) : null;
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-6 py-12">
+    <div className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-6 py-12">
       <header className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Profile</h1>
@@ -243,9 +261,13 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
               })}
               <div className="flex items-center justify-between">
                 <p className="text-muted-foreground text-xs">
-                  {lastRefreshed
-                    ? `Last updated ${lastRefreshed.toLocaleString()}`
-                    : "Stats not yet loaded"}
+                  {lastRefreshed ? (
+                    <>
+                      Last updated <LocalTime date={lastRefreshed} />
+                    </>
+                  ) : (
+                    "Stats not yet loaded"
+                  )}
                 </p>
                 <form action={manualRefreshStats}>
                   <Button type="submit" variant="outline" size="sm">
@@ -286,7 +308,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
             <Label htmlFor="opggUrl">
               OP.GG URL <span className="text-muted-foreground">(optional)</span>
             </Label>
-            <form action={saveProfile} className="flex gap-2">
+            <form action={saveOpggUrl} className="flex gap-2">
               <Input
                 id="opggUrl"
                 name="opggUrl"
@@ -294,9 +316,6 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
                 defaultValue={user.opggUrl ?? ""}
                 placeholder="https://op.gg/summoners/na/YourName-NA1"
               />
-              <input type="hidden" name="name" value={user.name ?? user.username ?? ""} />
-              <input type="hidden" name="bio" value={user.bio ?? ""} />
-              <input type="hidden" name="pronouns" value={user.pronouns ?? ""} />
               <Button type="submit" variant="outline">
                 Save
               </Button>
@@ -386,6 +405,6 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
           )}
         </CardContent>
       </Card>
-    </main>
+    </div>
   );
 }

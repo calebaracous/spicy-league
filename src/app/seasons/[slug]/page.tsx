@@ -11,8 +11,12 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LocalTime } from "@/components/ui/local-time";
+import { seasonPageMetadata } from "@/lib/season-meta";
 import { GAME_LABELS, SEASON_STATE_LABELS } from "@/lib/seasons";
 import { cn } from "@/lib/utils";
+
+export const generateMetadata = seasonPageMetadata(null);
 
 type Params = Promise<{ slug: string }>;
 type SearchParams = Promise<{ "signed-up"?: string; error?: string }>;
@@ -172,14 +176,6 @@ function StatusPanel({
   }
 }
 
-function formatDate(date: Date | null): string | null {
-  if (!date) return null;
-  return date.toLocaleString(undefined, {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-}
-
 export default async function SeasonDetailPage({
   params,
   searchParams,
@@ -222,12 +218,12 @@ export default async function SeasonDetailPage({
     }
   }
 
-  const signupOpens = formatDate(season.signupOpensAt);
-  const signupCloses = formatDate(season.signupClosesAt);
-  const seasonStart = formatDate(season.seasonStartAt);
+  const signupOpens = season.signupOpensAt;
+  const signupCloses = season.signupClosesAt;
+  const seasonStart = season.seasonStartAt;
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 space-y-8 px-6 py-12">
+    <div className="mx-auto w-full max-w-3xl flex-1 space-y-8 px-6 py-12">
       <header className="space-y-3">
         <Link href="/seasons" className="text-muted-foreground text-xs hover:underline">
           ← All seasons
@@ -260,19 +256,25 @@ export default async function SeasonDetailPage({
           {signupOpens ? (
             <div className="rounded-lg border p-4">
               <p className="text-muted-foreground text-xs tracking-wide uppercase">Signups open</p>
-              <p className="mt-1 text-sm">{signupOpens}</p>
+              <p className="mt-1 text-sm">
+                <LocalTime date={signupOpens} />
+              </p>
             </div>
           ) : null}
           {signupCloses ? (
             <div className="rounded-lg border p-4">
               <p className="text-muted-foreground text-xs tracking-wide uppercase">Signups close</p>
-              <p className="mt-1 text-sm">{signupCloses}</p>
+              <p className="mt-1 text-sm">
+                <LocalTime date={signupCloses} />
+              </p>
             </div>
           ) : null}
           {seasonStart ? (
             <div className="rounded-lg border p-4">
               <p className="text-muted-foreground text-xs tracking-wide uppercase">Season starts</p>
-              <p className="mt-1 text-sm">{seasonStart}</p>
+              <p className="mt-1 text-sm">
+                <LocalTime date={seasonStart} />
+              </p>
             </div>
           ) : null}
         </section>
@@ -288,6 +290,6 @@ export default async function SeasonDetailPage({
           </div>
         </section>
       ) : null}
-    </main>
+    </div>
   );
 }

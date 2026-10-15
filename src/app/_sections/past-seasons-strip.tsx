@@ -23,7 +23,7 @@ export function PastSeasonsStrip({ seasons, game }: PastSeasonsStripProps) {
         <Reveal className="mb-14 flex flex-col gap-4">
           <SectionLabel>PAST SEASONS</SectionLabel>
           <h2 className="text-heading" style={{ color: "var(--text)" }}>
-            Recently <span style={{ color: "var(--accent)" }}>completed</span>
+            Recently <span style={{ color: "var(--accent-text)" }}>completed</span>
           </h2>
         </Reveal>
 
@@ -36,7 +36,9 @@ export function PastSeasonsStrip({ seasons, game }: PastSeasonsStripProps) {
                 style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
               >
                 <div className="flex items-start justify-between gap-3">
-                  <SectionLabel className="opacity-50">{s.name.split(":")[0]}</SectionLabel>
+                  <SectionLabel style={{ color: "var(--muted)" }}>
+                    {s.name.split(":")[0]}
+                  </SectionLabel>
                   <span className="text-xs" style={{ color: "var(--muted)" }}>
                     {GAME_LABELS[s.game]}
                   </span>
@@ -64,7 +66,7 @@ export function PastSeasonsStrip({ seasons, game }: PastSeasonsStripProps) {
 
                 <span
                   className="inline-flex items-center gap-1.5 pt-2 text-sm font-medium"
-                  style={{ color: "var(--accent)", borderTop: "1px solid var(--border)" }}
+                  style={{ color: "var(--accent-text)", borderTop: "1px solid var(--border)" }}
                 >
                   View season →
                 </span>

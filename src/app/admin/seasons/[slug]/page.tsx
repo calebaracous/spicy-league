@@ -8,12 +8,17 @@ import { seasons } from "@/db/schema/seasons";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LocalDateTimeInput, LocalTime } from "@/components/ui/local-time";
 import { Textarea } from "@/components/ui/textarea";
+import { seasonPageMetadata } from "@/lib/season-meta";
 import { GAME_LABELS, SEASON_STATE_LABELS, nextStates } from "@/lib/seasons";
 import { cn } from "@/lib/utils";
+
+export const generateMetadata = seasonPageMetadata("Admin");
 
 type SearchParams = Promise<{ saved?: string; error?: string }>;
 type Params = Promise<{ slug: string }>;
@@ -25,12 +30,6 @@ const ERROR_MESSAGES: Record<string, string> = {
   "bad-transition": "That transition isn't allowed from the current state.",
   "not-found": "Season not found.",
 };
-
-function toDatetimeLocal(date: Date | null): string {
-  if (!date) return "";
-  const pad = (n: number) => n.toString().padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
 
 export default async function EditSeasonPage({
   params,
@@ -53,7 +52,7 @@ export default async function EditSeasonPage({
   const available = nextStates(season.state);
 
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-6 py-12">
+    <div className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-6 py-12">
       <header className="space-y-2">
         <Link href="/admin" className="text-muted-foreground text-xs hover:underline">
           ← Back to admin
@@ -67,7 +66,7 @@ export default async function EditSeasonPage({
         </div>
         <p className="text-muted-foreground text-sm">
           Slug <span className="font-mono">{season.slug}</span> · created{" "}
-          {season.createdAt.toLocaleString()}
+          <LocalTime date={season.createdAt} />
         </p>
       </header>
 
@@ -97,9 +96,12 @@ export default async function EditSeasonPage({
               {available.map((state) => (
                 <form key={state} action={transitionWithSlug}>
                   <input type="hidden" name="to" value={state} />
-                  <Button type="submit" variant="outline">
+                  <ConfirmSubmitButton
+                    variant="outline"
+                    confirmMessage={`Move ${season.name} from "${SEASON_STATE_LABELS[season.state]}" to "${SEASON_STATE_LABELS[state]}"? This changes what players see.`}
+                  >
                     → {SEASON_STATE_LABELS[state]}
-                  </Button>
+                  </ConfirmSubmitButton>
                 </form>
               ))}
             </div>
@@ -207,32 +209,32 @@ export default async function EditSeasonPage({
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-1.5">
                 <Label htmlFor="signupOpensAt">Signups open</Label>
-                <Input
+                <LocalDateTimeInput
                   id="signupOpensAt"
                   name="signupOpensAt"
-                  type="datetime-local"
-                  defaultValue={toDatetimeLocal(season.signupOpensAt)}
+                  defaultValue={season.signupOpensAt}
                 />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="signupClosesAt">Signups close</Label>
-                <Input
+                <LocalDateTimeInput
                   id="signupClosesAt"
                   name="signupClosesAt"
-                  type="datetime-local"
-                  defaultValue={toDatetimeLocal(season.signupClosesAt)}
+                  defaultValue={season.signupClosesAt}
                 />
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="seasonStartAt">Season starts</Label>
-                <Input
+                <LocalDateTimeInput
                   id="seasonStartAt"
                   name="seasonStartAt"
-                  type="datetime-local"
-                  defaultValue={toDatetimeLocal(season.seasonStartAt)}
+                  defaultValue={season.seasonStartAt}
                 />
               </div>
             </div>
+            <p className="text-muted-foreground -mt-2 text-xs">
+              Times are entered and shown in your local timezone.
+            </p>
             <div className="flex justify-end gap-2 pt-2">
               <Link href="/admin" className={cn(buttonVariants({ variant: "outline" }))}>
                 Cancel
@@ -242,6 +244,6 @@ export default async function EditSeasonPage({
           </form>
         </CardContent>
       </Card>
-    </main>
+    </div>
   );
 }

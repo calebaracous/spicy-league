@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useId, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
@@ -10,18 +10,38 @@ export function StatsTabs({ tabs, defaultTab }: { tabs: Tab[]; defaultTab?: stri
   const firstEnabled = tabs.find((t) => !t.disabled)?.id ?? tabs[0]?.id;
   const [active, setActive] = useState<string>(defaultTab ?? firstEnabled ?? "");
   const activeTab = tabs.find((t) => t.id === active) ?? tabs[0];
+  const baseId = useId();
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  // WAI-ARIA tabs pattern: arrow keys move between enabled tabs.
+  function onKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+    const enabled = tabs.filter((t) => !t.disabled);
+    const i = enabled.findIndex((t) => t.id === active);
+    const next = enabled[(i + (e.key === "ArrowRight" ? 1 : -1) + enabled.length) % enabled.length];
+    if (!next) return;
+    e.preventDefault();
+    setActive(next.id);
+    tabRefs.current[next.id]?.focus();
+  }
 
   return (
     <div>
-      <div role="tablist" className="flex gap-1 border-b">
+      <div role="tablist" className="flex gap-1 border-b" onKeyDown={onKeyDown}>
         {tabs.map((tab) => {
           const isActive = tab.id === active;
           return (
             <button
               key={tab.id}
+              ref={(el) => {
+                tabRefs.current[tab.id] = el;
+              }}
+              id={`${baseId}-tab-${tab.id}`}
               type="button"
               role="tab"
               aria-selected={isActive}
+              aria-controls={`${baseId}-panel`}
+              tabIndex={isActive ? 0 : -1}
               disabled={tab.disabled}
               onClick={() => setActive(tab.id)}
               className={cn(
@@ -37,7 +57,12 @@ export function StatsTabs({ tabs, defaultTab }: { tabs: Tab[]; defaultTab?: stri
           );
         })}
       </div>
-      <div role="tabpanel" className="pt-4">
+      <div
+        role="tabpanel"
+        id={`${baseId}-panel`}
+        aria-labelledby={`${baseId}-tab-${activeTab?.id}`}
+        className="pt-4"
+      >
         {activeTab?.content}
       </div>
     </div>

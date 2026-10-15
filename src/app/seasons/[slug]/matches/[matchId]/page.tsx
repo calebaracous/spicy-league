@@ -14,7 +14,11 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { LocalTime } from "@/components/ui/local-time";
+import { seasonPageMetadata } from "@/lib/season-meta";
 import { getTeamForCaptain } from "@/lib/schedule";
+
+export const generateMetadata = seasonPageMetadata("Match");
 
 type Params = Promise<{ slug: string; matchId: string }>;
 type SearchParams = Promise<{ saved?: string; error?: string }>;
@@ -104,7 +108,7 @@ export default async function MatchDetailPage({
   }
 
   return (
-    <main className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-6 py-12">
+    <div className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-6 py-12">
       <header className="space-y-2">
         <Link
           href={`/seasons/${slug}/matches`}
@@ -119,12 +123,29 @@ export default async function MatchDetailPage({
           <Badge variant={sb.variant}>{sb.label}</Badge>
         </div>
         <p className="text-muted-foreground text-sm">
-          {season.name} · Round {match.round}
-          {match.confirmedAt
-            ? ` · Confirmed ${match.confirmedAt.toLocaleDateString()}`
-            : match.reportedAt
-              ? ` · Reported ${match.reportedAt.toLocaleDateString()}`
-              : ""}
+          {season.name} ·{" "}
+          {match.stage === "final"
+            ? "Final"
+            : match.stage === "semis"
+              ? "Semifinal"
+              : `Round ${match.round}`}
+          {match.scheduledAt ? (
+            <>
+              {" "}
+              · <LocalTime date={match.scheduledAt} preset="weekday-datetime" />
+            </>
+          ) : null}
+          {match.confirmedAt ? (
+            <>
+              {" "}
+              · Confirmed <LocalTime date={match.confirmedAt} preset="date-short" />
+            </>
+          ) : match.reportedAt ? (
+            <>
+              {" "}
+              · Reported <LocalTime date={match.reportedAt} preset="date-short" />
+            </>
+          ) : null}
         </p>
       </header>
 
@@ -261,6 +282,6 @@ export default async function MatchDetailPage({
           </CardContent>
         </Card>
       ) : null}
-    </main>
+    </div>
   );
 }

@@ -1,12 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
 import { SectionLabel } from "@/components/ui/section-label";
+import { signInHref } from "@/lib/safe-redirect";
 import { cancel10Man, joinSignup, leaveSignup } from "../../actions";
-import { Avatar, PhaseBanner } from "./shared";
+import { ActionError, Avatar, PhaseBanner, useTenManAction } from "./shared";
 import type { TenManSnapshotClient } from "./types";
 
 export function SignupBoard({
@@ -21,7 +22,7 @@ export function SignupBoard({
   isAdmin: boolean;
 }) {
   const router = useRouter();
-  const [pending, startTransition] = useTransition();
+  const { pending, error, run } = useTenManAction();
   const { signups } = snap;
   const count = signups.length;
   const full = count >= 10;
@@ -29,16 +30,17 @@ export function SignupBoard({
   const emptyCount = Math.max(0, 10 - count);
 
   function handleJoin() {
-    startTransition(() => joinSignup(tenManId));
+    run(() => joinSignup(tenManId));
   }
   function handleLeave() {
-    startTransition(() => leaveSignup(tenManId));
+    run(() => leaveSignup(tenManId));
   }
   function handleCancel() {
-    startTransition(async () => {
-      await cancel10Man(tenManId);
-      router.push("/10-man");
-    });
+    if (!confirm("Cancel this 10-man? Everyone who joined will be dropped.")) return;
+    run(
+      () => cancel10Man(tenManId),
+      () => router.push("/10-man"),
+    );
   }
 
   const right = (
@@ -80,7 +82,13 @@ export function SignupBoard({
         </Button>
       ) : null}
       {!viewerUserId && !full ? (
-        <span style={{ fontSize: 13, color: "var(--muted)" }}>Sign in to join</span>
+        <Link
+          href={signInHref(`/10-man/${tenManId}`)}
+          className="rounded-full px-4 py-1.5 text-sm font-medium transition-opacity hover:opacity-80"
+          style={{ backgroundColor: "var(--accent)", color: "var(--accent-fg)" }}
+        >
+          Sign in to join
+        </Link>
       ) : null}
     </div>
   );
@@ -98,6 +106,8 @@ export function SignupBoard({
         progress={count / 10}
         right={right}
       />
+
+      <ActionError message={error} />
 
       {/* Slot grid */}
       <div
@@ -123,7 +133,9 @@ function formatJoinedAt(joinedAt: string | Date): string {
   const diff = Math.floor((Date.now() - d.getTime()) / 1000);
   if (diff < 60) return "just now";
   if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  if (diff < 86400 * 30) return `${Math.floor(diff / 86400)}d ago`;
+  return d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
 function SignupCard({

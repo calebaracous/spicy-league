@@ -1,5 +1,6 @@
 import { Divider } from "@/components/ui/divider";
 import { LinkButton } from "@/components/ui/link-button";
+import { LocalTime } from "@/components/ui/local-time";
 import { PlayerCard } from "@/components/ui/player-card";
 import { Reveal } from "@/components/ui/reveal";
 import { SectionLabel } from "@/components/ui/section-label";
@@ -17,11 +18,6 @@ interface SignupSectionProps {
 
 const SIGNUP_TARGET: Record<string, number> = { lol: 30, cs2: 20 };
 
-function formatDate(d: Date | null | undefined): string {
-  if (!d) return "TBD";
-  return d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
-}
-
 export function SignupSection({ season, signupCount, topPlayers }: SignupSectionProps) {
   const isLoL = season.game === "lol";
   const target = SIGNUP_TARGET[season.game] ?? 30;
@@ -32,11 +28,11 @@ export function SignupSection({ season, signupCount, topPlayers }: SignupSection
   const sectionLabel = isLoL ? "TOP-RANKED SIGNUPS" : "SIGNUPS";
   const sectionHeading = isLoL ? (
     <>
-      Highest-ranked <span style={{ color: "var(--accent)" }}>signups</span>
+      Highest-ranked <span style={{ color: "var(--accent-text)" }}>signups</span>
     </>
   ) : (
     <>
-      Registered <span style={{ color: "var(--accent)" }}>players</span>
+      Registered <span style={{ color: "var(--accent-text)" }}>players</span>
     </>
   );
   const sectionBody = isLoL
@@ -83,7 +79,7 @@ export function SignupSection({ season, signupCount, topPlayers }: SignupSection
                   <>
                     Signups close{" "}
                     <span style={{ color: "var(--text)" }}>
-                      {formatDate(season.signupClosesAt)}
+                      <LocalTime date={season.signupClosesAt} preset="weekday-datetime" />
                     </span>
                     .{" "}
                   </>
@@ -91,7 +87,9 @@ export function SignupSection({ season, signupCount, topPlayers }: SignupSection
                 {season.seasonStartAt && (
                   <>
                     Season starts{" "}
-                    <span style={{ color: "var(--text)" }}>{formatDate(season.seasonStartAt)}</span>
+                    <span style={{ color: "var(--text)" }}>
+                      <LocalTime date={season.seasonStartAt} preset="date" />
+                    </span>
                     .
                   </>
                 )}

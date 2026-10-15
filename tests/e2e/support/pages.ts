@@ -90,6 +90,8 @@ export const adminDraft = {
     label: "Start draft" | "Pause" | "Resume" | "Undo last pick",
   ) => {
     await adminDraft.open(page, slug);
+    // Undo is a ConfirmSubmitButton — accept its confirm() prompt.
+    if (label === "Undo last pick") page.once("dialog", (d) => d.accept());
     await page.getByRole("button", { name: label, exact: true }).click();
     await page.waitForURL(/[?&](saved|error)=/);
   },
