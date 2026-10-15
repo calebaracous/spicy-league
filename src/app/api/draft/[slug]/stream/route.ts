@@ -5,9 +5,11 @@ export const maxDuration = 300;
 
 const POLL_MS = 2000;
 
+// Compare the whole serialized snapshot, not a summary of it. A summary like
+// state + pick count + on-clock captain misses changes that leave those equal
+// — e.g. an undo followed by a different pick within one poll.
 function snapshotHash(snap: Awaited<ReturnType<typeof getDraftSnapshot>>): string {
-  if (!snap) return "none";
-  return `${snap.draft.state}:${snap.picks.length}:${snap.onTheClock?.captainUserId ?? ""}`;
+  return JSON.stringify(snap);
 }
 
 export async function GET(_req: Request, { params }: { params: Promise<{ slug: string }> }) {

@@ -103,8 +103,10 @@ independent of the season draft's `captainOrderForPick`.
 
 Identical pattern to the season draft (see [DRAFT.md](DRAFT.md)):
 `src/app/api/ten-man/[id]/stream/route.ts` polls `getTenManSnapshot(id)`
-every 2s, hashes `state:signups:votes:picks:winner`, emits `update` on change
-and `: ping` otherwise. `maxDuration = 300`.
+every 2s, compares the `JSON.stringify`'d snapshot with the last one, emits
+`update` on change and `: ping` otherwise. `maxDuration = 300`. (It used to
+hash counts only, which missed a player changing their vote — `castVote`
+deletes and re-inserts, so `votes.length` doesn't change.)
 
 Client: `src/app/10-man/[id]/live-board.tsx` opens the `EventSource` and
 switches on `snap.tenMan.state` to render one phase board from

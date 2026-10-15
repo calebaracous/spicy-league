@@ -66,7 +66,10 @@ snake order. That means:
 
 1. Opens a `ReadableStream`.
 2. Every **2000ms**, calls `getDraftSnapshot(slug)`.
-3. Computes a `snapshotHash`: `${state}:${picks.length}:${onClockCaptainId}`.
+3. Computes `snapshotHash` — the whole snapshot, `JSON.stringify`'d. It used
+   to be `state:picks.length:onClockCaptainId`, which missed an undo
+   followed by a different pick inside one poll (all three unchanged), so
+   spectators kept the stale pick. Compare full content, not a summary.
 4. If the hash changed → send SSE event `update` with the full snapshot.
 5. If unchanged → send a keep-alive comment (`: ping\n\n`).
 6. Aborts on request signal.
@@ -127,7 +130,7 @@ All in `src/app/seasons/[slug]/draft/actions.ts`, all gated by
 
 | Action | Effect |
 |---|---|
-| `startDraft(slug)` | Creates or resumes the `drafts` row (`state=in_progress`). Also transitions `seasons.state` to `drafting` if not already. Bails with `need-captains` if `< 2` captains, `already-complete` if the draft is completed. |
+| `startDraft(slug)` | Creates or resumes the `drafts` row (`state=in_progress`). Also transitions `seasons.state` to `drafting` if not already. Bails with `need-captains` if `< 2` captains, `pool-too-small` if non-captain signups `< totalPicks(captains)` (otherwise the pool runs dry before the last pick and the draft can never finalize), `already-complete` if the draft is completed. |
 | `pauseDraft(slug)` | `state=paused` (only if currently `in_progress`). |
 | `resumeDraft(slug)` | `state=in_progress` (only if currently `paused`). |
 | `undoLastPick(slug)` | Deletes the row with max `pickNumber` (`no-draft` / `no-picks` errors). Does nothing to the draft state or the season. If you undo past a `finalizeDraft` call, you'll need to also wipe teams and reset draft/season state manually. |
@@ -175,9 +178,11 @@ computation doesn't consult existing picks — you'd skew the order).
 
 - …a pick is rejected unexpectedly → grep the error code in
   `submitPick`. Every branch redirects with a different code.
-- …the SSE stream isn't updating → check `snapshotHash`. If the state,
-  `picks.length`, and on-clock captain are all unchanged, we send a ping
-  instead of an update — this is intentional.
+- …the SSE stream isn't updating → `snapshotHash` is the serialized
+  snapshot; a ping instead of an update means `getDraftSnapshot` really
+  returned identical data.
+- …"Start draft" says not enough players → each captain needs
+  `PICKS_PER_TEAM` (4) non-captain signups. Add signups or demote a captain.
 - …`finalizeDraft` didn't run → check the pick count matches
   `totalPicks(captains.length)` exactly. A manual DB insert with a wrong
   pickNumber breaks this.

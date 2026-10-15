@@ -20,12 +20,24 @@ export async function startDraft(slug: string) {
   await requireAdmin();
   const season = await getSeasonOrFail(slug);
 
-  const captainCount = await db
-    .select({ id: seasonCaptains.id })
+  const captains = await db
+    .select({ userId: seasonCaptains.userId })
     .from(seasonCaptains)
     .where(eq(seasonCaptains.seasonId, season.id));
-  if (captainCount.length < 2) {
+  if (captains.length < 2) {
     redirect(`/admin/seasons/${slug}/draft?error=need-captains`);
+  }
+
+  // Every team needs PICKS_PER_TEAM non-captain players, otherwise the pool
+  // runs out before the last pick and the draft can never finalize.
+  const captainIds = new Set(captains.map((c) => c.userId));
+  const signups = await db
+    .select({ userId: seasonSignups.userId })
+    .from(seasonSignups)
+    .where(eq(seasonSignups.seasonId, season.id));
+  const poolSize = signups.filter((s) => !captainIds.has(s.userId)).length;
+  if (poolSize < totalPicksFor(captains.length)) {
+    redirect(`/admin/seasons/${slug}/draft?error=pool-too-small`);
   }
 
   const existing = await db.query.drafts.findFirst({ where: eq(drafts.seasonId, season.id) });

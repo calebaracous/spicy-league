@@ -92,13 +92,13 @@ Seasons seeded straight into `captains_selected` / `drafting`
 
 - 1 captain → Start draft refused (`need-captains`).
 - 2 captains → smallest draft completes, two teams of five.
-- **Known gap** — 4 captains, 11 others: pool runs out at pick 11 of 16, the
-  draft stays `in_progress` with no teams. Pins current behaviour.
-- **Known bug (`test.fail`)** — undo + different pick inside one 2s poll:
-  the SSE hash (`state:picks.length:onClock`) is unchanged, so spectators
-  keep the old pick. Done as one DB batch for deterministic timing. When the
-  bug is fixed this test starts passing and Playwright flags it — remove
-  `test.fail` then.
+- 4 captains, 15 others (one short of 16) → Start draft refused
+  (`pool-too-small`). Before this guard the pool ran dry mid-draft and the
+  draft could never finish.
+- Undo + different pick inside one 2s poll reaches spectators. Regression
+  test for the SSE change detection (it used to compare only
+  `state:picks.length:onClock`). Done as one DB batch for deterministic
+  timing.
 - Two picks at the same moment (captain + admin): asserts invariants (pick
   numbers contiguous, no duplicates, captains follow the snake) and records
   which outcome happened.

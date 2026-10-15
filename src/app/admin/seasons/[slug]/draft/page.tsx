@@ -25,6 +25,8 @@ type SearchParams = Promise<{ saved?: string; error?: string }>;
 
 const ERROR_MESSAGES: Record<string, string> = {
   "need-captains": "You need at least 2 captains to start the draft.",
+  "pool-too-small":
+    "Not enough players to fill every team. Each captain needs 4 non-captain signups — add signups or remove a captain.",
   "already-complete": "This draft is already complete.",
   "no-draft": "No draft has been created yet.",
   "no-picks": "There are no picks to undo.",

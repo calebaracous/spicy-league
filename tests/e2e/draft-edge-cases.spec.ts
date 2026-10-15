@@ -16,8 +16,8 @@ import { admin, player, seedDraftSeason } from "./support/seed";
 /**
  * Draft edge cases. Each test seeds its own season directly (the main spec
  * already covers setup through the UI). Tests that pin down a known gap say
- * so in an annotation; `test.fail` marks a confirmed bug — the test asserts
- * the correct behaviour and is expected to fail until the bug is fixed.
+ * so in an annotation. A confirmed bug gets a test that asserts the correct
+ * behaviour, marked `test.fail` until the fix lands.
  */
 
 test.afterEach(closeContexts);
@@ -64,42 +64,24 @@ test("2 captains: the smallest draft completes with two teams of five", async ({
   for (const t of teams.values()) expect(t.members).toHaveLength(5);
 });
 
-test("pool smaller than the draft needs: the draft cannot finish", async ({ browser }) => {
-  test.info().annotations.push({
-    type: "known gap",
-    description:
-      "startDraft does not check signups >= captains × 5. With 4 captains and 11 other " +
-      "signups, the pool runs out at pick 11 of 16 and the draft stays in progress with no " +
-      "teams and no way forward. This test pins down that current behaviour.",
-  });
+test("pool smaller than the draft needs: Start draft is refused", async ({ browser }) => {
+  // 4 captains need 16 non-captain players; 15 is one short.
   const { slug } = await seedDraftSeason({
     suffix: "short-pool",
     captains: [1, 2, 3, 4],
-    others: range(5, 15),
-    startDraft: true,
+    others: range(5, 19),
+    startDraft: false,
   });
-  const adminBoard = await signedInPage(browser, admin().username);
-  await board.open(adminBoard, slug);
-  for (const [i, n] of range(5, 15).entries()) {
-    await board.pick(adminBoard, player(n).name);
-    await expect(board.logEntries(adminBoard)).toHaveCount(i + 1, { timeout: SSE_TIMEOUT });
-  }
-  await expect(board.poolHeading(adminBoard)).toHaveText("Available pool (0)", {
-    timeout: SSE_TIMEOUT,
-  });
-  await expect(adminBoard.getByText("Pick 12 / 16")).toBeVisible();
-  await expect(board.pickButtons(adminBoard)).toHaveCount(0);
-  expect((await getDraft(slug))?.state).toBe("in_progress");
-  expect((await getTeams(slug)).size).toBe(0);
+  const adminPage = await signedInPage(browser, admin().username);
+  await adminDraft.click(adminPage, slug, "Start draft");
+  await expect(board.alert(adminPage)).toContainText("Not enough players to fill every team.");
+  expect(await getDraft(slug)).toBeUndefined();
 });
 
 test("undo + a different pick between two polls reaches spectators", async ({ browser }) => {
-  test.fail(
-    true,
-    "Known bug: the SSE route only compares state, pick count and who is on the clock " +
-      "(src/app/api/draft/[slug]/stream/route.ts). Replacing the last pick with a different " +
-      "player inside one 2s poll leaves all three unchanged, so spectators keep showing the old pick.",
-  );
+  // Regression test: the SSE route used to compare only state, pick count and
+  // who is on the clock, so replacing the last pick inside one poll was never
+  // pushed to spectators.
   const { slug } = await seedDraftSeason({
     suffix: "undo-race",
     captains: [1, 2],

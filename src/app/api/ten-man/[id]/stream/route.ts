@@ -5,10 +5,11 @@ export const maxDuration = 300;
 
 const POLL_MS = 2000;
 
+// Compare the whole serialized snapshot, not a summary of it. Counts alone
+// miss changes that keep them equal — e.g. a player changing their vote
+// (castVote deletes and re-inserts, so votes.length is unchanged).
 function snapshotHash(snap: Awaited<ReturnType<typeof getTenManSnapshot>>): string {
-  if (!snap) return "none";
-  const tm = snap.tenMan;
-  return `${tm.state}:${snap.signups.length}:${snap.votes.length}:${snap.picks.length}:${tm.winnerCaptainUserId ?? ""}`;
+  return JSON.stringify(snap);
 }
 
 export async function GET(_req: Request, { params }: { params: Promise<{ id: string }> }) {

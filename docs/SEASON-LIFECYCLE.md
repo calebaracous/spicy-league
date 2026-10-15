@@ -130,8 +130,9 @@ Between `signups_closed` and `drafting`:
 
 Once happy, admin transitions to `captains_selected`, then starts the
 draft from `/admin/seasons/[slug]/draft` (`startDraft`), which moves the
-season to `drafting`. Using the generic transition to `drafting` instead
-would flip the label without creating a drafts row.
+season to `drafting`. It refuses (`pool-too-small`) unless there are at
+least 4 non-captain signups per captain. Using the generic transition to
+`drafting` instead would flip the label without creating a drafts row.
 
 ## Guards on user actions
 
