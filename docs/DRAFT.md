@@ -55,10 +55,10 @@ snake order. That means:
 - Undoing a pick automatically rewinds who's on the clock.
 - There is no separate "timer" row. If we ever add a pick clock it'll be
   stored on `drafts`, not computed.
-- Race condition window: two captains submitting simultaneously can't both
-  succeed because the `(draftId, pickNumber)` unique constraint prevents
-  duplicate pick numbers — the second insert fails. We don't currently
-  surface this error nicely; it'll 500 (acceptable given the scenario).
+- Race condition window: two picks submitted simultaneously can't both
+  succeed — the `(draftId, pickNumber)` unique constraint rejects the
+  second insert, and `submitPick` turns that into a `stale-pick` redirect
+  (`isUniqueViolation` walks the error's `cause` chain for code `23505`).
 
 ## Realtime: SSE polling
 
@@ -97,7 +97,7 @@ The client then hot-replaces it when SSE events arrive.
 
 ## Submitting a pick
 
-`submitPick(slug, pickedUserId)` in
+`submitPick(slug, pickedUserId, expectedPickNumber)` in
 `src/app/seasons/[slug]/draft/actions.ts` performs a dense validation chain.
 All failures redirect with a short error code; the page's error renderer
 displays them.
@@ -114,14 +114,21 @@ Order of checks:
 9. Picked user is not themselves a captain → `cant-pick-captain`.
 10. Picked user not already picked → `already-picked`.
 11. Picked user is in `seasonSignups` → `not-in-pool`.
-12. **Insert the pick.**
-13. If `nextPickNumber === total` → call `finalizeDraft(draft.id)`.
-14. `revalidatePath` + redirect.
+12. `expectedPickNumber !== nextPickNumber` → `stale-pick`. The live board
+    sends `snap.picks.length + 1` — the pick the clicker was looking at.
+13. **Insert the pick.** A unique violation (lost a simultaneous race) →
+    `stale-pick`.
+14. If `nextPickNumber === total` → call `finalizeDraft(draft.id)`.
+15. `revalidatePath` + redirect.
 
 **Admin override**: admins bypass the `not-your-turn` check. This is
 intentional — admins can submit a pick on any captain's behalf (no-show,
 internet issues). `submitPick` does not take a captain ID for override — it
-uses whoever is `onClockCaptain`, so an admin can't pick out of order.
+uses whoever is `onClockCaptain`, so an admin can't pick out of order. The
+`stale-pick` check (step 12) stops a late admin click from silently landing
+on the *next* captain's pick, and a captain's double-click at a snake turn
+from using up their following pick. It runs after `already-picked` so a
+stale click on a just-picked player still gets the more specific error.
 
 ## Admin controls
 

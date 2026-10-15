@@ -119,7 +119,22 @@ export async function undoLastPick(slug: string) {
   redirect(`/admin/seasons/${slug}/draft?saved=1`);
 }
 
-export async function submitPick(slug: string, pickedUserId: string) {
+/** True for a Postgres unique-constraint violation, however the driver wraps it. */
+function isUniqueViolation(err: unknown): boolean {
+  for (let e = err; e && typeof e === "object"; e = (e as { cause?: unknown }).cause) {
+    if ((e as { code?: unknown }).code === "23505") return true;
+  }
+  return false;
+}
+
+/**
+ * `expectedPickNumber` is the pick the clicker saw on the board. If the draft
+ * has moved on since (another pick landed, or an undo), the click is rejected
+ * with `stale-pick` instead of being applied to whichever pick is now next —
+ * otherwise an admin's late click would be credited to the next captain, and a
+ * captain's double-click at a snake turn would use up their following pick.
+ */
+export async function submitPick(slug: string, pickedUserId: string, expectedPickNumber: number) {
   const session = await requireOnboarded();
   const season = await getSeasonOrFail(slug);
 
@@ -176,12 +191,25 @@ export async function submitPick(slug: string, pickedUserId: string) {
     redirect(`/seasons/${slug}/draft?error=not-in-pool`);
   }
 
-  await db.insert(draftPicks).values({
-    draftId: draft.id,
-    pickNumber: nextPickNumber,
-    captainUserId: onClockCaptain.userId,
-    pickedUserId,
-  });
+  if (expectedPickNumber !== nextPickNumber) {
+    redirect(`/seasons/${slug}/draft?error=stale-pick`);
+  }
+
+  // Two picks submitted at the same moment both pass the checks above; the
+  // (draft_id, pick_number) unique constraint lets only one insert win.
+  let lostRace = false;
+  try {
+    await db.insert(draftPicks).values({
+      draftId: draft.id,
+      pickNumber: nextPickNumber,
+      captainUserId: onClockCaptain.userId,
+      pickedUserId,
+    });
+  } catch (err) {
+    if (!isUniqueViolation(err)) throw err;
+    lostRace = true;
+  }
+  if (lostRace) redirect(`/seasons/${slug}/draft?error=stale-pick`);
 
   if (nextPickNumber === total) {
     await finalizeDraft(draft.id);

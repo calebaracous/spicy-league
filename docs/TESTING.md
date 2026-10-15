@@ -99,9 +99,10 @@ Seasons seeded straight into `captains_selected` / `drafting`
   test for the SSE change detection (it used to compare only
   `state:picks.length:onClock`). Done as one DB batch for deterministic
   timing.
-- Two picks at the same moment (captain + admin): asserts invariants (pick
-  numbers contiguous, no duplicates, captains follow the snake) and records
-  which outcome happened.
+- A late admin pick (admin board frozen at pick 1 after the captain has
+  picked) is rejected with `stale-pick`, not credited to the next captain.
+- Two picks at the same moment (captain + admin): exactly one lands as
+  pick 1; the other page shows `stale-pick`. Records which side won.
 
 ### Not covered
 

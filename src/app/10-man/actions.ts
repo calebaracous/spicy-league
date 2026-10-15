@@ -200,8 +200,14 @@ export async function castVote(id: string, candidateIds: [string, string]): Prom
 
 /**
  * On-the-clock captain (or admin): pick a player from the pool.
+ * `expectedPickNumber` is the pick the clicker saw; if the draft has moved on,
+ * the click is rejected rather than credited to whoever is now on the clock.
  */
-export async function submitPick(id: string, pickedUserId: string): Promise<void> {
+export async function submitPick(
+  id: string,
+  pickedUserId: string,
+  expectedPickNumber: number,
+): Promise<void> {
   const session = await requireAuth();
   const callerId = session.user.id;
   const isAdmin = session.user.role === "admin";
@@ -225,6 +231,9 @@ export async function submitPick(id: string, pickedUserId: string): Promise<void
       .orderBy(tenManCaptains.captainOrder);
 
     const nextPickIdx = picks.length;
+    if (expectedPickNumber !== nextPickIdx + 1) {
+      throw new Error("Another pick was made first. Check the board and pick again.");
+    }
     const captainOrderNeeded = PICK_ORDER_C1_C2[nextPickIdx];
     const onTheClock = captains.find((c) => c.captainOrder === captainOrderNeeded);
     if (!onTheClock) throw new Error("No captain on the clock");

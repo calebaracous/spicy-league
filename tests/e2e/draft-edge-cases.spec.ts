@@ -8,6 +8,7 @@ import {
   anonymousPage,
   board,
   closeContexts,
+  freezeLiveUpdates,
   signedInPage,
   SSE_TIMEOUT,
 } from "./support/pages";
@@ -21,6 +22,8 @@ import { admin, player, seedDraftSeason } from "./support/seed";
  */
 
 test.afterEach(closeContexts);
+
+const STALE_PICK_MESSAGE = "Another pick was made before yours went through";
 
 const range = (from: number, to: number) =>
   Array.from({ length: to - from + 1 }, (_, i) => from + i);
@@ -120,7 +123,31 @@ test("undo + a different pick between two polls reaches spectators", async ({ br
   });
 });
 
-test("two picks submitted at the same moment never corrupt the draft", async ({ browser }) => {
+test("a late admin pick is rejected instead of going to the next captain", async ({ browser }) => {
+  const { slug } = await seedDraftSeason({
+    suffix: "late-admin",
+    captains: [1, 2],
+    others: range(3, 10),
+    startDraft: true,
+  });
+  const captainPage = await signedInPage(browser, player(1).username);
+  await board.open(captainPage, slug);
+  // The admin's board still shows pick 1 when they click.
+  const staleAdmin = await signedInPage(browser, admin().username);
+  await freezeLiveUpdates(staleAdmin);
+  await board.open(staleAdmin, slug);
+
+  await board.pick(captainPage, player(3).name);
+  await expect.poll(async () => (await getPicks(slug)).length).toBe(1);
+
+  await board.pick(staleAdmin, player(4).name);
+  await expect(board.alert(staleAdmin)).toContainText(STALE_PICK_MESSAGE);
+  const picks = await getPicks(slug);
+  expect(picks).toHaveLength(1);
+  expect(picks[0].picked).toBe(player(3).username);
+});
+
+test("two picks submitted at the same moment: exactly one lands", async ({ browser }) => {
   const { slug } = await seedDraftSeason({
     suffix: "double-pick",
     captains: [1, 2],
@@ -133,29 +160,28 @@ test("two picks submitted at the same moment never corrupt the draft", async ({ 
   await board.open(adminBoard, slug);
   await expect(board.pickButtons(captainPage).first()).toBeVisible();
 
+  // Both pages show pick 1 and click at once. Whether the second request
+  // arrives after the first commits (stale-pick check) or races it (unique
+  // constraint on pick number), it must be rejected — never applied as pick 2.
   await Promise.all([
     board.pick(captainPage, player(3).name),
     board.pick(adminBoard, player(4).name),
   ]);
 
-  // Let both server actions settle.
-  await expect
-    .poll(async () => (await getPicks(slug)).length, { timeout: SSE_TIMEOUT })
-    .toBeGreaterThanOrEqual(1);
-  await adminBoard.waitForTimeout(3_000);
-  const picks = await getPicks(slug);
-
-  // Invariants that must hold whichever request wins.
-  expect(picks.map((p) => p.pickNumber)).toEqual(range(1, picks.length));
-  expect(new Set(picks.map((p) => p.picked)).size).toBe(picks.length);
-  expect(picks.map((p) => p.captain)).toEqual(
-    [1, 2].slice(0, picks.length).map((c) => player(c).username),
+  const loser = await Promise.any(
+    [captainPage, adminBoard].map((page) =>
+      expect(board.alert(page))
+        .toContainText(STALE_PICK_MESSAGE)
+        .then(() => page),
+    ),
   );
+  const picks = await getPicks(slug);
+  expect(picks).toHaveLength(1);
+  expect(picks[0].pickNumber).toBe(1);
+  expect(picks[0].captain).toBe(player(1).username);
+  expect(picks[0].picked).toBe(loser === adminBoard ? player(3).username : player(4).username);
   test.info().annotations.push({
     type: "outcome",
-    description:
-      picks.length === 2
-        ? "Both picks landed: the second was processed after the first and credited to the next captain (admin override)."
-        : "One pick landed; the other request lost the unique (draft, pick_number) race and errored (known gap: unfriendly 500).",
+    description: `${loser === adminBoard ? "Captain" : "Admin"} won; the other click was rejected with stale-pick.`,
   });
 });

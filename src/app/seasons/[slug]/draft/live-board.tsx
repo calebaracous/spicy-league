@@ -250,7 +250,7 @@ export function LiveBoard({
                           onClick={() => {
                             if (!confirm(`Pick ${p.displayName}?`)) return;
                             startTransition(async () => {
-                              await submitPick(slug, p.userId);
+                              await submitPick(slug, p.userId, snap.picks.length + 1);
                             });
                           }}
                         >

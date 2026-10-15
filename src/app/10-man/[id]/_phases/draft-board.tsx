@@ -39,7 +39,7 @@ export function DraftBoard({
   const canPick = !complete && (isAdmin || Boolean(isOnClockViewer));
 
   function handlePick(pickedUserId: string) {
-    startTransition(() => submitPick(tenManId, pickedUserId));
+    startTransition(() => submitPick(tenManId, pickedUserId, picks.length + 1));
   }
 
   const cap1 = captains.find((c) => c.captainOrder === 1);

@@ -19,6 +19,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   "cant-pick-captain": "You can't pick another captain.",
   "already-picked": "That player has already been picked.",
   "not-in-pool": "That player isn't in the signup pool.",
+  "stale-pick":
+    "Another pick was made before yours went through, so yours was not applied. Check the board and pick again.",
   internal: "Something went wrong. Try again.",
 };
 

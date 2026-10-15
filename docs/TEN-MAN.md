@@ -74,7 +74,7 @@ rather than HTTP: the HTTP driver can't do interactive transactions.
 | `joinSignup(id)` | `requireAuth` | state = `signups`, count < 10 (`signups-full`), idempotent if already in |
 | `leaveSignup(id)` | `requireAuth` | state = `signups`; re-numbers remaining `signupOrder` |
 | `castVote(id, [a, b])` | `requireAuth` | a ≠ b, state = `voting`, caller **and both candidates** are signups. Self-votes allowed (volunteering to captain). Delete-then-insert, so re-voting replaces. |
-| `submitPick(id, userId)` | `requireAuth` | state = `drafting`, < 8 picks, caller is on-the-clock captain **or admin**, picked user is a signup and isn't a captain or already picked |
+| `submitPick(id, userId, expectedPickNumber)` | `requireAuth` | state = `drafting`, < 8 picks, `expectedPickNumber` is the next pick (the board sends `picks.length + 1`, so a late click is rejected instead of credited to the next captain), caller is on-the-clock captain **or admin**, picked user is a signup and isn't a captain or already picked |
 | `reportResult(id, {winnerCaptainUserId, durationLabel?})` | `requireAdmin` | state = `ready`, winner is one of the two captains |
 
 Note: guards use `requireAuth`, not `requireOnboarded` — username isn't
