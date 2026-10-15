@@ -4,6 +4,8 @@ import { PlayerCard } from "@/components/ui/player-card";
 import { Reveal } from "@/components/ui/reveal";
 import { SectionLabel } from "@/components/ui/section-label";
 import { TintedSection } from "@/components/ui/tinted-section";
+import { VideoBackdrop } from "@/components/ui/video-backdrop";
+import { backdropClip } from "@/lib/backdrop-clips";
 import type { PlayerInfo } from "@/lib/homepage";
 import type { Season } from "@/db/schema/seasons";
 
@@ -45,6 +47,7 @@ export function SignupSection({ season, signupCount, topPlayers }: SignupSection
     <>
       {/* Signup banner */}
       <section
+        className="relative isolate overflow-hidden"
         style={{
           paddingTop: "6rem",
           paddingBottom: "6rem",
@@ -53,6 +56,7 @@ export function SignupSection({ season, signupCount, topPlayers }: SignupSection
           background: "linear-gradient(180deg, rgba(185,28,28,0.06) 0%, var(--bg) 100%)",
         }}
       >
+        <VideoBackdrop clip={backdropClip(season.game, 1)} />
         <div className="site-container">
           <Reveal>
             <div className="flex max-w-2xl flex-col gap-6">
@@ -129,7 +133,7 @@ export function SignupSection({ season, signupCount, topPlayers }: SignupSection
 
       {/* Players grid */}
       {topPlayers && topPlayers.length > 0 && (
-        <TintedSection tint="subtle-warm">
+        <TintedSection tint="subtle-warm" backdrop={backdropClip(season.game, 2)}>
           <Reveal className="mb-14 flex flex-col gap-4">
             <SectionLabel>{sectionLabel}</SectionLabel>
             <h2 className="text-heading" style={{ color: "var(--text)" }}>
@@ -155,7 +159,7 @@ export function SignupSection({ season, signupCount, topPlayers }: SignupSection
 
       {/* CS2: no ranked player data — show prompt instead */}
       {!topPlayers && (
-        <TintedSection tint="subtle-warm">
+        <TintedSection tint="subtle-warm" backdrop={backdropClip(season.game, 2)}>
           <Reveal className="flex max-w-xl flex-col gap-4">
             <SectionLabel>{sectionLabel}</SectionLabel>
             <h2 className="text-heading" style={{ color: "var(--text)" }}>

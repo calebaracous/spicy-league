@@ -106,7 +106,8 @@ and `@base-ui/react` for accessibility.
 
 **Freelance-style (new)** — all use the hex tokens:
 - General: `reveal.tsx`, `section-label.tsx`, `divider.tsx`, `tag.tsx`,
-  `link-button.tsx`, `logo-mark.tsx`, `tinted-section.tsx`.
+  `link-button.tsx`, `logo-mark.tsx`, `tinted-section.tsx`,
+  `video-backdrop.tsx`.
 - Player/draft: `player-card.tsx` (username + role/rank row),
   `captain-badge.tsx` (red-tinted name chip) — home sections.
 - 10-man: `snake-order-strip.tsx` (8-cell C1/C2 order, exports
@@ -119,6 +120,34 @@ in `_phases/shared.tsx`.
 When building new chrome: prefer the freelance primitives + hex tokens.
 When touching existing forms / admin: keep using shadcn.
 
+### Home-row video backdrops
+
+Every full-width row on `/` has a muted, looping gameplay clip behind it at
+50% opacity (`VideoBackdrop`, `src/components/ui/video-backdrop.tsx`), with a
+`var(--bg)` fade at the top and bottom so rows blend together.
+
+- **Which clip:** `backdropClip(game, index)` in `src/lib/backdrop-clips.ts`.
+  Hero = index 0, state-section rows = 1, 2 (all the active season's game;
+  off-season uses the last season's game, else LoL). PastSeasonsStrip shows
+  `otherGame(game)` so both games appear. Indexes cycle through the clips
+  available for that game.
+- **Wiring:** `TintedSection` takes `backdrop={clip}` and adds
+  `relative isolate overflow-hidden`. Hand-rolled sections (Hero, signup
+  banner, PastSeasonsStrip) do the same by hand — the backdrop is `-z-10`, so
+  the parent must create a stacking context (`isolate`).
+- **Loading:** the `<video>` mounts only once the row is within 200px of the
+  viewport, fades in on `canplay`, and pauses when off-screen. Reduced-motion
+  and Save-Data users never get the video, only the poster.
+- **Assets:** `public/videos/` (clips) and `public/videos/posters/`. Posters are
+  SVG placeholders right now and every clip has `sources: []`, so no video is
+  requested. To add a clip: encode an 8–12s seamless loop at 1280×720, no
+  audio, as AV1 WebM + H.264 MP4 (~1.5–3 MB each), replace the poster with
+  its first frame, and list both files in `sources` (WebM first).
+- **Licensing:** footage must be our own recordings or official Riot / Valve
+  material — both publishers allow game footage on free, non-commercial fan
+  sites, but not other creators' videos. The Riot "Legal Jibber Jabber"
+  notice in `site-footer.tsx` is required while LoL footage is used.
+
 ## Components that set the site shape
 
 | Path | Role |
@@ -127,7 +156,7 @@ When touching existing forms / admin: keep using shadcn.
 | `src/app/template.tsx` | Adds `animate-page` to every route change. |
 | `src/components/site-header.tsx` | Server component. Calls `auth()`, builds the live pill (season or 10-man). |
 | `src/components/site-header-client.tsx` | Sticky nav: live pill, scroll-triggered blur+border, mobile hamburger overlay, session-aware actions. |
-| `src/components/site-footer.tsx` | Footer: nav links + Terms / Privacy. |
+| `src/components/site-footer.tsx` | Footer: nav links + Terms / Privacy + Riot/Valve footage notice. |
 | `src/app/_sections/*` | Home-page sections: Hero + one of Signup / Draft / Live / Upcoming / OffSeason + PastSeasonsStrip. |
 | `src/app/page.tsx` | Picks the section from `getHomepageData()` (`src/lib/homepage.ts`). |
 

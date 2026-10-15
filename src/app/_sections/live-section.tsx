@@ -4,6 +4,7 @@ import { PlayerCard } from "@/components/ui/player-card";
 import { Reveal } from "@/components/ui/reveal";
 import { SectionLabel } from "@/components/ui/section-label";
 import { TintedSection } from "@/components/ui/tinted-section";
+import { backdropClip } from "@/lib/backdrop-clips";
 import type { NextMatchInfo, PlayerInfo } from "@/lib/homepage";
 import type { Season } from "@/db/schema/seasons";
 import { SEASON_STATE_LABELS } from "@/lib/seasons";
@@ -38,7 +39,7 @@ export function LiveSection({ season, nextMatch, topPlayers }: LiveSectionProps)
 
   return (
     <>
-      <TintedSection tint="subtle-warm">
+      <TintedSection tint="subtle-warm" backdrop={backdropClip(season.game, 1)}>
         <Reveal className="mb-10 flex flex-col gap-4">
           <div className="flex items-center gap-2.5">
             <span className="relative flex h-2 w-2">
@@ -135,7 +136,7 @@ export function LiveSection({ season, nextMatch, topPlayers }: LiveSectionProps)
 
       <Divider />
 
-      <TintedSection tint="none">
+      <TintedSection tint="none" backdrop={backdropClip(season.game, 2)}>
         <Reveal className="mb-14 flex flex-col gap-4">
           <SectionLabel>TOP-RANKED PLAYERS</SectionLabel>
           <h2 className="text-heading" style={{ color: "var(--text)" }}>

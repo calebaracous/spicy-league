@@ -3,18 +3,22 @@ import Link from "next/link";
 import { LinkButton } from "@/components/ui/link-button";
 import { Reveal } from "@/components/ui/reveal";
 import { SectionLabel } from "@/components/ui/section-label";
+import { VideoBackdrop } from "@/components/ui/video-backdrop";
+import { backdropClip, type BackdropGame } from "@/lib/backdrop-clips";
 import type { PastSeasonCard } from "@/lib/homepage";
 import { GAME_LABELS } from "@/lib/seasons";
 
 interface PastSeasonsStripProps {
   seasons: PastSeasonCard[];
+  game: BackdropGame;
 }
 
-export function PastSeasonsStrip({ seasons }: PastSeasonsStripProps) {
+export function PastSeasonsStrip({ seasons, game }: PastSeasonsStripProps) {
   if (seasons.length === 0) return null;
 
   return (
-    <section className="py-24 md:py-32">
+    <section className="relative isolate overflow-hidden py-24 md:py-32">
+      <VideoBackdrop clip={backdropClip(game, 0)} />
       <div className="site-container">
         <Reveal className="mb-14 flex flex-col gap-4">
           <SectionLabel>PAST SEASONS</SectionLabel>

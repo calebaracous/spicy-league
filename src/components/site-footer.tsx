@@ -102,6 +102,12 @@ export function SiteFooter() {
             ))}
           </nav>
         </div>
+
+        <p className="mt-6 text-xs leading-relaxed" style={{ color: "var(--muted)", opacity: 0.7 }}>
+          Spicy League was created under Riot Games&apos; &ldquo;Legal Jibber Jabber&rdquo; policy
+          using assets owned by Riot Games. Riot Games does not endorse or sponsor this project.
+          Counter-Strike 2 footage is used under Valve&apos;s video policy.
+        </p>
       </div>
     </footer>
   );

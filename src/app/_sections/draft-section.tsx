@@ -5,6 +5,7 @@ import { PlayerCard } from "@/components/ui/player-card";
 import { Reveal } from "@/components/ui/reveal";
 import { SectionLabel } from "@/components/ui/section-label";
 import { TintedSection } from "@/components/ui/tinted-section";
+import { backdropClip } from "@/lib/backdrop-clips";
 import type { CaptainInfo, PlayerInfo } from "@/lib/homepage";
 import type { Season } from "@/db/schema/seasons";
 
@@ -21,7 +22,7 @@ export function DraftSection({ season, captains, topNonCaptains }: DraftSectionP
 
   return (
     <>
-      <TintedSection tint="subtle-warm">
+      <TintedSection tint="subtle-warm" backdrop={backdropClip(season.game, 1)}>
         <Reveal className="mb-14 flex flex-col gap-4">
           <SectionLabel>CAPTAINS</SectionLabel>
           <h2 className="text-heading" style={{ color: "var(--text)" }}>
@@ -55,7 +56,7 @@ export function DraftSection({ season, captains, topNonCaptains }: DraftSectionP
       </TintedSection>
 
       <Divider />
-      <TintedSection tint="none">
+      <TintedSection tint="none" backdrop={backdropClip(season.game, 2)}>
         <Reveal className="mb-14 flex flex-col gap-4">
           <SectionLabel>{season.game === "lol" ? "TOP-RANKED PLAYERS" : "PLAYERS"}</SectionLabel>
           <h2 className="text-heading" style={{ color: "var(--text)" }}>

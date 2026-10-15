@@ -1,5 +1,6 @@
 import { getHomepageData } from "@/lib/homepage";
 import { LIVE_STATE_COPY, liveSeasonHref } from "@/lib/live-season";
+import { otherGame } from "@/lib/backdrop-clips";
 import { Divider } from "@/components/ui/divider";
 import { Hero } from "./_sections/hero";
 import { SignupSection } from "./_sections/signup-section";
@@ -29,9 +30,13 @@ export default async function Home() {
       ? liveSeasonHref({ slug: data.season.slug, state: data.season.state })
       : undefined;
 
+  // Backdrop footage follows the active season's game; the past-seasons row
+  // shows the other game so both appear on the page.
+  const game = data.state === "off_season" ? (data.lastSeason?.game ?? "lol") : data.season.game;
+
   return (
     <>
-      <Hero liveHref={liveHref} liveLabel={heroLabel} />
+      <Hero liveHref={liveHref} liveLabel={heroLabel} game={game} />
       <Divider />
 
       {data.state === "signup_lol" && (
@@ -69,7 +74,7 @@ export default async function Home() {
       )}
 
       <Divider />
-      <PastSeasonsStrip seasons={data.pastSeasons} />
+      <PastSeasonsStrip seasons={data.pastSeasons} game={otherGame(game)} />
     </>
   );
 }

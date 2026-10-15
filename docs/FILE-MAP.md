@@ -149,6 +149,7 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index) and `drizz
 - `src/lib/draft.ts` — `PICKS_PER_TEAM`, `captainOrderForPick` (snake), `totalPicks`, `getDraftSnapshot` (incl. solo-queue rank per pool player), `finalizeDraft`. See [DRAFT.md](DRAFT.md).
 - `src/lib/schedule.ts` — `buildRoundRobin` (circle method), `generateSchedule`, `computeStandings`, `seedPlayoffs`, `getTeamForCaptain` (captain *or* rostered member). See [MATCHES.md](MATCHES.md).
 - `src/lib/homepage.ts` — `getHomepageData()` (discriminated union of 6 home states), `formatRank`, rank-sorting helpers, podium builder.
+- `src/lib/backdrop-clips.ts` — home-row backdrop clip registry (`backdropClip(game, index)`, `otherGame`). Clips have `sources: []` until real footage lands.
 - `src/lib/live-season.ts` — `getLiveSeason`, `LIVE_STATE_COPY`, `liveSeasonHref`. Used by header pill + home hero.
 - `src/lib/ten-man.ts` — `PICK_ORDER_C1_C2`, `getActiveTenMan`, `getTenManSnapshot`, `getRecentTenMans`, `electCaptains`. See [TEN-MAN.md](TEN-MAN.md).
 - `src/lib/riot-api.ts` — Riot API client. `getAccountByRiotId`, `getRankEntries`, `getTopChampions`, `getChampionName` (Data Dragon).
@@ -159,7 +160,7 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index) and `drizz
 
 - `src/components/site-header.tsx` — server; calls `auth()`, `getLiveSeason()`, `getActiveTenMan()`; builds the live pill (season first, else 10-man).
 - `src/components/site-header-client.tsx` — sticky nav (Seasons / History / 10-man / Admin), live pill, scroll blur, mobile hamburger overlay.
-- `src/components/site-footer.tsx` — footer: nav links + Terms / Privacy.
+- `src/components/site-footer.tsx` — footer: nav links + Terms / Privacy + Riot "Legal Jibber Jabber" / Valve footage notice.
 - `src/components/legal-page.tsx` — `LegalPage` chrome for `/terms` + `/privacy`.
 
 ## UI primitives
@@ -171,7 +172,8 @@ Freelance-style (hex tokens):
 - `src/components/ui/tag.tsx` — small pill.
 - `src/components/ui/link-button.tsx` — `<Link>`-wrapped button with primary/outline/ghost variants.
 - `src/components/ui/logo-mark.tsx` — inline flame SVG. Themed via `var(--accent)` / `var(--text)` by default; used in header + footer wordmarks.
-- `src/components/ui/tinted-section.tsx` — padded `<section>` + `.site-container`, optional `subtle-warm` tint. Home sections.
+- `src/components/ui/tinted-section.tsx` — padded `<section>` + `.site-container`, optional `subtle-warm` tint, optional `backdrop` clip. Home sections.
+- `src/components/ui/video-backdrop.tsx` — client; muted looping clip at 50% opacity behind a home row. Lazy-loads near viewport, pauses off-screen, poster-only for reduced motion / Save-Data.
 - `src/components/ui/player-card.tsx` — username + optional role/rank row card. Home sections.
 - `src/components/ui/captain-badge.tsx` — red-tinted name chip. Home draft section.
 - `src/components/ui/snake-order-strip.tsx` — 8-cell C1/C2 pick-order strip + `SNAKE_ORDER`. 10-man draft.
@@ -182,6 +184,7 @@ shadcn (OKLCH tokens):
 
 ## Public assets
 
+- `public/videos/posters/` — placeholder SVG posters for home-row video backdrops (`lol-1/2`, `cs2-1/2`). Real clips go in `public/videos/`.
 - `public/history/` — screenshots for the `/history` archive (seasons 1–11 + Zero Space).
 - `public/logo.svg`, `public/icon-512.svg` — vector flame mark (240×240 / 512×512 artboards). Source-of-truth shape lives inline in `src/components/ui/logo-mark.tsx`.
 - `public/icon-{16,32,64,128,192,512}.png` — favicon + PWA app-icon raster sizes. Wired via `metadata.icons` in `src/app/layout.tsx`.

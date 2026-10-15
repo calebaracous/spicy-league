@@ -2,6 +2,7 @@ import { LinkButton } from "@/components/ui/link-button";
 import { Reveal } from "@/components/ui/reveal";
 import { SectionLabel } from "@/components/ui/section-label";
 import { TintedSection } from "@/components/ui/tinted-section";
+import { backdropClip } from "@/lib/backdrop-clips";
 import type { PodiumEntry } from "@/lib/homepage";
 import type { Season } from "@/db/schema/seasons";
 
@@ -12,7 +13,7 @@ interface OffSeasonSectionProps {
 
 export function OffSeasonSection({ lastSeason, podium }: OffSeasonSectionProps) {
   return (
-    <TintedSection tint="subtle-warm">
+    <TintedSection tint="subtle-warm" backdrop={backdropClip(lastSeason?.game ?? "lol", 1)}>
       <Reveal className="mb-14 flex flex-col gap-4">
         <SectionLabel className="opacity-50">OFF-SEASON</SectionLabel>
         <h2 className="text-heading" style={{ color: "var(--text)" }}>

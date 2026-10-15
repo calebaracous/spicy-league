@@ -3,6 +3,7 @@ import { LinkButton } from "@/components/ui/link-button";
 import { Reveal } from "@/components/ui/reveal";
 import { SectionLabel } from "@/components/ui/section-label";
 import { TintedSection } from "@/components/ui/tinted-section";
+import { backdropClip } from "@/lib/backdrop-clips";
 import type { Season } from "@/db/schema/seasons";
 import { GAME_LABELS } from "@/lib/seasons";
 
@@ -24,7 +25,7 @@ export function UpcomingSection({ season }: UpcomingSectionProps) {
 
   return (
     <>
-      <TintedSection tint="subtle-warm">
+      <TintedSection tint="subtle-warm" backdrop={backdropClip(season.game, 1)}>
         <Reveal className="mb-14 flex flex-col gap-4">
           <SectionLabel>UPCOMING SEASON</SectionLabel>
           <h2 className="text-heading" style={{ color: "var(--text)" }}>
@@ -89,7 +90,7 @@ export function UpcomingSection({ season }: UpcomingSectionProps) {
 
       <Divider />
 
-      <TintedSection tint="none">
+      <TintedSection tint="none" backdrop={backdropClip(season.game, 2)}>
         <Reveal className="flex max-w-xl flex-col gap-4">
           <SectionLabel>ACCOUNTS</SectionLabel>
           <h2 className="text-heading" style={{ color: "var(--text)" }}>
