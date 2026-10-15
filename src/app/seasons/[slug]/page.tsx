@@ -1,4 +1,4 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, asc, eq, ne, or } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -12,7 +12,9 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LocalTime } from "@/components/ui/local-time";
+import { SeasonNav } from "@/components/season-nav";
 import { seasonPageMetadata } from "@/lib/season-meta";
+import { getTeamForCaptain } from "@/lib/schedule";
 import { GAME_LABELS, SEASON_STATE_LABELS } from "@/lib/seasons";
 import { cn } from "@/lib/utils";
 
@@ -218,6 +220,30 @@ export default async function SeasonDetailPage({
     }
   }
 
+  // "Your team" + next match for signed-in players once teams exist.
+  const myTeam =
+    session?.user?.id && ["group_stage", "playoffs", "complete"].includes(season.state)
+      ? await getTeamForCaptain(season.id, session.user.id)
+      : null;
+  const myNextMatch = myTeam
+    ? await db.query.matches.findFirst({
+        where: and(
+          eq(matches.seasonId, season.id),
+          eq(matches.state, "scheduled"),
+          or(eq(matches.homeTeamId, myTeam.id), eq(matches.awayTeamId, myTeam.id)),
+        ),
+        orderBy: [asc(matches.round)],
+      })
+    : null;
+  const myOpponent = myNextMatch
+    ? await db.query.teams.findFirst({
+        where: eq(
+          teams.id,
+          myNextMatch.homeTeamId === myTeam!.id ? myNextMatch.awayTeamId : myNextMatch.homeTeamId,
+        ),
+      })
+    : null;
+
   const signupOpens = season.signupOpensAt;
   const signupCloses = season.signupClosesAt;
   const seasonStart = season.seasonStartAt;
@@ -238,6 +264,8 @@ export default async function SeasonDetailPage({
         ) : null}
       </header>
 
+      <SeasonNav slug={season.slug} state={season.state} current="overview" />
+
       {signedUp ? (
         <Alert>
           <AlertDescription>You are signed up for {season.name}.</AlertDescription>
@@ -250,6 +278,55 @@ export default async function SeasonDetailPage({
         alreadySignedUp={alreadySignedUp}
         championName={championName}
       />
+
+      {myTeam ? (
+        <section
+          aria-label="Your team"
+          className="flex flex-wrap items-center justify-between gap-4 rounded-xl border p-5"
+          style={{ borderColor: "var(--accent)" }}
+        >
+          <div className="space-y-1">
+            <p className="text-label" style={{ color: "var(--accent-text)" }}>
+              Your team
+            </p>
+            <p className="text-lg font-medium">{myTeam.name}</p>
+            {myNextMatch ? (
+              <p className="text-muted-foreground text-sm">
+                Next: vs <span className="text-foreground">{myOpponent?.name ?? "TBD"}</span> ·{" "}
+                {myNextMatch.stage === "final"
+                  ? "Final"
+                  : myNextMatch.stage === "semis"
+                    ? "Semifinal"
+                    : `Round ${myNextMatch.round}`}
+                {myNextMatch.scheduledAt ? (
+                  <>
+                    {" "}
+                    · <LocalTime date={myNextMatch.scheduledAt} preset="weekday-datetime" />
+                  </>
+                ) : null}
+              </p>
+            ) : (
+              <p className="text-muted-foreground text-sm">No scheduled matches left.</p>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {myNextMatch ? (
+              <Link
+                href={`/seasons/${season.slug}/matches/${myNextMatch.id}`}
+                className={cn(buttonVariants({ size: "lg" }))}
+              >
+                Match details
+              </Link>
+            ) : null}
+            <Link
+              href={`/seasons/${season.slug}/teams`}
+              className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
+            >
+              All teams
+            </Link>
+          </div>
+        </section>
+      ) : null}
 
       {signupOpens || signupCloses || seasonStart ? (
         <section className="grid gap-3 sm:grid-cols-3">

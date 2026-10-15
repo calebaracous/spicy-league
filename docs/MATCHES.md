@@ -104,6 +104,14 @@ Tiebreaker order:
 Currently game diff is used as the second tiebreaker. See `rows.sort(...)`
 near the bottom of `computeStandings` to change this.
 
+## UI (`/seasons/[slug]/matches`)
+
+Standings mark the top `PLAYOFF_SPOTS` (4) in red with a red rule under 4th
+place when more than 4 teams exist. Playoffs render as a bracket
+(`BracketCard`: two semis → final, winner bold, loser muted; a dashed
+placeholder until the final exists). Scheduled matches show their
+`scheduledAt` in the viewer's timezone (`LocalTime`).
+
 ## Playoff seeding
 
 `seedPlayoffs(seasonId)` in `src/lib/schedule.ts`:

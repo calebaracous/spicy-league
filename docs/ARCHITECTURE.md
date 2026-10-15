@@ -166,7 +166,13 @@ Public:
 - `/seasons/[slug]/signup` — signup form (gated by state + window)
 - `/seasons/[slug]/captains` — announced captain list
 - `/seasons/[slug]/draft` — live draft viewer (SSE-fed)
-- `/seasons/[slug]/matches` — schedule + standings
+- `/seasons/[slug]/teams` — rosters per team (captain + picks, primary role, W–L), viewer's team highlighted
+- `/seasons/[slug]/matches` — standings (playoff cut line) + bracket + schedule with times
+
+Every `/seasons/[slug]/*` page renders `<SeasonNav>` (`src/components/season-nav.tsx`):
+Overview / Captains / Draft / Teams / Matches tabs, each shown once the season
+reaches the state where it has content. The overview also shows a "Your team"
+card (team + next scheduled match) for signed-in players once teams exist.
 - `/seasons/[slug]/matches/[matchId]` — match detail + report form
 - `/10-man` — 10-man landing (redirects to the active session if any)
 - `/10-man/[id]` — live 10-man board (SSE-fed). See [TEN-MAN.md](TEN-MAN.md).

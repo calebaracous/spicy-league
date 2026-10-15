@@ -7,6 +7,7 @@ import { seasons } from "@/db/schema/seasons";
 import { seasonCaptains } from "@/db/schema/seasons";
 import { users } from "@/db/schema/auth";
 import { Badge } from "@/components/ui/badge";
+import { SeasonNav } from "@/components/season-nav";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { GAME_LABELS } from "@/lib/seasons";
 
@@ -51,7 +52,7 @@ export default async function CaptainsPage({ params }: { params: Params }) {
     <div className="mx-auto w-full max-w-2xl flex-1 space-y-8 px-6 py-12">
       <header className="space-y-2">
         <Link href={`/seasons/${slug}`} className="text-muted-foreground text-xs hover:underline">
-          ← Back to season
+          ← {season.name}
         </Link>
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-3xl font-bold tracking-tight">Captains</h1>
@@ -61,6 +62,8 @@ export default async function CaptainsPage({ params }: { params: Params }) {
           {season.name} · {captains.length} captain{captains.length !== 1 ? "s" : ""}
         </p>
       </header>
+
+      <SeasonNav slug={slug} state={season.state} current="captains" />
 
       {captains.length === 0 ? (
         <p className="text-muted-foreground text-sm">No captains have been announced yet.</p>

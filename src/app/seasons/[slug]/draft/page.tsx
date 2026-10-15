@@ -5,6 +5,7 @@ import { LiveBoard } from "./live-board";
 import { auth } from "@/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { SeasonNav } from "@/components/season-nav";
 import { GAME_LABELS } from "@/lib/seasons";
 import { getDraftSnapshot } from "@/lib/draft";
 import { seasonPageMetadata } from "@/lib/season-meta";
@@ -57,13 +58,15 @@ export default async function DraftPage({
     <div className="mx-auto w-full max-w-6xl flex-1 space-y-6 px-6 py-12">
       <header className="space-y-2">
         <Link href={`/seasons/${slug}`} className="text-muted-foreground text-xs hover:underline">
-          ← Back to season
+          ← {snap.season.name}
         </Link>
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-3xl font-bold tracking-tight">{snap.season.name} Draft</h1>
           {season ? <Badge variant="outline">{GAME_LABELS[season.game]}</Badge> : null}
         </div>
       </header>
+
+      {season ? <SeasonNav slug={slug} state={season.state} current="draft" /> : null}
 
       {errorMessage ? (
         <Alert variant="destructive">

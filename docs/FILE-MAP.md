@@ -67,7 +67,8 @@ Rendered by `src/app/page.tsx`:
 - `src/app/seasons/[slug]/draft/page.tsx` — live draft viewer. Fetches initial snapshot, renders `<LiveBoard>`.
 - `src/app/seasons/[slug]/draft/live-board.tsx` — client component; SSE-subscribes to `/api/draft/[slug]/stream`; shows solo-queue rank per pool player (LoL).
 - `src/app/seasons/[slug]/draft/actions.ts` — `submitPick`, `startDraft`, `pauseDraft`, `resumeDraft`, `undoLastPick`. Full validation chain in `submitPick` — see [DRAFT.md](DRAFT.md).
-- `src/app/seasons/[slug]/matches/page.tsx` — schedule + standings table.
+- `src/app/seasons/[slug]/teams/page.tsx` — team rosters with roles, record, "Your team" highlight.
+- `src/app/seasons/[slug]/matches/page.tsx` — standings (playoff cut line), bracket (`BracketCard`), schedule with times.
 - `src/app/seasons/[slug]/matches/actions.ts` — `reportMatch`, `confirmMatch` (writes `championTeamId` on the final), `disputeMatch`, `resetMatch`. See [MATCHES.md](MATCHES.md).
 - `src/app/seasons/[slug]/matches/[matchId]/page.tsx` — match detail + report form.
 
@@ -167,6 +168,7 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index) and `drizz
 - `src/components/site-header-client.tsx` — sticky nav (Seasons / History / 10-man / Admin), live pill, scroll blur, mobile hamburger overlay.
 - `src/components/site-footer.tsx` — async server component; nav links (Seasons / History / 10-man), session-aware Account links, Terms / Privacy, Riot "Legal Jibber Jabber" / Valve footage notice.
 - `src/components/legal-page.tsx` — `LegalPage` chrome for `/terms` + `/privacy`.
+- `src/components/season-nav.tsx` — `SeasonNav` tabs for `/seasons/[slug]/*`, gated by season state.
 - `src/components/use-turn-alert.ts` — client hooks: `useSnapshotStream` (SSE + connection status), `useTurnAlert` (title flash + chime on your pick), `useTurnSoundPref`.
 - `src/components/live-status.tsx` — `LiveStatusDot` ("Live" / "Reconnecting…") and `TurnSoundToggle`.
 
