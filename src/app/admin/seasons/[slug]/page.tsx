@@ -53,13 +53,13 @@ export default async function EditSeasonPage({
   const available = nextStates(season.state);
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-6 py-12">
+    <div className="page flex-1 space-y-6 [--page-max:48rem]">
       <header className="space-y-2">
         <Link href="/admin" className="text-muted-foreground text-xs hover:underline">
           ← Back to admin
         </Link>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight">{season.name}</h1>
+          <h1 className="text-heading">{season.name}</h1>
           <Badge variant={season.state === "draft" ? "secondary" : "default"}>
             {SEASON_STATE_LABELS[season.state]}
           </Badge>

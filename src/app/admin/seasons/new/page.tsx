@@ -25,12 +25,12 @@ export default async function NewSeasonPage({ searchParams }: { searchParams: Se
   const errorMessage = error ? ERROR_MESSAGES[error] : null;
 
   return (
-    <div className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-6 py-12">
+    <div className="page flex-1 space-y-6 [--page-max:42rem]">
       <header className="space-y-1">
         <Link href="/admin" className="text-muted-foreground text-xs hover:underline">
           ← Back to admin
         </Link>
-        <h1 className="text-3xl font-bold tracking-tight">New season</h1>
+        <h1 className="text-heading">New season</h1>
         <p className="text-muted-foreground text-sm">
           New seasons start in the draft state and are not public. All fields except name, slug, and
           game can be edited later.

@@ -91,12 +91,12 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
   const errorMessage = error ? (ERROR_MESSAGES[error] ?? null) : null;
 
   return (
-    <div className="mx-auto w-full max-w-5xl flex-1 space-y-6 px-6 py-12">
+    <div className="page flex-1 space-y-6 [--page-max:64rem]">
       <header className="space-y-2">
         <Link href="/admin" className="text-muted-foreground text-xs hover:underline">
           ← Admin
         </Link>
-        <h1 className="text-3xl font-bold tracking-tight">Players</h1>
+        <h1 className="text-heading">Players</h1>
         <p className="text-muted-foreground text-sm">
           Search accounts, check verification and linked Riot accounts, and ban or unban players.
         </p>

@@ -23,9 +23,9 @@ const STATE_BADGE: Record<
   string,
   { label: string; variant: "default" | "secondary" | "outline" | "destructive" }
 > = {
-  scheduled: { label: "Scheduled", variant: "secondary" },
+  scheduled: { label: "Scheduled", variant: "outline" },
   reported: { label: "Reported", variant: "default" },
-  confirmed: { label: "Confirmed", variant: "default" },
+  confirmed: { label: "Confirmed", variant: "secondary" },
   disputed: { label: "Disputed", variant: "destructive" },
 };
 
@@ -133,13 +133,13 @@ export default async function MatchesPage({ params }: { params: Params }) {
   const rounds = [...new Set(groupMatches.map((m) => m.round))].sort((a, b) => a - b);
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex-1 space-y-8 px-6 py-12">
+    <div className="page flex-1 space-y-8 [--page-max:48rem]">
       <header className="space-y-2">
         <Link href={`/seasons/${slug}`} className="text-muted-foreground text-xs hover:underline">
           ← {season.name}
         </Link>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight">Matches</h1>
+          <h1 className="text-heading">Matches</h1>
           <Badge variant="outline">{GAME_LABELS[season.game]}</Badge>
         </div>
         <p className="text-muted-foreground text-sm">{season.name}</p>

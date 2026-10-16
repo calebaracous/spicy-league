@@ -73,6 +73,13 @@ All headings default to `font-weight: 500` and `letter-spacing: -0.025em`.
 horizontal padding that grows at `md`. Prefer this over ad-hoc
 `max-w-6xl mx-auto px-6` — keeps the whole site aligned.
 
+`.page` is the wrapper for app pages (seasons, teams, matches, profile,
+admin, history, public profiles): same edges as `.site-container` plus
+vertical padding, with each direct child capped at `--page-max` and
+left-aligned so narrow content lines up with the header logo. Set the width
+per page with an arbitrary property: `className="page flex-1 space-y-8
+[--page-max:48rem]"`. Page titles use `<h1 className="text-heading">`.
+
 `--navbar-height: 64px` is exposed so sticky-offset calculations can share
 it (currently used only in `src/components/site-header-client.tsx`).
 

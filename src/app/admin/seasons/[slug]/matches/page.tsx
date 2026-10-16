@@ -34,9 +34,9 @@ const STATE_BADGE: Record<
   string,
   { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
 > = {
-  scheduled: { label: "Scheduled", variant: "secondary" },
-  reported: { label: "Reported", variant: "outline" },
-  confirmed: { label: "Confirmed", variant: "default" },
+  scheduled: { label: "Scheduled", variant: "outline" },
+  reported: { label: "Reported", variant: "default" },
+  confirmed: { label: "Confirmed", variant: "secondary" },
   disputed: { label: "Disputed", variant: "destructive" },
 };
 
@@ -89,7 +89,7 @@ export default async function AdminMatchesPage({
     season.state === "playoffs" && playoffMatches.length === 0 && groupMatches.length > 0;
 
   return (
-    <div className="mx-auto w-full max-w-5xl flex-1 space-y-6 px-6 py-12">
+    <div className="page flex-1 space-y-6 [--page-max:64rem]">
       <header className="space-y-1">
         <Link
           href={`/admin/seasons/${slug}`}
@@ -98,7 +98,7 @@ export default async function AdminMatchesPage({
           ← Back to {season.name}
         </Link>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-3xl font-bold tracking-tight">Matches</h1>
+          <h1 className="text-heading">Matches</h1>
           <Link
             href={`/seasons/${slug}/matches`}
             className={cn(buttonVariants({ variant: "outline", size: "sm" }))}

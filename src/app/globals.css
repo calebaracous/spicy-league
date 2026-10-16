@@ -46,18 +46,20 @@
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
 
   /* ── shadcn tokens (kept so existing admin/form components keep working) ── */
-  --background: oklch(0.12 0 0);
+  --background: var(--bg);
   --foreground: oklch(0.95 0 0);
-  --card: oklch(0.18 0 0);
+  --card: var(--surface);
   --card-foreground: oklch(0.95 0 0);
-  --popover: oklch(0.18 0 0);
+  --popover: var(--surface);
   --popover-foreground: oklch(0.95 0 0);
 
   /* Primary = the brand red, so default <Button>/<Badge> read as the main CTA.
      (Was near-black, which rendered dark-on-dark.) */
   --primary: var(--accent);
   --primary-foreground: var(--accent-fg);
-  --secondary: oklch(0.5 0.19 25); /* dark red, shadcn-side alias */
+  /* Neutral: every `secondary` badge/button means "de-emphasised" (No draft,
+     Scheduled, Paused, Captain). It used to be red, so nothing stood out. */
+  --secondary: oklch(0.26 0 0);
   --secondary-foreground: oklch(0.95 0 0);
 
   /* shadcn's "muted" / "accent" are neutral hover + chip surfaces — not the
@@ -261,6 +263,27 @@ h6 {
 @media (min-width: 768px) {
   .site-container {
     padding-inline: 2.5rem;
+  }
+}
+
+/* App pages (seasons, profile, admin, auth-adjacent). Same edges as the
+   header/footer (.site-container); each child is capped at --page-max and
+   left-aligned, so narrow forms line up with the logo instead of floating
+   centred. Set the width per page: `page [--page-max:48rem]`. */
+.page {
+  width: 100%;
+  max-width: var(--container-max);
+  margin-inline: auto;
+  padding-inline: 1.5rem;
+  padding-block: 3rem 4rem;
+}
+.page > * {
+  max-width: var(--page-max, none);
+}
+@media (min-width: 768px) {
+  .page {
+    padding-inline: 2.5rem;
+    padding-block: 4rem 5rem;
   }
 }
 

@@ -21,9 +21,9 @@ export default async function SeasonsIndexPage() {
   const past = publicSeasons.filter((s) => s.state === "complete");
 
   return (
-    <div className="mx-auto w-full max-w-4xl flex-1 space-y-10 px-6 py-12">
+    <div className="page flex-1 space-y-10 [--page-max:56rem]">
       <header className="space-y-2">
-        <h1 className="text-4xl font-bold tracking-tight">Seasons</h1>
+        <h1 className="text-heading">Seasons</h1>
         <p className="text-muted-foreground">
           Current and upcoming seasons, from signups through championship. Seasons 1–11 are in the{" "}
           <Link href="/history" className="text-accent-text underline-offset-4 hover:underline">

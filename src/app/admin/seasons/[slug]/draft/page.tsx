@@ -74,7 +74,7 @@ export default async function AdminDraftPage({
   const pickCount = snap?.picks.length ?? 0;
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex-1 space-y-6 px-6 py-12">
+    <div className="page flex-1 space-y-6 [--page-max:48rem]">
       <header className="space-y-2">
         <Link
           href={`/admin/seasons/${slug}`}
@@ -83,7 +83,7 @@ export default async function AdminDraftPage({
           ← Back to {season.name}
         </Link>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight">Draft control</h1>
+          <h1 className="text-heading">Draft control</h1>
           {draft ? (
             <Badge>{STATE_LABELS[draft.state]}</Badge>
           ) : (

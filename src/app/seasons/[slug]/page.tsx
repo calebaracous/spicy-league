@@ -259,13 +259,13 @@ export default async function SeasonDetailPage({
   const seasonStart = season.seasonStartAt;
 
   return (
-    <div className="mx-auto w-full max-w-3xl flex-1 space-y-8 px-6 py-12">
+    <div className="page flex-1 space-y-8 [--page-max:48rem]">
       <header className="space-y-3">
         <Link href="/seasons" className="text-muted-foreground text-xs hover:underline">
           ← All seasons
         </Link>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-4xl font-bold tracking-tight">{season.name}</h1>
+          <h1 className="text-heading">{season.name}</h1>
           <Badge>{SEASON_STATE_LABELS[season.state]}</Badge>
           <Badge variant="outline">{GAME_LABELS[season.game]}</Badge>
         </div>

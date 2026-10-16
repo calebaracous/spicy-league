@@ -49,13 +49,13 @@ export default async function CaptainsPage({ params }: { params: Params }) {
     .orderBy(asc(seasonCaptains.captainOrder));
 
   return (
-    <div className="mx-auto w-full max-w-2xl flex-1 space-y-8 px-6 py-12">
+    <div className="page flex-1 space-y-8 [--page-max:42rem]">
       <header className="space-y-2">
         <Link href={`/seasons/${slug}`} className="text-muted-foreground text-xs hover:underline">
           ← {season.name}
         </Link>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight">Captains</h1>
+          <h1 className="text-heading">Captains</h1>
           <Badge variant="outline">{GAME_LABELS[season.game]}</Badge>
         </div>
         <p className="text-muted-foreground text-sm">

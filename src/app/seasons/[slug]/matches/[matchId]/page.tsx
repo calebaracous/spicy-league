@@ -34,11 +34,11 @@ const ERROR_MESSAGES: Record<string, string> = {
 
 const STATE_BADGE: Record<
   string,
-  { label: string; variant: "default" | "secondary" | "destructive" }
+  { label: string; variant: "default" | "secondary" | "outline" | "destructive" }
 > = {
-  scheduled: { label: "Scheduled", variant: "secondary" },
+  scheduled: { label: "Scheduled", variant: "outline" },
   reported: { label: "Reported — awaiting confirmation", variant: "default" },
-  confirmed: { label: "Confirmed", variant: "default" },
+  confirmed: { label: "Confirmed", variant: "secondary" },
   disputed: { label: "Disputed", variant: "destructive" },
 };
 
@@ -109,7 +109,7 @@ export default async function MatchDetailPage({
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-6 py-12">
+    <div className="page flex-1 space-y-6 [--page-max:42rem]">
       <header className="space-y-2">
         <Link
           href={`/seasons/${slug}/matches`}
@@ -118,7 +118,7 @@ export default async function MatchDetailPage({
           ← All matches
         </Link>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-2xl font-bold tracking-tight">
+          <h1 className="text-heading">
             {homeTeam?.name ?? "?"} vs {awayTeam?.name ?? "?"}
           </h1>
           <Badge variant={sb.variant}>{sb.label}</Badge>

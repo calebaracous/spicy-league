@@ -183,9 +183,9 @@ export default async function PublicProfilePage({ params }: Props) {
   );
 
   return (
-    <div className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-6 py-12">
+    <div className="page flex-1 space-y-6 [--page-max:42rem]">
       <header className="space-y-0.5">
-        <h1 className="font-mono text-4xl font-bold tracking-tight">{displayName}</h1>
+        <h1 className="text-heading">{displayName}</h1>
         <p className="text-muted-foreground text-sm">@{user.username}</p>
         {user.pronouns ? <p className="text-muted-foreground text-sm">{user.pronouns}</p> : null}
       </header>

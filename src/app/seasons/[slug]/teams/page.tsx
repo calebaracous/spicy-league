@@ -65,13 +65,13 @@ export default async function TeamsPage({ params }: { params: Params }) {
   const viewerId = session?.user?.id ?? null;
 
   return (
-    <div className="mx-auto w-full max-w-4xl flex-1 space-y-8 px-6 py-12">
+    <div className="page flex-1 space-y-8 [--page-max:56rem]">
       <header className="space-y-2">
         <Link href={`/seasons/${slug}`} className="text-muted-foreground text-xs hover:underline">
           ← {season.name}
         </Link>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight">Teams</h1>
+          <h1 className="text-heading">Teams</h1>
           <Badge variant="outline">{GAME_LABELS[season.game]}</Badge>
         </div>
         <p className="text-muted-foreground text-sm">

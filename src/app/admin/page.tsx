@@ -29,10 +29,10 @@ export default async function AdminPage() {
   ];
 
   return (
-    <div className="mx-auto w-full max-w-5xl flex-1 space-y-6 px-6 py-12">
+    <div className="page flex-1 space-y-6 [--page-max:64rem]">
       <header className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Admin</h1>
+          <h1 className="text-heading">Admin</h1>
           <p className="text-muted-foreground text-sm">
             What needs attention, who&apos;s joining, and every season.
           </p>

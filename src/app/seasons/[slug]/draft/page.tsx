@@ -55,13 +55,13 @@ export default async function DraftPage({
   const season = await db.query.seasons.findFirst({ where: eq(seasons.slug, slug) });
 
   return (
-    <div className="mx-auto w-full max-w-6xl flex-1 space-y-6 px-6 py-12">
+    <div className="page flex-1 space-y-6 [--page-max:72rem]">
       <header className="space-y-2">
         <Link href={`/seasons/${slug}`} className="text-muted-foreground text-xs hover:underline">
           ← {snap.season.name}
         </Link>
         <div className="flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-bold tracking-tight">{snap.season.name} Draft</h1>
+          <h1 className="text-heading">{snap.season.name} Draft</h1>
           {season ? <Badge variant="outline">{GAME_LABELS[season.game]}</Badge> : null}
         </div>
       </header>

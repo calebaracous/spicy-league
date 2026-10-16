@@ -85,7 +85,7 @@ export default async function SignupPage({
 
   if (!session?.user) {
     return (
-      <div className="mx-auto w-full max-w-xl flex-1 px-6 py-12">
+      <div className="page flex-1 [--page-max:36rem]">
         <Alert>
           <AlertDescription>
             You need to{" "}
@@ -104,7 +104,7 @@ export default async function SignupPage({
 
   if (!session.user.username) {
     return (
-      <div className="mx-auto w-full max-w-xl flex-1 px-6 py-12">
+      <div className="page flex-1 [--page-max:36rem]">
         <Alert>
           <AlertDescription>
             You need to{" "}
@@ -120,7 +120,7 @@ export default async function SignupPage({
 
   if (alreadySignedUp) {
     return (
-      <div className="mx-auto w-full max-w-xl flex-1 space-y-4 px-6 py-12">
+      <div className="page flex-1 space-y-4 [--page-max:36rem]">
         <Link href={`/seasons/${slug}`} className="text-muted-foreground text-xs hover:underline">
           ← Back to season
         </Link>
@@ -133,7 +133,7 @@ export default async function SignupPage({
 
   if (!isOpen) {
     return (
-      <div className="mx-auto w-full max-w-xl flex-1 space-y-4 px-6 py-12">
+      <div className="page flex-1 space-y-4 [--page-max:36rem]">
         <Link href={`/seasons/${slug}`} className="text-muted-foreground text-xs hover:underline">
           ← Back to season
         </Link>
@@ -157,12 +157,12 @@ export default async function SignupPage({
   }
 
   return (
-    <div className="mx-auto w-full max-w-xl flex-1 space-y-6 px-6 py-12">
+    <div className="page flex-1 space-y-6 [--page-max:36rem]">
       <header className="space-y-1">
         <Link href={`/seasons/${slug}`} className="text-muted-foreground text-xs hover:underline">
           ← Back to season
         </Link>
-        <h1 className="text-3xl font-bold tracking-tight">Sign up</h1>
+        <h1 className="text-heading">Sign up</h1>
         <p className="text-muted-foreground text-sm">
           {season.name} · {GAME_LABELS[season.game]}
         </p>

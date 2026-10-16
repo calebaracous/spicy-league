@@ -119,10 +119,10 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
   const errorMessage = error ? (ERROR_MESSAGES[error] ?? null) : null;
 
   return (
-    <div className="mx-auto w-full max-w-2xl flex-1 space-y-6 px-6 py-12">
+    <div className="page flex-1 space-y-6 [--page-max:42rem]">
       <header className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Profile</h1>
+          <h1 className="text-heading">Profile</h1>
           <p className="text-muted-foreground text-sm">
             Signed in as <span className="font-medium">{user.email}</span>
           </p>

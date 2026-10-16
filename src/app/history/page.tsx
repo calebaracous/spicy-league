@@ -238,9 +238,9 @@ function shortLabel(season: Season): string {
 
 export default function HistoryPage() {
   return (
-    <div className="mx-auto w-full max-w-5xl flex-1 px-6 py-12">
+    <div className="page flex-1 [--page-max:64rem]">
       <header className="mb-12 space-y-2">
-        <h1 className="text-4xl font-bold tracking-tight">History</h1>
+        <h1 className="text-heading">History</h1>
         <p className="text-muted-foreground">All Spicy League seasons, most recent first.</p>
       </header>
 
