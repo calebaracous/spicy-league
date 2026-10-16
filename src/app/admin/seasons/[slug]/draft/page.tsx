@@ -19,6 +19,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { FlashToast } from "@/components/flash-toast";
 import { getDraftSnapshot, totalPicks } from "@/lib/draft";
 import { cn } from "@/lib/utils";
 
@@ -95,11 +96,7 @@ export default async function AdminDraftPage({
         </p>
       </header>
 
-      {saved ? (
-        <Alert>
-          <AlertDescription>Saved.</AlertDescription>
-        </Alert>
-      ) : null}
+      {saved ? <FlashToast message="Saved." /> : null}
       {errorMessage ? (
         <Alert variant="destructive">
           <AlertDescription>{errorMessage}</AlertDescription>

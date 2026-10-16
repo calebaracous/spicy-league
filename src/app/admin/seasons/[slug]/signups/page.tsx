@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { LocalTime } from "@/components/ui/local-time";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { FlashToast } from "@/components/flash-toast";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { GAME_LABELS } from "@/lib/seasons";
 
@@ -136,11 +137,7 @@ export default async function AdminSignupsPage({
         </p>
       </header>
 
-      {saved ? (
-        <Alert>
-          <AlertDescription>Saved.</AlertDescription>
-        </Alert>
-      ) : null}
+      {saved ? <FlashToast message="Saved." /> : null}
       {errorMessage ? (
         <Alert variant="destructive">
           <AlertDescription>{errorMessage}</AlertDescription>

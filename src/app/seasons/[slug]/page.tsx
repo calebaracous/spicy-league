@@ -7,12 +7,12 @@ import { teams } from "@/db/schema/drafts";
 import { matches } from "@/db/schema/matches";
 import { seasons, seasonSignups, type SeasonState } from "@/db/schema/seasons";
 import { auth } from "@/auth";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LocalTime } from "@/components/ui/local-time";
 import { SeasonNav } from "@/components/season-nav";
+import { FlashToast } from "@/components/flash-toast";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { getTeamForCaptain } from "@/lib/schedule";
 import { GAME_LABELS, SEASON_STATE_LABELS } from "@/lib/seasons";
@@ -267,9 +267,7 @@ export default async function SeasonDetailPage({
       <SeasonNav slug={season.slug} state={season.state} current="overview" />
 
       {signedUp ? (
-        <Alert>
-          <AlertDescription>You are signed up for {season.name}.</AlertDescription>
-        </Alert>
+        <FlashToast param="signed-up" message={`You're signed up for ${season.name}.`} />
       ) : null}
 
       <StatusPanel

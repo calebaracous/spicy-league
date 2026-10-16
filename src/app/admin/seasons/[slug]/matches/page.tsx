@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { FlashToast } from "@/components/flash-toast";
 import { cn } from "@/lib/utils";
 
 export const generateMetadata = seasonPageMetadata("Matches · Admin");
@@ -112,15 +113,15 @@ export default async function AdminMatchesPage({
       </header>
 
       {saved ? (
-        <Alert>
-          <AlertDescription>
-            {saved === "seeded"
+        <FlashToast
+          message={
+            saved === "seeded"
               ? "Playoff bracket seeded."
               : typeof saved === "string" && /^\d+$/.test(saved)
                 ? `Generated ${saved} matches.`
-                : "Saved."}
-          </AlertDescription>
-        </Alert>
+                : "Saved."
+          }
+        />
       ) : null}
       {errorMessage ? (
         <Alert variant="destructive">

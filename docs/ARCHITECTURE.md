@@ -124,7 +124,14 @@ again" via `unstable_retry`); `notFound()` and unmatched URLs render
 - **Errors are redirects** (form actions). Server actions redirect to
   `?error=<code>` and the page reads that and renders an alert. Error codes
   are short kebab-case strings. Message maps live on the page that receives
-  them (e.g. `ERROR_MESSAGES` in `src/app/profile/page.tsx`).
+  them (e.g. `ERROR_MESSAGES` in `src/app/profile/page.tsx`). Exception: forms
+  where losing the typed value hurts (profile Riot / CS2 link forms,
+  `src/app/profile/_components/link-forms.tsx`) use `useActionState` — the
+  action returns `{ error }` and the inputs are controlled so they survive.
+- **Success is a toast.** Pages render `<FlashToast message=…>`
+  (`src/components/flash-toast.tsx`) when `?saved=` (or `?signed-up=`) is
+  set; it fires a sonner toast and strips the flag from the URL. The
+  `<Toaster>` is mounted once in the root layout.
 - **Guards**: never check `session?.user?.role === "admin"` inline for
   authorization — use `requireAdmin()` from `src/lib/auth-helpers.ts`. Same
   for `requireAuth` (signed in) and `requireOnboarded` (also has a

@@ -12,21 +12,31 @@ import { getAccountByRiotId } from "@/lib/riot-api";
 import { refreshRiotStats } from "@/lib/stat-refresh";
 import { MAX_RIOT_ACCOUNTS } from "./constants";
 
+/**
+ * The link forms use useActionState: validation failures come back as
+ * `{ error }` so the form can show them inline and keep what was typed
+ * (a redirect to ?error= would wipe the input). Success still redirects.
+ */
+export type LinkFormState = { error?: string };
+
 // ── Riot linking ───────────────────────────────────────────────────────────
 
-export async function linkRiotAccount(formData: FormData) {
+export async function linkRiotAccount(
+  _prev: LinkFormState,
+  formData: FormData,
+): Promise<LinkFormState> {
   const session = await requireOnboarded();
   const raw = (formData.get("riotId") as string | null)?.trim() ?? "";
 
   const parts = raw.split("#");
   if (parts.length !== 2 || !parts[0] || !parts[1]) {
-    redirect("/profile?error=riot-format");
+    return { error: "Enter your Riot ID as GameName#TAG." };
   }
   const [gameName, tagLine] = parts;
 
   const account = await getAccountByRiotId(gameName, tagLine);
   if (!account) {
-    redirect("/profile?error=riot-not-found");
+    return { error: "That Riot ID wasn't found. Double-check your game name and tag." };
   }
 
   const existingLinks = await db.query.accountLinks.findMany({
@@ -34,10 +44,10 @@ export async function linkRiotAccount(formData: FormData) {
   });
 
   if (existingLinks.some((l) => l.externalId === account.puuid)) {
-    redirect("/profile?error=riot-duplicate");
+    return { error: "That Riot account is already linked to your profile." };
   }
   if (existingLinks.length >= MAX_RIOT_ACCOUNTS) {
-    redirect("/profile?error=riot-max");
+    return { error: `You can link up to ${MAX_RIOT_ACCOUNTS} Riot accounts.` };
   }
 
   const [inserted] = await db
@@ -87,27 +97,29 @@ export async function unlinkRiotAccount(formData: FormData) {
 
 // ── CS2 linking ────────────────────────────────────────────────────────────
 
-export async function linkCs2Account(formData: FormData) {
+export async function linkCs2Account(
+  _prev: LinkFormState,
+  formData: FormData,
+): Promise<LinkFormState> {
   const session = await requireOnboarded();
   const steamId = (formData.get("steamId") as string | null)?.trim() ?? "";
   const leetifyUrl = (formData.get("leetifyUrl") as string | null)?.trim() ?? "";
 
-  if (!steamId) {
-    redirect("/profile?error=steam-required");
-  }
+  if (!steamId) return { error: "Steam ID is required." };
 
   if (!/^7656\d{13}$/.test(steamId)) {
-    redirect("/profile?error=steam-format");
+    return { error: "Enter a valid Steam64 ID (17-digit number starting with 7656)." };
   }
 
   if (leetifyUrl) {
+    let host: string | null = null;
     try {
-      const url = new URL(leetifyUrl);
-      if (!url.hostname.includes("leetify.com")) {
-        redirect("/profile?error=leetify-host");
-      }
+      host = new URL(leetifyUrl).hostname.toLowerCase();
     } catch {
-      redirect("/profile?error=leetify-url");
+      return { error: "Enter a valid Leetify URL." };
+    }
+    if (host !== "leetify.com" && !host.endsWith(".leetify.com")) {
+      return { error: "The Leetify link must point to leetify.com." };
     }
   }
 

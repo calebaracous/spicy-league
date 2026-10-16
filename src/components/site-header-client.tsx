@@ -96,33 +96,38 @@ export function SiteHeaderClient({
             </span>
           </Link>
 
-          {/* Centered live-season pill */}
-          {livePill ? (
-            <Link
-              href={livePill.href}
-              className="absolute top-1/2 left-1/2 hidden -translate-x-1/2 -translate-y-1/2 items-center gap-2 rounded-full border px-3 py-1 text-[10px] font-medium tracking-wider uppercase transition-opacity hover:opacity-80 sm:inline-flex sm:text-xs"
-              style={{
-                color: "var(--accent-text)",
-                borderColor: "var(--border)",
-                backgroundColor: "rgba(10,10,10,0.4)",
-              }}
-            >
-              <span className="relative flex h-1.5 w-1.5 shrink-0">
-                <span
-                  className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
-                  style={{ backgroundColor: "var(--accent)" }}
-                />
-                <span
-                  className="relative inline-flex h-1.5 w-1.5 rounded-full"
-                  style={{ backgroundColor: "var(--accent)" }}
-                />
-              </span>
-              <span>{livePill.label}</span>
-            </Link>
-          ) : null}
-
           {/* Desktop nav */}
           <nav className="hidden items-center gap-8 md:flex">
+            {/* Live pill sits in the nav row (an absolutely centred pill
+                collided with the links once Admin was added). Full label on
+                wide screens, just "Live" below xl. */}
+            {livePill ? (
+              <Link
+                href={livePill.href}
+                title={livePill.label}
+                className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-medium tracking-wider whitespace-nowrap uppercase transition-opacity hover:opacity-80"
+                style={{
+                  color: "var(--accent-text)",
+                  borderColor: "var(--border)",
+                  backgroundColor: "rgba(10,10,10,0.4)",
+                }}
+              >
+                <span className="relative flex h-1.5 w-1.5 shrink-0" aria-hidden>
+                  <span
+                    className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
+                    style={{ backgroundColor: "var(--accent)" }}
+                  />
+                  <span
+                    className="relative inline-flex h-1.5 w-1.5 rounded-full"
+                    style={{ backgroundColor: "var(--accent)" }}
+                  />
+                </span>
+                <span className="hidden xl:inline">{livePill.label}</span>
+                <span className="xl:hidden">
+                  Live<span className="sr-only">: {livePill.label}</span>
+                </span>
+              </Link>
+            ) : null}
             {allLinks.map(({ href, label }) => {
               const active = pathname === href || pathname.startsWith(`${href}/`);
               return (

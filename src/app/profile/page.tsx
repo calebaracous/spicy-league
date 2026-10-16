@@ -2,13 +2,8 @@ import { and, eq } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
-import {
-  linkCs2Account,
-  linkRiotAccount,
-  manualRefreshStats,
-  unlinkCs2Account,
-  unlinkRiotAccount,
-} from "./account-actions";
+import { manualRefreshStats, unlinkCs2Account, unlinkRiotAccount } from "./account-actions";
+import { Cs2LinkForm, RiotLinkForm } from "./_components/link-forms";
 import { MAX_RIOT_ACCOUNTS } from "./constants";
 import { db } from "@/db/client";
 import { users } from "@/db/schema/auth";
@@ -24,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { LocalTime } from "@/components/ui/local-time";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { FlashToast } from "@/components/flash-toast";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Your profile" };
@@ -33,14 +29,6 @@ type SearchParams = Promise<{ saved?: string; error?: string }>;
 const ERROR_MESSAGES: Record<string, string> = {
   "opgg-host": "The OP.GG link must point to op.gg.",
   "opgg-url": "Enter a valid URL.",
-  "riot-format": 'Enter your Riot ID as "GameName#TAG".',
-  "riot-not-found": "That Riot ID wasn't found. Double-check your game name and tag.",
-  "riot-duplicate": "That Riot account is already linked to your profile.",
-  "riot-max": `You can link at most ${MAX_RIOT_ACCOUNTS} Riot accounts.`,
-  "steam-required": "Steam ID is required.",
-  "steam-format": "Enter a valid Steam64 ID (17-digit number starting with 7656).",
-  "leetify-host": "The Leetify link must point to leetify.com.",
-  "leetify-url": "Enter a valid URL.",
   "refresh-rate-limited": "You can only refresh stats once per hour.",
   "name-required": "Display name cannot be empty.",
   "name-too-long": "Display name must be 50 characters or fewer.",
@@ -147,11 +135,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
       </header>
       <Separator />
 
-      {saved ? (
-        <Alert>
-          <AlertDescription>Saved.</AlertDescription>
-        </Alert>
-      ) : null}
+      {saved ? <FlashToast message="Saved." /> : null}
       {errorMessage ? (
         <Alert variant="destructive">
           <AlertDescription>{errorMessage}</AlertDescription>
@@ -279,23 +263,16 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
           ) : null}
 
           {canAddRiot ? (
-            <form action={linkRiotAccount} className="space-y-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="riotId">
-                  {riotLinks.length === 0 ? "Riot ID" : "Add another Riot account"}
-                </Label>
-                <Input id="riotId" name="riotId" placeholder="GameName#NA1" required />
-                <p className="text-muted-foreground text-xs">
-                  Found in the client under your profile icon (top right).{" "}
-                  {riotLinks.length > 0
-                    ? `${MAX_RIOT_ACCOUNTS - riotLinks.length} slot${
-                        MAX_RIOT_ACCOUNTS - riotLinks.length === 1 ? "" : "s"
-                      } remaining.`
-                    : ""}
-                </p>
-              </div>
-              <Button type="submit">Link Riot account</Button>
-            </form>
+            <RiotLinkForm
+              label={riotLinks.length === 0 ? "Riot ID" : "Add another Riot account"}
+              hint={
+                riotLinks.length > 0
+                  ? `${MAX_RIOT_ACCOUNTS - riotLinks.length} slot${
+                      MAX_RIOT_ACCOUNTS - riotLinks.length === 1 ? "" : "s"
+                    } remaining.`
+                  : ""
+              }
+            />
           ) : (
             <p className="text-muted-foreground text-xs">
               Maximum of {MAX_RIOT_ACCOUNTS} Riot accounts reached. Unlink one to add another.
@@ -366,42 +343,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
               ) : null}
             </div>
           ) : (
-            <form action={linkCs2Account} className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="steamId">Steam64 ID</Label>
-                <Input
-                  id="steamId"
-                  name="steamId"
-                  placeholder="76561198000000000"
-                  pattern="7656\d{13}"
-                  required
-                />
-                <p className="text-muted-foreground text-xs">
-                  Find yours at{" "}
-                  <Link
-                    href="https://steamid.io"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline underline-offset-2"
-                  >
-                    steamid.io
-                  </Link>{" "}
-                  — use the steamID64 value.
-                </p>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="leetifyUrl">
-                  Leetify profile URL <span className="text-muted-foreground">(optional)</span>
-                </Label>
-                <Input
-                  id="leetifyUrl"
-                  name="leetifyUrl"
-                  type="url"
-                  placeholder="https://leetify.com/app/profile/76561198000000000"
-                />
-              </div>
-              <Button type="submit">Link CS2 account</Button>
-            </form>
+            <Cs2LinkForm />
           )}
         </CardContent>
       </Card>

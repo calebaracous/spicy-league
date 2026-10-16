@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { LocalTime } from "@/components/ui/local-time";
+import { FlashToast } from "@/components/flash-toast";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { getTeamForCaptain } from "@/lib/schedule";
 
@@ -149,11 +150,7 @@ export default async function MatchDetailPage({
         </p>
       </header>
 
-      {saved ? (
-        <Alert>
-          <AlertDescription>Saved.</AlertDescription>
-        </Alert>
-      ) : null}
+      {saved ? <FlashToast message="Saved." /> : null}
       {errorMessage ? (
         <Alert variant="destructive">
           <AlertDescription>{errorMessage}</AlertDescription>

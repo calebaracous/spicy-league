@@ -50,8 +50,8 @@ every 24h).
   mastery go to `na1.api.riotgames.com`. Non-NA players are not supported.
 - **Endpoints in use**:
   - `/riot/account/v1/accounts/by-riot-id/{gameName}/{tagLine}` — PUUID
-    resolution on account link (`linkRiotAccount`; returns
-    `riot-not-found` if null).
+    resolution on account link (`linkRiotAccount`; returns a "not found"
+    `{ error }` to the form if null).
   - `/lol/league/v4/entries/by-puuid/{puuid}` — ranked solo / flex.
   - `/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}/top` —
     top champs.

@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LocalDateTimeInput, LocalTime } from "@/components/ui/local-time";
 import { Textarea } from "@/components/ui/textarea";
+import { FlashToast } from "@/components/flash-toast";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { GAME_LABELS, SEASON_STATE_LABELS, nextStates } from "@/lib/seasons";
 import { cn } from "@/lib/utils";
@@ -70,11 +71,7 @@ export default async function EditSeasonPage({
         </p>
       </header>
 
-      {saved ? (
-        <Alert>
-          <AlertDescription>Saved.</AlertDescription>
-        </Alert>
-      ) : null}
+      {saved ? <FlashToast message="Saved." /> : null}
       {errorMessage ? (
         <Alert variant="destructive">
           <AlertDescription>{errorMessage}</AlertDescription>

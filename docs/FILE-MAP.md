@@ -108,6 +108,7 @@ Rendered by `src/app/page.tsx`:
 - `src/app/reset-password/page.tsx` + `_components/reset-password-form.tsx` — consume reset token.
 - `src/app/profile/page.tsx` — private profile + account-link UI. Contains inline `saveProfile` and `doSignOut` server actions and the `ERROR_MESSAGES` map.
 - `src/app/profile/account-actions.ts` — `linkRiotAccount`, `unlinkRiotAccount` (by `linkId`), `linkCs2Account`, `unlinkCs2Account`, `manualRefreshStats` (rate-limited).
+- `src/app/profile/_components/link-forms.tsx` — client `RiotLinkForm` / `Cs2LinkForm` (`useActionState`, inline errors, input kept).
 - `src/app/profile/constants.ts` — `MAX_RIOT_ACCOUNTS = 3`.
 
 ## Other pages
@@ -165,9 +166,10 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index) and `drizz
 ## Site chrome
 
 - `src/components/site-header.tsx` — server; calls `auth()`, `getLiveSeason()`, `getActiveTenMan()`; builds the live pill (season first, else 10-man).
-- `src/components/site-header-client.tsx` — sticky nav (Seasons / History / 10-man / Admin), live pill, scroll blur, mobile hamburger overlay.
+- `src/components/site-header-client.tsx` — sticky nav (live pill inline — "Live" below xl, full label at xl — then Seasons / History / 10-man / Admin), scroll blur, mobile hamburger overlay (also shows the pill).
 - `src/components/site-footer.tsx` — async server component; nav links (Seasons / History / 10-man), session-aware Account links, Terms / Privacy, Riot "Legal Jibber Jabber" / Valve footage notice.
 - `src/components/legal-page.tsx` — `LegalPage` chrome for `/terms` + `/privacy`.
+- `src/components/flash-toast.tsx` — client; turns a `?saved=` flag into a sonner toast and removes it from the URL.
 - `src/components/season-nav.tsx` — `SeasonNav` tabs for `/seasons/[slug]/*`, gated by season state.
 - `src/components/use-turn-alert.ts` — client hooks: `useSnapshotStream` (SSE + connection status), `useTurnAlert` (title flash + chime on your pick), `useTurnSoundPref`.
 - `src/components/live-status.tsx` — `LiveStatusDot` ("Live" / "Reconnecting…") and `TurnSoundToggle`.
