@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 
+import { ZoomableImage } from "./_components/zoomable-image";
+
 export const metadata: Metadata = {
   title: "History",
   description: "Every Spicy League season, from the beginning.",
@@ -221,6 +223,19 @@ const SEASONS: Season[] = [
   },
 ];
 
+/** Stable anchor id per season, e.g. "season-11-cs2", "season-9-5". */
+function seasonAnchor(season: Season): string {
+  const base = `season-${String(season.number).replace(".", "-")}`;
+  const suffix = season.label?.match(/LoL|CS2/)?.[0]?.toLowerCase();
+  return suffix ? `${base}-${suffix}` : base;
+}
+
+function shortLabel(season: Season): string {
+  if (season.label?.startsWith("Special")) return "Special";
+  const game = season.label?.match(/LoL|CS2/)?.[0];
+  return `S${season.number}${game ? ` ${game}` : ""}`;
+}
+
 export default function HistoryPage() {
   return (
     <div className="mx-auto w-full max-w-5xl flex-1 px-6 py-12">
@@ -229,13 +244,32 @@ export default function HistoryPage() {
         <p className="text-muted-foreground">All Spicy League seasons, most recent first.</p>
       </header>
 
+      <nav aria-label="Jump to season" className="mb-10">
+        <ul className="flex flex-wrap gap-2">
+          {SEASONS.map((season) => (
+            <li key={season.title}>
+              <a
+                href={`#${seasonAnchor(season)}`}
+                className="text-muted-foreground hover:text-foreground inline-block rounded-full border px-3 py-1 text-xs transition-colors"
+              >
+                {shortLabel(season)}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+
       <div className="relative">
         {/* vertical timeline line */}
         <div className="bg-border absolute top-0 bottom-0 left-5 w-px" />
 
         <ol className="space-y-14">
           {SEASONS.map((season) => (
-            <li key={season.title} className="relative pl-14">
+            <li
+              key={season.title}
+              id={seasonAnchor(season)}
+              className="relative scroll-mt-24 pl-14"
+            >
               {/* dot */}
               <div className="bg-primary border-background absolute top-1 left-3.5 h-3 w-3 -translate-x-1/2 rounded-full border-2" />
 
@@ -294,15 +328,7 @@ export default function HistoryPage() {
                   <div className="mt-4 space-y-3">
                     {season.images.map((img) => (
                       <figure key={img.src}>
-                        <div className="overflow-x-auto rounded-lg border">
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img
-                            src={img.src}
-                            alt={img.alt}
-                            loading="lazy"
-                            className="h-auto max-h-[600px] w-auto min-w-full object-contain"
-                          />
-                        </div>
+                        <ZoomableImage src={img.src} alt={img.alt} />
                         <figcaption className="text-muted-foreground mt-1 pl-1 text-xs">
                           {img.alt}
                         </figcaption>

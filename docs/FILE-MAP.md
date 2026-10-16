@@ -113,7 +113,8 @@ Rendered by `src/app/page.tsx`:
 
 ## Other pages
 
-- `src/app/history/page.tsx` — hardcoded season archive (13 entries: Seasons 1–11 incl. separate S11 LoL/CS2, plus Zero Space special; images from `public/history/`).
+- `src/app/history/page.tsx` — hardcoded season archive (13 entries: Seasons 1–11 incl. separate S11 LoL/CS2, plus Zero Space special; images from `public/history/`). Jump-to-season chip nav (`seasonAnchor` ids).
+- `src/app/history/_components/zoomable-image.tsx` — client; tap a screenshot to open it full-size in a native `<dialog>`.
 - `src/app/users/[username]/page.tsx` — public profile; per-Riot-account rank + top champs, Steam/Leetify links.
 - `src/app/users/[username]/_components/stats-tabs.tsx` — client tab switcher (LoL / CS2).
 - `src/app/terms/page.tsx`, `src/app/privacy/page.tsx` — static legal pages using `LegalPage`.
