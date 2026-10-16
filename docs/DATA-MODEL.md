@@ -28,6 +28,7 @@ files are in git history before the squash commit):
 - `0002_user_bans.sql` — adds the four nullable ban columns to `users`.
 - `0003_match_substitutions.sql` — `substitution_status` enum + `match_substitutions`.
 - `0004_sub_signups.sql` — `signup_kind` enum + `season_signups.kind`.
+- `0005_season_schedule.sql` — `seasons.draft_at`, `group_stage_ends_at`, `semis_at`, `final_at`.
 
 **Why the baseline's `when` is old.** Drizzle's migrator applies a journal
 entry only if its `when` is greater than the newest `created_at` in
@@ -99,6 +100,12 @@ Auth, not queried directly by app code.
 - `description` (text), `rules` (text) — markdown-ish, rendered as
   `whitespace-pre-wrap`
 - `signupOpensAt`, `signupClosesAt`, `seasonStartAt` — optional timestamps
+- `draftAt`, `groupStageEndsAt`, `semisAt`, `finalAt` — optional schedule
+  timestamps (migration `0005_season_schedule`). `seasonStartAt` doubles as
+  the group stage start. Display only — nothing gates on them, and they don't
+  set `matches.scheduledAt`. `seasonSchedule()` in `src/lib/seasons.ts` turns
+  them into the ordered "key dates" list used by the season page and the
+  upcoming home section; edited in the admin season form.
 - `championTeamId` — set by `confirmMatch` when the **final** is
   confirmed (to the final's `winnerTeamId`), cleared again if that final
   is disputed or reset. Migration `0001_reconcile_live_schema` backfilled

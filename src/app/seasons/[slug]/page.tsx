@@ -18,7 +18,7 @@ import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { leaveSubList } from "./signup/actions";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { getTeamForCaptain } from "@/lib/schedule";
-import { GAME_LABELS, openSignupKind, SEASON_STATE_LABELS } from "@/lib/seasons";
+import { GAME_LABELS, openSignupKind, SEASON_STATE_LABELS, seasonSchedule } from "@/lib/seasons";
 import { signInHref } from "@/lib/safe-redirect";
 import { cn } from "@/lib/utils";
 
@@ -263,9 +263,7 @@ export default async function SeasonDetailPage({
       })
     : null;
 
-  const signupOpens = season.signupOpensAt;
-  const signupCloses = season.signupClosesAt;
-  const seasonStart = season.seasonStartAt;
+  const schedule = seasonSchedule(season);
 
   return (
     <div className="page flex-1 space-y-8 [--page-max:48rem]">
@@ -413,32 +411,22 @@ export default async function SeasonDetailPage({
         </section>
       ) : null}
 
-      {signupOpens || signupCloses || seasonStart ? (
-        <section className="grid gap-3 sm:grid-cols-3">
-          {signupOpens ? (
-            <div className="rounded-lg border p-4">
-              <p className="text-muted-foreground text-xs tracking-wide uppercase">Signups open</p>
+      {schedule.length > 0 ? (
+        <section aria-label="Schedule" className="grid gap-3 sm:grid-cols-3">
+          {schedule.map(({ label, at, until }) => (
+            <div key={label} className="rounded-lg border p-4">
+              <p className="text-muted-foreground text-xs tracking-wide uppercase">{label}</p>
               <p className="mt-1 text-sm">
-                <LocalTime date={signupOpens} />
+                <LocalTime date={at} preset="weekday-datetime" />
+                {until ? (
+                  <>
+                    {" "}
+                    – <LocalTime date={until} preset="date-short" />
+                  </>
+                ) : null}
               </p>
             </div>
-          ) : null}
-          {signupCloses ? (
-            <div className="rounded-lg border p-4">
-              <p className="text-muted-foreground text-xs tracking-wide uppercase">Signups close</p>
-              <p className="mt-1 text-sm">
-                <LocalTime date={signupCloses} />
-              </p>
-            </div>
-          ) : null}
-          {seasonStart ? (
-            <div className="rounded-lg border p-4">
-              <p className="text-muted-foreground text-xs tracking-wide uppercase">Season starts</p>
-              <p className="mt-1 text-sm">
-                <LocalTime date={seasonStart} />
-              </p>
-            </div>
-          ) : null}
+          ))}
         </section>
       ) : null}
 

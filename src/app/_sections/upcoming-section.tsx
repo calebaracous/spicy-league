@@ -6,18 +6,14 @@ import { SectionLabel } from "@/components/ui/section-label";
 import { TintedSection } from "@/components/ui/tinted-section";
 import { backdropClip } from "@/lib/backdrop-clips";
 import type { Season } from "@/db/schema/seasons";
-import { GAME_LABELS } from "@/lib/seasons";
+import { GAME_LABELS, seasonSchedule } from "@/lib/seasons";
 
 interface UpcomingSectionProps {
   season: Season;
 }
 
 export function UpcomingSection({ season }: UpcomingSectionProps) {
-  const dates = [
-    { label: "Signups open", value: season.signupOpensAt },
-    { label: "Signups close", value: season.signupClosesAt },
-    { label: "Tournament start", value: season.seasonStartAt },
-  ].filter((d): d is { label: string; value: Date } => d.value !== null);
+  const dates = seasonSchedule(season);
 
   return (
     <>
@@ -66,7 +62,7 @@ export function UpcomingSection({ season }: UpcomingSectionProps) {
                 style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
               >
                 <SectionLabel style={{ color: "var(--muted)" }}>KEY DATES</SectionLabel>
-                {dates.map(({ label, value }) => (
+                {dates.map(({ label, at, until }) => (
                   <div
                     key={label}
                     className="flex items-center justify-between py-2 text-[13px]"
@@ -74,7 +70,13 @@ export function UpcomingSection({ season }: UpcomingSectionProps) {
                   >
                     <span style={{ color: "var(--muted)" }}>{label}</span>
                     <span className="font-mono" style={{ color: "var(--text)" }}>
-                      <LocalTime date={value} preset="weekday-datetime" />
+                      <LocalTime date={at} preset="weekday-datetime" />
+                      {until ? (
+                        <>
+                          {" "}
+                          – <LocalTime date={until} preset="date-short" />
+                        </>
+                      ) : null}
                     </span>
                   </div>
                 ))}

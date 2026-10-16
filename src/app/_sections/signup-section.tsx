@@ -84,6 +84,15 @@ export function SignupSection({ season, signupCount, topPlayers }: SignupSection
                     .{" "}
                   </>
                 )}
+                {season.draftAt && (
+                  <>
+                    Draft{" "}
+                    <span style={{ color: "var(--text)" }}>
+                      <LocalTime date={season.draftAt} preset="weekday-datetime" />
+                    </span>
+                    .{" "}
+                  </>
+                )}
                 {season.seasonStartAt && (
                   <>
                     Season starts{" "}

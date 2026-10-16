@@ -1,4 +1,4 @@
-import type { Game, SeasonState } from "@/db/schema/seasons";
+import type { Game, Season, SeasonState } from "@/db/schema/seasons";
 
 export const SEASON_STATES: readonly SeasonState[] = [
   "draft",
@@ -92,4 +92,39 @@ export function slugify(input: string): string {
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-+|-+$/g, "")
     .slice(0, 48);
+}
+
+type ScheduleFields = Pick<
+  Season,
+  | "signupOpensAt"
+  | "signupClosesAt"
+  | "draftAt"
+  | "seasonStartAt"
+  | "groupStageEndsAt"
+  | "semisAt"
+  | "finalAt"
+>;
+
+export interface ScheduleEntry {
+  label: string;
+  at: Date;
+  /** Last day of a multi-day stage (group stage), when set. */
+  until?: Date;
+}
+
+/** The season's key dates in order, skipping any that aren't set. */
+export function seasonSchedule(season: ScheduleFields): ScheduleEntry[] {
+  const entries: (ScheduleEntry | null)[] = [
+    season.signupOpensAt && { label: "Signups open", at: season.signupOpensAt },
+    season.signupClosesAt && { label: "Signups close", at: season.signupClosesAt },
+    season.draftAt && { label: "Draft", at: season.draftAt },
+    season.seasonStartAt && {
+      label: "Group stage",
+      at: season.seasonStartAt,
+      until: season.groupStageEndsAt ?? undefined,
+    },
+    season.semisAt && { label: "Semifinals", at: season.semisAt },
+    season.finalAt && { label: "Final", at: season.finalAt },
+  ];
+  return entries.filter((e): e is ScheduleEntry => Boolean(e));
 }

@@ -221,12 +221,32 @@ export default async function EditSeasonPage({
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="seasonStartAt">Season starts</Label>
+                <Label htmlFor="draftAt">Draft</Label>
+                <LocalDateTimeInput id="draftAt" name="draftAt" defaultValue={season.draftAt} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="seasonStartAt">Group stage starts</Label>
                 <LocalDateTimeInput
                   id="seasonStartAt"
                   name="seasonStartAt"
                   defaultValue={season.seasonStartAt}
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="groupStageEndsAt">Group stage ends</Label>
+                <LocalDateTimeInput
+                  id="groupStageEndsAt"
+                  name="groupStageEndsAt"
+                  defaultValue={season.groupStageEndsAt}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="semisAt">Semifinals</Label>
+                <LocalDateTimeInput id="semisAt" name="semisAt" defaultValue={season.semisAt} />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="finalAt">Final</Label>
+                <LocalDateTimeInput id="finalAt" name="finalAt" defaultValue={season.finalAt} />
               </div>
             </div>
             <p className="text-muted-foreground -mt-2 text-xs">

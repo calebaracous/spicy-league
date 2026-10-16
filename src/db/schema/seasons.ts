@@ -38,7 +38,12 @@ export const seasons = pgTable(
     rules: text("rules"),
     signupOpensAt: timestamp("signup_opens_at", { mode: "date" }),
     signupClosesAt: timestamp("signup_closes_at", { mode: "date" }),
+    // Doubles as the group stage start; the rest of the schedule follows.
     seasonStartAt: timestamp("season_start_at", { mode: "date" }),
+    draftAt: timestamp("draft_at", { mode: "date" }),
+    groupStageEndsAt: timestamp("group_stage_ends_at", { mode: "date" }),
+    semisAt: timestamp("semis_at", { mode: "date" }),
+    finalAt: timestamp("final_at", { mode: "date" }),
     championTeamId: text("champion_team_id"),
     createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),

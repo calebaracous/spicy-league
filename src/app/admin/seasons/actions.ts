@@ -37,7 +37,11 @@ const seasonInputSchema = z.object({
     .transform((v) => v?.trim() || null),
   signupOpensAt: optionalDate,
   signupClosesAt: optionalDate,
+  draftAt: optionalDate,
   seasonStartAt: optionalDate,
+  groupStageEndsAt: optionalDate,
+  semisAt: optionalDate,
+  finalAt: optionalDate,
 });
 
 function parseSeasonInput(formData: FormData) {
@@ -49,7 +53,11 @@ function parseSeasonInput(formData: FormData) {
     rules: formData.get("rules"),
     signupOpensAt: formData.get("signupOpensAt"),
     signupClosesAt: formData.get("signupClosesAt"),
+    draftAt: formData.get("draftAt"),
     seasonStartAt: formData.get("seasonStartAt"),
+    groupStageEndsAt: formData.get("groupStageEndsAt"),
+    semisAt: formData.get("semisAt"),
+    finalAt: formData.get("finalAt"),
   });
 }
 
