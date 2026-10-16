@@ -71,7 +71,8 @@ test("season draft end to end", async ({ browser }) => {
     await page.getByLabel("Secondary role").selectOption("top");
     await page.getByRole("button", { name: "Submit signup" }).click();
     await page.waitForURL(`**/seasons/${slug}?signed-up=1`);
-    await expect(page.getByText(`You are signed up for ${seasonName}`)).toBeVisible();
+    // Success is a toast now (FlashToast), not an inline alert.
+    await expect(page.getByText(`You're signed up for ${seasonName}.`)).toBeVisible();
     await page.context().close();
   });
 
