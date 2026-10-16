@@ -26,6 +26,8 @@ type SearchParams = Promise<{ saved?: string | number; error?: string }>;
 const ERROR_MESSAGES: Record<string, string> = {
   "already-generated": "A schedule has already been generated for this season.",
   "playoffs-already-seeded": "Playoff bracket has already been seeded.",
+  "group-unfinished":
+    "Every group match needs a confirmed result before the playoffs can be seeded.",
   "no-winner": "That match has no reported winner yet, so it can't be confirmed.",
   "not-found": "Match not found.",
 };
@@ -41,6 +43,17 @@ const STATE_BADGE: Record<
 };
 
 export const dynamic = "force-dynamic";
+
+/** `?saved=` codes from the match actions → toast text. */
+function flashMessage(saved: string): string {
+  if (saved === "seeded") return "Playoff bracket seeded.";
+  if (saved === "confirmed") return "Result confirmed.";
+  if (saved === "disputed") return "Result marked as disputed.";
+  if (saved === "reset") return "Match reset to scheduled.";
+  const generated = saved.match(/^generated-(\d+)$/);
+  if (generated) return `Generated ${generated[1]} matches.`;
+  return "Saved.";
+}
 
 export default async function AdminMatchesPage({
   params,
@@ -85,8 +98,14 @@ export default async function AdminMatchesPage({
   const reportedCount = allMatches.filter((m) => m.state === "reported").length;
   const groupMatches = allMatches.filter((m) => m.stage === "group");
   const playoffMatches = allMatches.filter((m) => m.stage !== "group");
+  // Seeding is offered from the group stage once every group match is
+  // confirmed (seeding then moves the season to Playoffs), or from Playoffs
+  // if an admin transitioned first.
+  const unconfirmedGroup = groupMatches.filter((m) => m.state !== "confirmed").length;
   const canSeedPlayoffs =
-    season.state === "playoffs" && playoffMatches.length === 0 && groupMatches.length > 0;
+    (season.state === "group_stage" || season.state === "playoffs") &&
+    playoffMatches.length === 0 &&
+    groupMatches.length > 0;
 
   return (
     <div className="page flex-1 space-y-6 [--page-max:64rem]">
@@ -112,17 +131,7 @@ export default async function AdminMatchesPage({
         </p>
       </header>
 
-      {saved ? (
-        <FlashToast
-          message={
-            saved === "seeded"
-              ? "Playoff bracket seeded."
-              : typeof saved === "string" && /^\d+$/.test(saved)
-                ? `Generated ${saved} matches.`
-                : "Saved."
-          }
-        />
-      ) : null}
+      {saved ? <FlashToast message={flashMessage(String(saved))} /> : null}
       {errorMessage ? (
         <Alert variant="destructive">
           <AlertDescription>{errorMessage}</AlertDescription>
@@ -161,15 +170,22 @@ export default async function AdminMatchesPage({
                 <CardTitle>Seed playoff bracket</CardTitle>
                 <CardDescription>
                   Seeds top 4 teams from group standings into a single-elimination bracket
-                  (Semifinals + Final). This can only be done once.
+                  (Semifinals + Final) and moves the season to Playoffs. This can only be done once.
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form action={seedPlayoffsWithSlug}>
-                  <ConfirmSubmitButton confirmMessage="Seed the playoffs from current standings? This can only be done once.">
-                    Seed playoffs (top 4)
-                  </ConfirmSubmitButton>
-                </form>
+                {unconfirmedGroup > 0 ? (
+                  <p className="text-muted-foreground text-sm">
+                    {unconfirmedGroup} group match{unconfirmedGroup !== 1 ? "es" : ""} still need
+                    {unconfirmedGroup === 1 ? "s" : ""} a confirmed result before seeding.
+                  </p>
+                ) : (
+                  <form action={seedPlayoffsWithSlug}>
+                    <ConfirmSubmitButton confirmMessage="Seed the playoffs from the final group standings and move the season to Playoffs? This can only be done once.">
+                      Seed playoffs (top 4)
+                    </ConfirmSubmitButton>
+                  </form>
+                )}
               </CardContent>
             </Card>
           ) : null}

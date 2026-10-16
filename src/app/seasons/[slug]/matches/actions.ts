@@ -30,6 +30,15 @@ async function clearChampionIfFinal(seasonId: string, matchId: string) {
     .where(eq(seasons.id, seasonId));
 }
 
+/** Blank -> null (no score given); 0-10 -> number; anything else -> undefined (invalid). */
+function parseScore(raw: FormDataEntryValue | null): number | null | undefined {
+  const v = raw?.toString().trim() ?? "";
+  if (v === "") return null;
+  if (!/^\d+$/.test(v)) return undefined;
+  const n = Number(v);
+  return n <= 10 ? n : undefined;
+}
+
 export async function reportMatch(slug: string, matchId: string, formData: FormData) {
   const session = await requireOnboarded();
   const season = await getSeasonOrFail(slug);
@@ -56,8 +65,23 @@ export async function reportMatch(slug: string, matchId: string, formData: FormD
     redirect(`/seasons/${slug}/matches/${matchId}?error=invalid-winner`);
   }
 
-  const homeScore = parseInt(formData.get("homeScore")?.toString() ?? "0", 10) || null;
-  const awayScore = parseInt(formData.get("awayScore")?.toString() ?? "0", 10) || null;
+  // Scores are optional, but a 0 is a real score (the old `|| null` turned a
+  // 2-0 into 2-blank, which then rendered with no score at all).
+  const homeScore = parseScore(formData.get("homeScore"));
+  const awayScore = parseScore(formData.get("awayScore"));
+  if (homeScore === undefined || awayScore === undefined) {
+    redirect(`/seasons/${slug}/matches/${matchId}?error=invalid-score`);
+  }
+  if ((homeScore === null) !== (awayScore === null)) {
+    redirect(`/seasons/${slug}/matches/${matchId}?error=partial-score`);
+  }
+  if (homeScore !== null && awayScore !== null) {
+    const winnerScore = winnerTeamId === match.homeTeamId ? homeScore : awayScore;
+    const loserScore = winnerTeamId === match.homeTeamId ? awayScore : homeScore;
+    if (winnerScore <= loserScore) {
+      redirect(`/seasons/${slug}/matches/${matchId}?error=score-mismatch`);
+    }
+  }
 
   await db
     .update(matches)
@@ -129,7 +153,7 @@ export async function confirmMatch(slug: string, matchId: string) {
   revalidatePath(`/seasons/${slug}/matches/${matchId}`);
   revalidatePath(`/seasons/${slug}`);
   revalidatePath(`/admin/seasons/${slug}/matches`);
-  redirect(`/admin/seasons/${slug}/matches?saved=1`);
+  redirect(`/admin/seasons/${slug}/matches?saved=confirmed`);
 }
 
 export async function disputeMatch(slug: string, matchId: string) {
@@ -144,7 +168,7 @@ export async function disputeMatch(slug: string, matchId: string) {
 
   revalidatePath(`/seasons/${slug}/matches/${matchId}`);
   revalidatePath(`/admin/seasons/${slug}/matches`);
-  redirect(`/admin/seasons/${slug}/matches?saved=1`);
+  redirect(`/admin/seasons/${slug}/matches?saved=disputed`);
 }
 
 export async function resetMatch(slug: string, matchId: string) {
@@ -167,5 +191,5 @@ export async function resetMatch(slug: string, matchId: string) {
 
   revalidatePath(`/seasons/${slug}/matches/${matchId}`);
   revalidatePath(`/admin/seasons/${slug}/matches`);
-  redirect(`/admin/seasons/${slug}/matches?saved=1`);
+  redirect(`/admin/seasons/${slug}/matches?saved=reset`);
 }

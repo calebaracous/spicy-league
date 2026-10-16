@@ -55,7 +55,8 @@ export function OffSeasonSection({ lastSeason, podium }: OffSeasonSectionProps) 
                         className="font-mono text-[11px] font-semibold"
                         style={{ color: p.rank === 1 ? "var(--accent-text)" : "var(--muted)" }}
                       >
-                        {p.rank === 1 ? "1st" : p.rank === 2 ? "2nd" : p.rank === 3 ? "3rd" : "4th"}
+                        {/* No 3rd-place match, so both semifinal losers share 3rd. */}
+                        {p.rank === 1 ? "1st" : p.rank === 2 ? "2nd" : "3rd–4th"}
                       </div>
                       <div
                         className="text-sm leading-snug font-medium"

@@ -96,10 +96,18 @@ export async function computeStandings(seasonId: string): Promise<StandingRow[]>
     for (const c of captainRows) captainNames.set(c.id, c.name ?? c.username ?? "?");
   }
 
+  // Group stage only: once playoffs are played, counting semis/final here
+  // inflated the finalists' records and could reorder the table.
   const confirmedMatches = await db
     .select()
     .from(matches)
-    .where(and(eq(matches.seasonId, seasonId), eq(matches.state, "confirmed")));
+    .where(
+      and(
+        eq(matches.seasonId, seasonId),
+        eq(matches.state, "confirmed"),
+        eq(matches.stage, "group"),
+      ),
+    );
 
   const stats = new Map<
     string,

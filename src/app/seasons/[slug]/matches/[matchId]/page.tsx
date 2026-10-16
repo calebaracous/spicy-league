@@ -30,6 +30,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   "not-on-team": "You aren't on a team in this season.",
   "not-your-match": "That match doesn't involve your team.",
   "invalid-winner": "Select a valid winner.",
+  "invalid-score": "Scores must be whole numbers from 0 to 10.",
+  "partial-score": "Enter both scores, or leave both blank.",
+  "score-mismatch": "The winner needs the higher score.",
 };
 
 const STATE_BADGE: Record<
@@ -80,7 +83,8 @@ export default async function MatchDetailPage({
       .innerJoin(users, eq(teamMembers.userId, users.id))
       .where(eq(teamMembers.teamId, teamId))
       .orderBy(teamMembers.pickNumber);
-    return members;
+    // Captain (pickNumber null) first; ascending order alone puts them last.
+    return members.sort((a, b) => (a.pickNumber ?? 0) - (b.pickNumber ?? 0));
   };
 
   const [homeRoster, awayRoster] = await Promise.all([

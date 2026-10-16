@@ -320,7 +320,13 @@ export default async function SeasonDetailPage({
                 ) : null}
               </p>
             ) : (
-              <p className="text-muted-foreground text-sm">No scheduled matches left.</p>
+              <p className="text-muted-foreground text-sm">
+                {season.state === "complete"
+                  ? championName === myTeam.name
+                    ? "Season champions."
+                    : "Season complete."
+                  : "No scheduled matches left."}
+              </p>
             )}
           </div>
           <div className="flex flex-wrap gap-2">

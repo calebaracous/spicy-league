@@ -58,9 +58,11 @@ All transitions are server actions in
   `teams.captainUserId` first, then `team_members`. Errors: `not-on-team`,
   `not-your-match`.
 - `winnerTeamId` must match home or away ID (`invalid-winner`).
-- Scores parsed as ints; `0`, blank, or non-numeric all become `null`
-  (`parseInt(...) || null`). A 2–0 is stored as home 2 / away null — the
-  standings treat null as 0, so game diff is still correct.
+- Scores are optional (`parseScore`): blank → `null`, whole numbers 0–10
+  accepted, anything else → `invalid-score`. Both or neither
+  (`partial-score`); when both are given the winner must have the higher
+  score (`score-mismatch`). A 0 is stored as 0 (it used to become `null`, so
+  a 2–0 rendered with no score).
 - Can re-report a `reported` or `disputed` match — it simply overwrites.
 - Sets `state = 'reported'`, stamps `reportedBy` + `reportedAt`.
 
@@ -92,8 +94,9 @@ On the final, also clears `seasons.championTeamId`.
 `computeStandings(seasonId)` in `src/lib/schedule.ts` returns
 `StandingRow[]`, sorted.
 
-A row contributes only from **confirmed** matches. `reported` doesn't
-count until confirmed.
+A row contributes only from **confirmed group-stage** matches. `reported`
+doesn't count until confirmed, and semis/final never count (they used to,
+which inflated the finalists' records once the playoffs were played).
 
 Tiebreaker order:
 1. Wins, descending
@@ -112,6 +115,10 @@ place when more than 4 teams exist. Playoffs render as a bracket
 placeholder until the final exists). Scheduled matches show their
 `scheduledAt` in the viewer's timezone (`LocalTime`).
 
+Admin match actions redirect to `/admin/seasons/[slug]/matches?saved=<code>`
+with `confirmed` / `disputed` / `reset` / `seeded` / `generated-N`;
+`flashMessage()` on that page maps each to its toast.
+
 ## Playoff seeding
 
 `seedPlayoffs(seasonId)` in `src/lib/schedule.ts`:
@@ -125,10 +132,10 @@ placeholder until the final exists). Scheduled matches show their
    semis are confirmed.
 
 Admin action: `seedPlayoffsAction(slug)` in
-`src/app/admin/seasons/[slug]/matches/actions.ts`. Does **not** change
-`seasons.state` — admin still needs to separately transition
-`group_stage → playoffs` via the edit page. (The state transition is
-independent of the seeding action.)
+`src/app/admin/seasons/[slug]/matches/actions.ts`. Offered (and allowed)
+only once every group match is confirmed (`group-unfinished` otherwise).
+Seeding from `group_stage` also moves the season to `playoffs`; seeding
+after a manual transition to `playoffs` still works.
 
 ## Champion detection
 
