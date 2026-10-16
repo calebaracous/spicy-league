@@ -21,6 +21,7 @@ import { drafts } from "@/db/schema/drafts";
 import { matches } from "@/db/schema/matches";
 import { seasons, seasonSignups } from "@/db/schema/seasons";
 import { accountLinks } from "@/db/schema/stats";
+import { getPendingSubsBySeason } from "@/lib/substitutions";
 import { getActiveTenMan } from "@/lib/ten-man";
 
 export type ActionItem = { label: string; detail: string; href: string };
@@ -114,6 +115,8 @@ export async function getAdminOverview() {
     getActiveTenMan(),
   ]);
 
+  const pendingSubs = await getPendingSubsBySeason();
+
   // Signup windows that have closed while the season still says "open".
   const staleSignups = await db
     .select({ name: seasons.name, slug: seasons.slug })
@@ -156,6 +159,23 @@ export async function getAdminOverview() {
       label: "Signup window has closed",
       detail: `${s.name} is still "Signups open"`,
       href: `/admin/seasons/${s.slug}`,
+    });
+  }
+  const subsBySeason = new Map<string, { name: string; count: number; matchId: string }>();
+  for (const p of pendingSubs) {
+    const e = subsBySeason.get(p.seasonSlug) ?? {
+      name: p.seasonName,
+      count: 0,
+      matchId: p.matchId,
+    };
+    e.count++;
+    subsBySeason.set(p.seasonSlug, e);
+  }
+  for (const [slug, e] of subsBySeason) {
+    actionItems.push({
+      label: `${e.count} sub request${e.count > 1 ? "s" : ""}`,
+      detail: e.name,
+      href: `/admin/seasons/${slug}/matches`,
     });
   }
   if (activeTenMan) {

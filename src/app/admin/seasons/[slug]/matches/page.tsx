@@ -4,6 +4,9 @@ import { notFound } from "next/navigation";
 
 import { generateMatchSchedule, seedPlayoffsAction } from "./actions";
 import { confirmMatch, disputeMatch, resetMatch } from "@/app/seasons/[slug]/matches/actions";
+import { decideSub } from "@/app/seasons/[slug]/matches/sub-actions";
+import { getPendingSubsForSeason } from "@/lib/substitutions";
+import { SUB_ERROR_MESSAGES } from "@/lib/substitution-rules";
 import { db } from "@/db/client";
 import { teams } from "@/db/schema/drafts";
 import { matches } from "@/db/schema/matches";
@@ -30,6 +33,7 @@ const ERROR_MESSAGES: Record<string, string> = {
     "Every group match needs a confirmed result before the playoffs can be seeded.",
   "no-winner": "That match has no reported winner yet, so it can't be confirmed.",
   "not-found": "Match not found.",
+  ...SUB_ERROR_MESSAGES,
 };
 
 const STATE_BADGE: Record<
@@ -50,6 +54,9 @@ function flashMessage(saved: string): string {
   if (saved === "confirmed") return "Result confirmed.";
   if (saved === "disputed") return "Result marked as disputed.";
   if (saved === "reset") return "Match reset to scheduled.";
+  if (saved === "sub-approved") return "Sub approved.";
+  if (saved === "sub-rejected") return "Sub rejected.";
+  if (saved === "sub-revoked") return "Sub revoked.";
   const generated = saved.match(/^generated-(\d+)$/);
   if (generated) return `Generated ${generated[1]} matches.`;
   return "Saved.";
@@ -106,6 +113,8 @@ export default async function AdminMatchesPage({
     (season.state === "group_stage" || season.state === "playoffs") &&
     playoffMatches.length === 0 &&
     groupMatches.length > 0;
+  const pendingSubs = await getPendingSubsForSeason(season.id);
+  const here = `/admin/seasons/${slug}/matches`;
 
   return (
     <div className="page flex-1 space-y-6 [--page-max:64rem]">
@@ -136,6 +145,61 @@ export default async function AdminMatchesPage({
         <Alert variant="destructive">
           <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
+      ) : null}
+
+      {pendingSubs.length > 0 ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Sub requests</CardTitle>
+            <CardDescription>
+              Captains asked to bring these players in. Approving re-checks eligibility.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="divide-y rounded-lg border">
+              {pendingSubs.map((p) => (
+                <li
+                  key={p.id}
+                  className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm"
+                >
+                  <div className="min-w-0">
+                    <span className="font-medium">{p.subName}</span>
+                    <span className="text-muted-foreground">
+                      {" "}
+                      → {p.teamName}
+                      {p.replacingName ? `, for ${p.replacingName}` : ", extra slot"}
+                    </span>
+                    <p className="text-muted-foreground text-xs">
+                      <Link
+                        href={`/seasons/${slug}/matches/${p.matchId}`}
+                        className="hover:underline"
+                      >
+                        {p.matchLabel}
+                      </Link>
+                      {p.reason ? ` · “${p.reason}”` : ""}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 gap-1">
+                    <form action={decideSub.bind(null, slug, p.matchId, p.id)}>
+                      <input type="hidden" name="decision" value="approve" />
+                      <input type="hidden" name="back" value={here} />
+                      <Button type="submit" size="sm">
+                        Approve
+                      </Button>
+                    </form>
+                    <form action={decideSub.bind(null, slug, p.matchId, p.id)}>
+                      <input type="hidden" name="decision" value="reject" />
+                      <input type="hidden" name="back" value={here} />
+                      <Button type="submit" size="sm" variant="ghost">
+                        Reject
+                      </Button>
+                    </form>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       ) : null}
 
       {groupMatches.length === 0 && playoffMatches.length === 0 ? (

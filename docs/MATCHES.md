@@ -162,6 +162,33 @@ column with 101/102/201. Any UI that sorts by round will naturally put
 playoffs after group stage, and final after semis. When filtering
 "group only" use `matches.stage = 'group'` or `round < 100`.
 
+## Substitutions
+
+A player not on a team's roster can play one match for it. Design and
+rationale: [design/SUBSTITUTIONS.md](design/SUBSTITUTIONS.md).
+
+- **Rules** — `evaluateSubRequest` in `src/lib/substitution-rules.ts`
+  (pure, unit-tested in `tests/unit/substitution-rules.test.ts`): match must
+  be `scheduled` (lineup locks on report); candidate must be a season signup
+  (free agent) or on a team **not** in this match (cross-team); not banned;
+  not already subbing in this match; the sitting-out player must be on the
+  requesting roster and not already replaced; max `MAX_SUBS_PER_TEAM` (2)
+  pending + approved per team.
+- **DB side** — `src/lib/substitutions.ts`: `checkSubEligibility` (gathers
+  inputs, `excludeSubId` when re-checking on approval), `getMatchLineups`,
+  `getSubCandidates`, `getPlayerMatchHistory`, `getPendingSubsForSeason`,
+  `getPendingSubsBySeason`.
+- **Actions** — `src/app/seasons/[slug]/matches/sub-actions.ts`:
+  `requestSub` (team captain, or admin for either team), `withdrawSub`
+  (pending only), `decideSub` (admin: approve → re-checks eligibility,
+  reject, revoke an approved sub while the match is still scheduled).
+  Every sub needs admin approval.
+- **UI** — match page `_components/lineups.tsx`: rosters with `Sub` badges /
+  struck-through "sat out" players, the requests list and the request form.
+  Admin matches page: "Sub requests" card with Approve / Reject. `/admin`
+  dashboard: "N sub requests" item. Player profiles: match history.
+- Standings are unaffected — results stay team-level.
+
 ## Where to look when…
 
 - …schedule is too short / missing matches → team count. With N teams

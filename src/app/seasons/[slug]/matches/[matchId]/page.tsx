@@ -4,7 +4,7 @@ import { notFound } from "next/navigation";
 
 import { reportMatch } from "../actions";
 import { db } from "@/db/client";
-import { teams, teamMembers } from "@/db/schema/drafts";
+import { teams } from "@/db/schema/drafts";
 import { matches } from "@/db/schema/matches";
 import { seasons } from "@/db/schema/seasons";
 import { users } from "@/db/schema/auth";
@@ -18,6 +18,9 @@ import { LocalTime } from "@/components/ui/local-time";
 import { FlashToast } from "@/components/flash-toast";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { getTeamForCaptain } from "@/lib/schedule";
+import { SUB_ERROR_MESSAGES } from "@/lib/substitution-rules";
+import { getMatchLineups, getSubCandidates } from "@/lib/substitutions";
+import { MatchLineups } from "./_components/lineups";
 
 export const generateMetadata = seasonPageMetadata("Match");
 
@@ -33,6 +36,15 @@ const ERROR_MESSAGES: Record<string, string> = {
   "invalid-score": "Scores must be whole numbers from 0 to 10.",
   "partial-score": "Enter both scores, or leave both blank.",
   "score-mismatch": "The winner needs the higher score.",
+  ...SUB_ERROR_MESSAGES,
+};
+
+const SAVED_MESSAGES: Record<string, string> = {
+  "sub-requested": "Sub requested. An admin will review it.",
+  "sub-withdrawn": "Sub request withdrawn.",
+  "sub-approved": "Sub approved.",
+  "sub-rejected": "Sub rejected.",
+  "sub-revoked": "Sub revoked.",
 };
 
 const STATE_BADGE: Record<
@@ -70,28 +82,6 @@ export default async function MatchDetailPage({
     db.query.teams.findFirst({ where: eq(teams.id, match.awayTeamId) }),
   ]);
 
-  // Load rosters
-  const loadRoster = async (teamId: string) => {
-    const members = await db
-      .select({
-        userId: teamMembers.userId,
-        username: users.username,
-        name: users.name,
-        pickNumber: teamMembers.pickNumber,
-      })
-      .from(teamMembers)
-      .innerJoin(users, eq(teamMembers.userId, users.id))
-      .where(eq(teamMembers.teamId, teamId))
-      .orderBy(teamMembers.pickNumber);
-    // Captain (pickNumber null) first; ascending order alone puts them last.
-    return members.sort((a, b) => (a.pickNumber ?? 0) - (b.pickNumber ?? 0));
-  };
-
-  const [homeRoster, awayRoster] = await Promise.all([
-    loadRoster(match.homeTeamId),
-    loadRoster(match.awayTeamId),
-  ]);
-
   const session = await auth();
   const userId = session?.user?.id ?? null;
   const isAdmin = session?.user?.role === "admin";
@@ -101,6 +91,17 @@ export default async function MatchDetailPage({
     myTeam && (myTeam.id === match.homeTeamId || myTeam.id === match.awayTeamId);
   const canReport = (isOnThisMatch || isAdmin) && match.state !== "confirmed";
 
+  // Subs: captains manage their own team; admins either team.
+  const managedTeamIds = isAdmin
+    ? [match.homeTeamId, match.awayTeamId]
+    : [homeTeam, awayTeam].filter((t) => t && t.captainUserId === userId).map((t) => t!.id);
+  const [lineups, candidates] = await Promise.all([
+    getMatchLineups(match),
+    match.state === "scheduled" && managedTeamIds.length > 0
+      ? getSubCandidates(match)
+      : Promise.resolve([]),
+  ]);
+
   const reportWithIds = reportMatch.bind(null, slug, matchId);
   const sb = STATE_BADGE[match.state] ?? STATE_BADGE.scheduled;
   const errorMessage = error ? ERROR_MESSAGES[error] : null;
@@ -109,7 +110,8 @@ export default async function MatchDetailPage({
   let reporterName: string | null = null;
   if (match.reportedBy) {
     const reporter = await db.query.users.findFirst({ where: eq(users.id, match.reportedBy) });
-    reporterName = reporter?.name ?? reporter?.username ?? reporter?.email ?? null;
+    // Never fall back to the email — this page is public.
+    reporterName = reporter?.name ?? reporter?.username ?? null;
   }
 
   return (
@@ -154,7 +156,7 @@ export default async function MatchDetailPage({
         </p>
       </header>
 
-      {saved ? <FlashToast message="Saved." /> : null}
+      {saved ? <FlashToast message={SAVED_MESSAGES[saved] ?? "Saved."} /> : null}
       {errorMessage ? (
         <Alert variant="destructive">
           <AlertDescription>{errorMessage}</AlertDescription>
@@ -186,45 +188,19 @@ export default async function MatchDetailPage({
         </Card>
       ) : null}
 
-      {/* Rosters */}
-      <div className="grid gap-4 sm:grid-cols-2">
-        {[
-          { team: homeTeam, roster: homeRoster, label: "Home" },
-          { team: awayTeam, roster: awayRoster, label: "Away" },
-        ].map(({ team, roster, label }) => (
-          <Card key={team?.id}>
-            <CardHeader>
-              <CardTitle className="text-sm">
-                {team?.name ?? "?"}{" "}
-                <span className="text-muted-foreground text-xs font-normal">({label})</span>
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <ul className="space-y-1 text-sm">
-                {roster.map((m) => (
-                  <li key={m.userId} className="flex items-center gap-2">
-                    {m.pickNumber === null ? (
-                      <Badge variant="secondary" className="text-xs">
-                        C
-                      </Badge>
-                    ) : (
-                      <span className="text-muted-foreground w-5 text-right font-mono text-xs">
-                        #{m.pickNumber}
-                      </span>
-                    )}
-                    <Link
-                      href={`/users/${m.username}`}
-                      className="underline-offset-2 hover:underline"
-                    >
-                      {m.name ?? m.username}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+      {homeTeam && awayTeam ? (
+        <MatchLineups
+          slug={slug}
+          matchId={matchId}
+          matchState={match.state}
+          home={{ id: homeTeam.id, name: homeTeam.name }}
+          away={{ id: awayTeam.id, name: awayTeam.name }}
+          lineups={lineups}
+          managedTeamIds={managedTeamIds}
+          isAdmin={isAdmin}
+          candidates={candidates}
+        />
+      ) : null}
 
       {/* Report form */}
       {canReport ? (

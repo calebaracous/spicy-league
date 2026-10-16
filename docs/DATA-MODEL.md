@@ -26,6 +26,7 @@ files are in git history before the squash commit):
   the partial index exists, and backfills `seasons.champion_team_id`.
 
 - `0002_user_bans.sql` — adds the four nullable ban columns to `users`.
+- `0003_match_substitutions.sql` — `substitution_status` enum + `match_substitutions`.
 
 **Why the baseline's `when` is old.** Drizzle's migrator applies a journal
 entry only if its `when` is greater than the newest `created_at` in
@@ -170,6 +171,17 @@ Single table for group stage, semis, final.
 - Indexes: on `seasonId`, `homeTeamId`, `awayTeamId`
 
 See [MATCHES.md](MATCHES.md) for the lifecycle and tiebreaker rules.
+
+### match_substitutions (migration `0003_match_substitutions`)
+
+One row per sub request: `matchId`, `teamId` (team the sub plays for),
+`subUserId`, `replacedUserId` (roster player sitting out; null = filling an
+empty slot), `status` enum `substitution_status`
+(`pending | approved | rejected | withdrawn`), `reason`, `requestedBy`,
+`decidedBy`, `createdAt`, `decidedAt`. Unique on `(matchId, subUserId)` — a
+rejected/withdrawn request for the same player is reused, not duplicated.
+Only `approved` rows change a lineup. Lineups are **derived**, not stored:
+roster − approved `replacedUserId` + approved `subUserId`.
 
 ## stats.ts — accountLinks, riotStatSnapshots, leetifyStatSnapshots
 

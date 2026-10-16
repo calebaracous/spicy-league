@@ -2,11 +2,13 @@ import { and, eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { MatchHistory } from "./_components/match-history";
 import { StatsTabs } from "./_components/stats-tabs";
 import { db } from "@/db/client";
 import { users } from "@/db/schema/auth";
 import { accountLinks, riotStatSnapshots } from "@/db/schema/stats";
 import { getChampionName } from "@/lib/riot-api";
+import { getPlayerMatchHistory } from "@/lib/substitutions";
 import { Card, CardContent } from "@/components/ui/card";
 import { LocalTime } from "@/components/ui/local-time";
 import { Separator } from "@/components/ui/separator";
@@ -79,6 +81,7 @@ export default async function PublicProfilePage({ params }: Props) {
     }),
   );
 
+  const history = await getPlayerMatchHistory(user.id);
   const hasLolData = riotLinks.length > 0 || !!user.opggUrl;
   const hasCs2Data = !!steamLink;
   const hasAnyStats = hasLolData || hasCs2Data;
@@ -205,6 +208,8 @@ export default async function PublicProfilePage({ params }: Props) {
           </CardContent>
         </Card>
       ) : null}
+
+      <MatchHistory matches={history} />
     </div>
   );
 }

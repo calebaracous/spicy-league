@@ -184,7 +184,8 @@ card (team + next scheduled match) for signed-in players once teams exist.
 - `/10-man` — 10-man landing (redirects to the active session if any)
 - `/10-man/[id]` — live 10-man board (SSE-fed). See [TEN-MAN.md](TEN-MAN.md).
 - `/history` — static season archive (hard-coded in the page)
-- `/users/[username]` — public profile
+- `/users/[username]` — public profile + match history (confirmed matches,
+  tagged Sub / Sat out — `getPlayerMatchHistory`)
 - `/terms`, `/privacy` — static legal docs. Required by the Discord
   Developer Portal for app creation. Shared chrome in
   `src/components/legal-page.tsx`; prose styling is the `.legal-prose`

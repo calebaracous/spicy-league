@@ -15,6 +15,8 @@ the real UI against a real database and is run on demand.
   captains, `PICKS_PER_TEAM` per captain, back-to-back picks at the turn,
   `totalPicks`.
 - `round-robin.test.ts` — `buildRoundRobin`: every pair once, `n-1` rounds
+- `substitution-rules.test.ts` — `evaluateSubRequest`: eligibility, lineup
+  lock, cross-team flag, per-team sub limit
   for even `n`, one bye per team for odd `n`.
 
 `src/lib/draft.ts` and `schedule.ts` import `server-only`, which throws

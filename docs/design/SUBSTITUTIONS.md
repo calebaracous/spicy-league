@@ -1,6 +1,11 @@
 # Substitutions — design proposal
 
-Status: **proposal, not built.** Lets a player who is not on a team's
+Status: **built** (Oct 2026) with the recommended defaults below. Current
+behaviour is documented in [MATCHES.md](../MATCHES.md#substitutions); this file
+keeps the rationale. Module names differ slightly from the sketch: rules live in
+`src/lib/substitution-rules.ts`, DB helpers in `src/lib/substitutions.ts`.
+
+Original summary: Lets a player who is not on a team's
 roster play one match for it, and records that so it shows up in the match
 page and in players' match history.
 
@@ -135,7 +140,7 @@ Limits (defaults, constants in the helper):
 5. `/users/[username]` "Matches" tab with history.
 6. Docs: DATA-MODEL, MATCHES, FILE-MAP.
 
-## Decisions needed
+## Decisions (taken: all recommended defaults)
 
 1. **Eligible pool**: season signups only (recommended), or any account?
 2. **Approval**: admin approves every sub (recommended to start), or
