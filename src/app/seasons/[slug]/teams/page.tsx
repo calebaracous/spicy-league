@@ -86,7 +86,10 @@ export default async function TeamsPage({ params }: { params: Params }) {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">
           {seasonTeams.map((team) => {
-            const roster = members.filter((m) => m.teamId === team.id);
+            // Captain (pickNumber null) first, then picks in order.
+            const roster = members
+              .filter((m) => m.teamId === team.id)
+              .sort((a, b) => (a.pickNumber ?? 0) - (b.pickNumber ?? 0));
             const mine = !!viewerId && roster.some((m) => m.userId === viewerId);
             const rec = record.get(team.id);
             return (
