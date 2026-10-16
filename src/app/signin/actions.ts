@@ -42,7 +42,8 @@ export async function signInWithUsername(
       return { error: "Please verify your email before signing in. Check your inbox." };
     }
     if (code === "USER_BANNED") {
-      return { error: "This account has been suspended." };
+      // The session hook's message carries the reason and end date.
+      return { error: message || "This account has been suspended." };
     }
     return { error: "Invalid username or password." };
   }

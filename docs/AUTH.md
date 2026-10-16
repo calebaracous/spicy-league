@@ -166,6 +166,23 @@ There is no UI for granting admin. `users.role` is a Postgres enum
 UPDATE users SET role = 'admin' WHERE email = 'me@example.com';
 ```
 
+## Bans
+
+League bans live on `users` (`bannedAt`, `banReason`, `banExpiresAt`,
+`bannedBy`) — not Better Auth's admin plugin, which would fight the app's own
+`role` handling. Pieces:
+
+- `databaseHooks.session.create.before` in `src/lib/auth.ts` throws
+  `APIError("FORBIDDEN", { code: "USER_BANNED" })` for an active ban, so no
+  sign-in path can create a session. `signInWithUsername` shows the hook's
+  message (reason + end date).
+- `banUser()` (`src/lib/bans.ts`) also deletes the user's sessions. The 5-min
+  cookie cache means an open tab can keep *reading* for up to 5 minutes, so
+  every write path that matters checks `getActiveBan()` against the DB:
+  `submitSignup` (season) and `joinSignup` (10-man).
+- Admins can't be banned (and can't ban themselves) — demote first.
+- UI: `/admin/users` (`src/app/admin/users/`).
+
 ## Base URL and trusted origins
 
 `src/lib/auth.ts` reads `BETTER_AUTH_URL ?? NEXT_PUBLIC_APP_URL` for

@@ -25,6 +25,8 @@ files are in git history before the squash commit):
   Drizzle's default names with the intended `ON DELETE` actions, ensures
   the partial index exists, and backfills `seasons.champion_team_id`.
 
+- `0002_user_bans.sql` — adds the four nullable ban columns to `users`.
+
 **Why the baseline's `when` is old.** Drizzle's migrator applies a journal
 entry only if its `when` is greater than the newest `created_at` in
 `drizzle.__drizzle_migrations`. The baseline is pinned to `1777163682000`,
@@ -65,6 +67,10 @@ wiring in `src/lib/auth.ts`).
     `input: false` means clients cannot set it via Better Auth's endpoints.
   - `role` enum `user_role` (`user | admin`), default `user`
   - `bio`, `pronouns`, `opggUrl` — free-text profile fields
+  - `bannedAt`, `banReason`, `banExpiresAt`, `bannedBy` — league ban
+    (migration `0002_user_bans`). Active while `bannedAt` is set and
+    `banExpiresAt` is null or in the future (`isBanActive` in
+    `src/lib/bans.ts`). Expired bans are left in place, just inactive.
 - `createdAt`, `updatedAt` — auto-defaulted
 
 ### `sessions`

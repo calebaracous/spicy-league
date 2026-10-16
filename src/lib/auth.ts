@@ -1,12 +1,14 @@
 import "server-only";
 
 import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { Resend } from "resend";
 
 import { db } from "@/db/client";
 import { users, sessions, accounts, verifications } from "@/db/schema/auth";
+import { banMessage, getActiveBan } from "@/lib/bans";
 
 const FROM = process.env.AUTH_EMAIL_FROM ?? "no-reply@spicyleague.dev";
 const getResend = () => new Resend(process.env.AUTH_RESEND_KEY);
@@ -116,6 +118,21 @@ export const auth = betterAuth({
         required: false,
         defaultValue: null,
         input: false,
+      },
+    },
+  },
+
+  // League bans: refuse to create a session for a banned user. Covers every
+  // sign-in path. The sign-in action maps code USER_BANNED to a message.
+  databaseHooks: {
+    session: {
+      create: {
+        async before(session) {
+          const ban = await getActiveBan(session.userId);
+          if (ban) {
+            throw new APIError("FORBIDDEN", { message: banMessage(ban), code: "USER_BANNED" });
+          }
+        },
       },
     },
   },

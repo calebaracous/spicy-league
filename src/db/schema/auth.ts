@@ -14,6 +14,12 @@ export const users = pgTable("users", {
   pronouns: text("pronouns"),
   role: userRoleEnum("role").default("user").notNull(),
   opggUrl: text("opgg_url"),
+  // League ban (see src/lib/bans.ts). Active while bannedAt is set and
+  // banExpiresAt is null (permanent) or in the future.
+  bannedAt: timestamp("banned_at", { mode: "date" }),
+  banReason: text("ban_reason"),
+  banExpiresAt: timestamp("ban_expires_at", { mode: "date" }),
+  bannedBy: text("banned_by"),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });

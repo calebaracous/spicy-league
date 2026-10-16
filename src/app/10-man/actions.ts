@@ -12,6 +12,7 @@ import {
   tenMans,
 } from "@/db/schema/ten-mans";
 import { requireAdmin, requireAuth } from "@/lib/auth-helpers";
+import { getActiveBan } from "@/lib/bans";
 import { electCaptains, PICK_ORDER_C1_C2 } from "@/lib/ten-man";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -104,6 +105,9 @@ export async function joinSignup(id: string): Promise<TenManActionResult> {
   const userId = session.user.id;
 
   return run(async () => {
+    if (await getActiveBan(userId)) {
+      throw new TenManError("Your account is suspended from Spicy League.");
+    }
     await db.transaction(async (tx) => {
       // Lock the row
       const [tm] = await tx.select().from(tenMans).where(eq(tenMans.id, id)).for("update");

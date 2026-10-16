@@ -9,6 +9,7 @@ import { db } from "@/db/client";
 import { seasons } from "@/db/schema/seasons";
 import { seasonSignups } from "@/db/schema/seasons";
 import { requireOnboarded } from "@/lib/auth-helpers";
+import { getActiveBan } from "@/lib/bans";
 
 const LOL_ROLES = ["top", "jungle", "mid", "adc", "support", "fill"] as const;
 const CS2_MAPS = ["dust2", "mirage", "inferno", "nuke", "overpass", "anubis", "ancient"] as const;
@@ -24,6 +25,7 @@ const cs2PrefsSchema = z.object({
 
 export async function submitSignup(slug: string, formData: FormData) {
   const session = await requireOnboarded();
+  if (await getActiveBan(session.user.id)) redirect(`/seasons/${slug}?error=banned`);
 
   const season = await db.query.seasons.findFirst({
     where: and(eq(seasons.slug, slug), eq(seasons.state, "signups_open")),

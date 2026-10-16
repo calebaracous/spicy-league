@@ -7,6 +7,7 @@ import { teams } from "@/db/schema/drafts";
 import { matches } from "@/db/schema/matches";
 import { seasons, seasonSignups, type SeasonState } from "@/db/schema/seasons";
 import { auth } from "@/auth";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +25,14 @@ type Params = Promise<{ slug: string }>;
 type SearchParams = Promise<{ "signed-up"?: string; error?: string }>;
 
 export const dynamic = "force-dynamic";
+
+// Codes the signup action redirects here with (`submitSignup`).
+const SIGNUP_ERRORS: Record<string, string> = {
+  "signups-closed": "Signups for this season are closed.",
+  "signups-not-open": "Signups for this season haven't opened yet.",
+  "already-signed-up": "You're already signed up for this season.",
+  banned: "Your account is suspended from Spicy League, so you can't sign up.",
+};
 
 function StatusPanel({
   state,
@@ -186,7 +195,8 @@ export default async function SeasonDetailPage({
   searchParams: SearchParams;
 }) {
   const { slug } = await params;
-  const { "signed-up": signedUp } = await searchParams;
+  const { "signed-up": signedUp, error } = await searchParams;
+  const errorMessage = error ? (SIGNUP_ERRORS[error] ?? null) : null;
 
   const season = await db.query.seasons.findFirst({
     where: and(eq(seasons.slug, slug), ne(seasons.state, "draft")),
@@ -268,6 +278,12 @@ export default async function SeasonDetailPage({
 
       {signedUp ? (
         <FlashToast param="signed-up" message={`You're signed up for ${season.name}.`} />
+      ) : null}
+
+      {errorMessage ? (
+        <Alert variant="destructive">
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
       ) : null}
 
       <StatusPanel
