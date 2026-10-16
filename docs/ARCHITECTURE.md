@@ -196,10 +196,16 @@ Auth flow:
 - `/profile` — private profile + account linking (up to 3 Riot accounts, Steam + Leetify)
 
 Admin (requires `role === "admin"`):
-- `/admin` — all seasons
+- `/admin` — overview: stat tiles, "needs attention" (results to confirm,
+  disputes, paused drafts, signup windows closed while still "open", a live
+  10-man), active seasons with signup counts, newest accounts, latest season
+  signups, then all seasons. Data from `getAdminOverview()`
+  (`src/lib/admin-overview.ts`).
+- `/admin/users` — player search + filters (banned / unverified / admins),
+  ban (reason + 1/7/30 days or permanent) and unban
 - `/admin/seasons/new` — create season
 - `/admin/seasons/[slug]` — edit + state transition
-- `/admin/seasons/[slug]/signups` — promote/demote captains, reorder, CSV export (`/signups/export`)
+- `/admin/seasons/[slug]/signups` — promote/demote captains, reorder, remove a player (pre-draft only), CSV export (`/signups/export`)
 - `/admin/seasons/[slug]/draft` — start/pause/resume/undo controls
 - `/admin/seasons/[slug]/matches` — generate schedule, seed playoffs, confirm results
 - 10-man admin controls (start, cancel, report result) are inline on the

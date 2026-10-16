@@ -2,7 +2,8 @@ import { asc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { promoteCaptain, demoteCaptain, moveCaptain } from "./actions";
+import { promoteCaptain, demoteCaptain, moveCaptain, removeSignup } from "./actions";
+import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { db } from "@/db/client";
 import { seasons } from "@/db/schema/seasons";
 import { seasonSignups, seasonCaptains } from "@/db/schema/seasons";
@@ -24,6 +25,8 @@ type SearchParams = Promise<{ saved?: string; error?: string; role?: string }>;
 const ERROR_MESSAGES: Record<string, string> = {
   "not-found": "Signup not found.",
   "already-captain": "This player is already a captain.",
+  "remove-too-late":
+    "Players can only be removed before the draft starts. Once teams exist, removing someone would break rosters and the schedule.",
 };
 
 const LOL_ROLE_LABELS: Record<string, string> = {
@@ -109,6 +112,8 @@ export default async function AdminSignupsPage({
       : allSignups;
 
   const promoteWithSlug = promoteCaptain.bind(null, slug);
+  const removeWithSlug = removeSignup.bind(null, slug);
+  const canRemove = ["signups_open", "signups_closed", "captains_selected"].includes(season.state);
   const demoteWithSlug = demoteCaptain.bind(null, slug);
   const moveWithSlug = moveCaptain.bind(null, slug);
 
@@ -137,7 +142,9 @@ export default async function AdminSignupsPage({
         </p>
       </header>
 
-      {saved ? <FlashToast message="Saved." /> : null}
+      {saved ? (
+        <FlashToast message={saved === "removed" ? "Player removed from the season." : "Saved."} />
+      ) : null}
       {errorMessage ? (
         <Alert variant="destructive">
           <AlertDescription>{errorMessage}</AlertDescription>
@@ -287,13 +294,27 @@ export default async function AdminSignupsPage({
                           <LocalTime date={s.createdAt} preset="date-short" />
                         </td>
                         <td className="py-2">
-                          {!isCaptain ? (
-                            <form action={promoteWithSlug.bind(null, s.id)}>
-                              <Button type="submit" variant="outline" size="sm">
-                                Make captain
-                              </Button>
-                            </form>
-                          ) : null}
+                          <div className="flex items-center justify-end gap-1">
+                            {!isCaptain ? (
+                              <form action={promoteWithSlug.bind(null, s.id)}>
+                                <Button type="submit" variant="outline" size="sm">
+                                  Make captain
+                                </Button>
+                              </form>
+                            ) : null}
+                            {canRemove ? (
+                              <form action={removeWithSlug.bind(null, s.id)}>
+                                <ConfirmSubmitButton
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-destructive hover:text-destructive"
+                                  confirmMessage={`Remove ${s.name ?? s.username} from ${season.name}?${isCaptain ? " They'll also lose their captain spot." : ""}`}
+                                >
+                                  Remove
+                                </ConfirmSubmitButton>
+                              </form>
+                            ) : null}
+                          </div>
                         </td>
                       </tr>
                     );

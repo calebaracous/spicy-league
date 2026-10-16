@@ -86,12 +86,13 @@ Rendered by `src/app/page.tsx`:
 ## Admin pages
 
 - `src/app/admin/layout.tsx` — wraps admin section with `requireAdmin()`.
-- `src/app/admin/page.tsx` — all seasons (including drafts).
+- `src/app/admin/page.tsx` — admin overview (stats, needs-attention list, active seasons, newest accounts, latest signups) + all seasons.
+- `src/app/admin/users/page.tsx` — player search/filters, ban + unban forms. `actions.ts` — `banUserAction`, `unbanUserAction`.
 - `src/app/admin/seasons/new/page.tsx` — create season form.
 - `src/app/admin/seasons/actions.ts` — `createSeason`, `updateSeason`, `transitionSeasonState`. zod-validated.
 - `src/app/admin/seasons/[slug]/page.tsx` — edit metadata + state transition buttons.
 - `src/app/admin/seasons/[slug]/signups/page.tsx` — signup roster, captain promotion UI.
-- `src/app/admin/seasons/[slug]/signups/actions.ts` — `promoteCaptain`, `demoteCaptain`, `moveCaptain` (swap via a `-1` placeholder), `getSignupStats`.
+- `src/app/admin/seasons/[slug]/signups/actions.ts` — `promoteCaptain`, `demoteCaptain`, `moveCaptain` (swap via a `-1` placeholder), `removeSignup` (pre-draft only; drops captain spot + renumbers), `getSignupStats`.
 - `src/app/admin/seasons/[slug]/signups/export/route.ts` — CSV download of signup roster.
 - `src/app/admin/seasons/[slug]/draft/page.tsx` — admin draft board with start/pause/resume/undo controls.
 - `src/app/admin/seasons/[slug]/matches/page.tsx` — schedule generation + playoff seeding + confirm/dispute/reset buttons.
@@ -145,7 +146,7 @@ Rendered by `src/app/page.tsx`:
 - `src/db/schema/stats.ts` — `accountLinks`, `riotStatSnapshots` (per account link), `leetifyStatSnapshots`.
 - `src/db/schema/ten-mans.ts` — `tenMans`, `tenManSignups`, `tenManVotes`, `tenManCaptains`, `tenManPicks`. `ten_man_state` enum.
 
-Migrations: `drizzle/0000_baseline.sql` (full schema + partial index) and `drizzle/0001_reconcile_live_schema.sql` (idempotent fix-up for DBs from the pre-squash history), plus `drizzle/meta/`. See [DATA-MODEL.md](DATA-MODEL.md) → Migrations.
+Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/0001_reconcile_live_schema.sql` (idempotent fix-up for DBs from the pre-squash history), `drizzle/0002_user_bans.sql` (ban columns), plus `drizzle/meta/`. See [DATA-MODEL.md](DATA-MODEL.md) → Migrations.
 
 ## Business logic (`src/lib`)
 
@@ -161,6 +162,8 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index) and `drizz
 - `src/lib/riot-api.ts` — Riot API client. `getAccountByRiotId`, `getRankEntries`, `getTopChampions`, `getChampionName` (Data Dragon).
 - `src/lib/stat-refresh.ts` — `refreshRiotStats(userId)` (all of a user's Riot links), `refreshAllRiotStats` (every Riot link); per-link delete-then-insert, 1200ms sleep between links.
 - `src/lib/rate-limit.ts` — Upstash sliding-window. Specs: `magicLink` (unused), `statRefresh`. Fails open if Upstash env missing.
+- `src/lib/bans.ts` — `isBanActive`, `getActiveBan` (DB read), `banUser` (also deletes sessions), `unbanUser`, `banMessage`.
+- `src/lib/admin-overview.ts` — `getAdminOverview()`: stats, newest accounts, latest signups, active seasons, action items.
 - `src/lib/safe-redirect.ts` — `safeCallbackUrl` (same-origin paths only) + `signInHref(path)` for sign-in links that return the user.
 - `src/lib/season-meta.ts` — `getSeasonName` (request-cached) + `seasonPageMetadata("Page")` for season sub-page `<title>`s.
 
