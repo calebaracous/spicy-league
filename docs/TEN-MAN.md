@@ -137,7 +137,8 @@ switches on `snap.tenMan.state` to render one phase board from
 
 - `/10-man` (`src/app/10-man/page.tsx`) — if a 10-man is active, **redirects**
   to `/10-man/{id}`. Otherwise renders `_landing.tsx`: 4-step explainer,
-  admin "Start a 10-man" button, last 10 completed results
+  admin "Start a 10-man" button (non-admins get a "no 10-man running" note,
+  plus sign-in / create-account links when signed out), last 10 completed results
   (`getRecentTenMans`).
 - `/10-man/[id]` — server-fetches the snapshot, passes it to the live board.
   404 if the id doesn't exist. Cancelled and completed sessions stay viewable.

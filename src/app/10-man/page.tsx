@@ -17,5 +17,5 @@ export default async function TenManLandingPage() {
 
   const isAdmin = session?.user?.role === "admin";
 
-  return <TenManLanding isAdmin={isAdmin} history={history} />;
+  return <TenManLanding isAdmin={isAdmin} signedIn={!!session} history={history} />;
 }

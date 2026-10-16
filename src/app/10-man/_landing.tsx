@@ -1,11 +1,13 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import { LocalTime } from "@/components/ui/local-time";
 import { SectionLabel } from "@/components/ui/section-label";
 import { ActionError, useTenManAction } from "./[id]/_phases/shared";
+import { signInHref } from "@/lib/safe-redirect";
 import { start10Man } from "./actions";
 
 const STEPS = [
@@ -31,7 +33,15 @@ type HistoryEntry = {
   loserName: string;
 };
 
-export function TenManLanding({ isAdmin, history }: { isAdmin: boolean; history: HistoryEntry[] }) {
+export function TenManLanding({
+  isAdmin,
+  signedIn,
+  history,
+}: {
+  isAdmin: boolean;
+  signedIn: boolean;
+  history: HistoryEntry[];
+}) {
   const router = useRouter();
   const { pending, error, run } = useTenManAction();
 
@@ -91,18 +101,38 @@ export function TenManLanding({ isAdmin, history }: { isAdmin: boolean; history:
                 {pending ? "Starting…" : "Start a 10-man"}
               </Button>
             ) : (
-              <>
-                <Button
-                  disabled
-                  className="rounded-full px-6 py-2.5 opacity-40"
-                  style={{ backgroundColor: "var(--accent)", color: "var(--accent-fg)" }}
-                >
-                  Start a 10-man
-                </Button>
-                <span style={{ fontSize: 13, color: "var(--muted)" }}>
-                  Only admins can start a 10-man.
-                </span>
-              </>
+              // Non-admins can't start one, so tell them what to expect
+              // instead of showing a disabled button.
+              <div
+                className="flex flex-col gap-3 rounded-xl p-5"
+                style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+              >
+                <p style={{ fontSize: 15, color: "var(--text)" }}>
+                  No 10-man is running right now.
+                </p>
+                <p style={{ fontSize: 13, lineHeight: 1.6, color: "var(--muted)" }}>
+                  When an admin opens signups, this page takes you straight to the lobby and a live
+                  indicator appears in the site header. The first 10 to join play.
+                </p>
+                {signedIn ? null : (
+                  <div className="flex flex-wrap gap-3 pt-1">
+                    <Link
+                      href={signInHref("/10-man")}
+                      className="rounded-full px-5 py-2 text-sm font-medium transition-opacity hover:opacity-80"
+                      style={{ backgroundColor: "var(--accent)", color: "var(--accent-fg)" }}
+                    >
+                      Sign in
+                    </Link>
+                    <Link
+                      href="/signup"
+                      className="rounded-full border px-5 py-2 text-sm font-medium transition-opacity hover:opacity-80"
+                      style={{ borderColor: "var(--border)", color: "var(--text)" }}
+                    >
+                      Create an account
+                    </Link>
+                  </div>
+                )}
+              </div>
             )}
           </div>
           <ActionError message={error} />
