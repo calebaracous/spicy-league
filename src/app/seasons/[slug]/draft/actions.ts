@@ -34,7 +34,7 @@ export async function startDraft(slug: string) {
   const signups = await db
     .select({ userId: seasonSignups.userId })
     .from(seasonSignups)
-    .where(eq(seasonSignups.seasonId, season.id));
+    .where(and(eq(seasonSignups.seasonId, season.id), eq(seasonSignups.kind, "player")));
   const poolSize = signups.filter((s) => !captainIds.has(s.userId)).length;
   if (poolSize < totalPicksFor(captains.length)) {
     redirect(`/admin/seasons/${slug}/draft?error=pool-too-small`);
@@ -185,7 +185,11 @@ export async function submitPick(slug: string, pickedUserId: string, expectedPic
   }
 
   const inSignups = await db.query.seasonSignups.findFirst({
-    where: and(eq(seasonSignups.seasonId, season.id), eq(seasonSignups.userId, pickedUserId)),
+    where: and(
+      eq(seasonSignups.seasonId, season.id),
+      eq(seasonSignups.userId, pickedUserId),
+      eq(seasonSignups.kind, "player"),
+    ),
   });
   if (!inSignups) {
     redirect(`/seasons/${slug}/draft?error=not-in-pool`);

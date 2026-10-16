@@ -29,6 +29,13 @@
       "when": 1792172290649,
       "tag": "0003_match_substitutions",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1792173478413,
+      "tag": "0004_sub_signups",
+      "breakpoints": true
     }
   ]
 }

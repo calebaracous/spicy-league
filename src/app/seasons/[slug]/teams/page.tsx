@@ -11,7 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { SeasonNav } from "@/components/season-nav";
 import { computeStandings } from "@/lib/schedule";
 import { seasonPageMetadata } from "@/lib/season-meta";
-import { GAME_LABELS } from "@/lib/seasons";
+import { GAME_LABELS, openSignupKind } from "@/lib/seasons";
+import { getAvailableSubs } from "@/lib/substitutions";
 
 export const generateMetadata = seasonPageMetadata("Teams");
 
@@ -63,6 +64,14 @@ export default async function TeamsPage({ params }: { params: Params }) {
     : [];
   const record = new Map(standings.map((s) => [s.teamId, s]));
   const viewerId = session?.user?.id ?? null;
+  // Once teams exist, everyone signed up but not on a team can be subbed in.
+  const availableSubs = seasonTeams.length > 0 ? await getAvailableSubs(season.id) : [];
+  // Offer the sub list only to people not already in the season.
+  const viewerInSeason =
+    !!viewerId &&
+    (members.some((m) => m.userId === viewerId) ||
+      availableSubs.some((p) => p.userId === viewerId));
+  const subSignupsOpen = openSignupKind(season) === "sub" && !viewerInSeason;
 
   return (
     <div className="page flex-1 space-y-8 [--page-max:56rem]">
@@ -138,6 +147,74 @@ export default async function TeamsPage({ params }: { params: Params }) {
           })}
         </div>
       )}
+
+      {seasonTeams.length > 0 ? (
+        <section aria-labelledby="available-subs" className="space-y-3">
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <h2
+              id="available-subs"
+              className="text-muted-foreground text-sm font-medium tracking-wide uppercase"
+            >
+              Available subs
+            </h2>
+            {subSignupsOpen ? (
+              <Link
+                href={`/seasons/${slug}/signup`}
+                className="text-accent-text text-xs hover:underline"
+              >
+                Join the sub list →
+              </Link>
+            ) : null}
+          </div>
+          <p className="text-muted-foreground text-sm">
+            Signed up but not on a team. Captains request a sub from the match page; an admin
+            approves it.
+          </p>
+          {availableSubs.length === 0 ? (
+            <p className="text-muted-foreground rounded-xl border px-4 py-3 text-sm">
+              Nobody is on the sub list yet.
+            </p>
+          ) : (
+            <ul className="divide-y rounded-xl border">
+              {availableSubs.map((p) => (
+                <li key={p.userId} className="space-y-1 px-4 py-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex min-w-0 items-center gap-2">
+                      <Link
+                        href={`/users/${p.username}`}
+                        className="truncate font-medium underline-offset-2 hover:underline"
+                      >
+                        {p.label}
+                      </Link>
+                      <Badge variant="outline" className="text-xs">
+                        {p.kind === "sub" ? "Sub list" : "Undrafted"}
+                      </Badge>
+                    </div>
+                    <span className="text-muted-foreground text-xs">
+                      {[formatPrefs(season.game, p.rolePrefs), p.rank].filter(Boolean).join(" · ")}
+                    </span>
+                  </div>
+                  {p.notes ? <p className="text-muted-foreground text-xs">“{p.notes}”</p> : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ) : null}
     </div>
   );
+}
+
+/** "Mid / Top" for LoL, "Mirage, Nuke" for CS2. */
+function formatPrefs(game: string, prefs: unknown): string | null {
+  if (!prefs || typeof prefs !== "object") return null;
+  if (game === "lol") {
+    const p = prefs as { primaryRole?: string; secondaryRole?: string };
+    return [p.primaryRole, p.secondaryRole]
+      .filter(Boolean)
+      .map((r) => ROLE_LABELS[r!] ?? r)
+      .join(" / ");
+  }
+  const maps = (prefs as { mapPrefs?: string[] }).mapPrefs;
+  return maps?.length ? maps.join(", ") : null;
 }

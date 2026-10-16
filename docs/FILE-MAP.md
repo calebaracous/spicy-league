@@ -28,6 +28,7 @@ Trivial shadcn primitives get a single entry at the bottom.
 - `vitest.config.mts` — unit test config; aliases `@` and stubs `server-only`.
 - `tests/unit/draft-order.test.ts`, `tests/unit/round-robin.test.ts` — snake order and round-robin logic.
 - `tests/unit/substitution-rules.test.ts` — substitution eligibility rules.
+- `tests/unit/signup-kind.test.ts` — when player vs sub signups are open.
 - `playwright.config.ts` — e2e config: serial, builds + starts the app on :3100 with auth URLs overridden to localhost.
 - `tests/e2e/global-setup.ts` / `global-teardown.ts` — seed run-scoped admin + players; delete all e2e-tagged data afterwards.
 - `tests/e2e/support/` — `env.ts` (DB URL, markers), `db.ts` (assert helpers, `cleanupE2EData`), `seed.ts` (users, signups, `seedDraftSeason`), `pages.ts` (sign-in, live-board + admin-draft helpers, `freezeLiveUpdates`).
@@ -150,13 +151,13 @@ Rendered by `src/app/page.tsx`:
 - `src/db/schema/stats.ts` — `accountLinks`, `riotStatSnapshots` (per account link), `leetifyStatSnapshots`.
 - `src/db/schema/ten-mans.ts` — `tenMans`, `tenManSignups`, `tenManVotes`, `tenManCaptains`, `tenManPicks`. `ten_man_state` enum.
 
-Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/0001_reconcile_live_schema.sql` (idempotent fix-up for DBs from the pre-squash history), `drizzle/0002_user_bans.sql` (ban columns), `drizzle/0003_match_substitutions.sql` (subs table), plus `drizzle/meta/`. See [DATA-MODEL.md](DATA-MODEL.md) → Migrations.
+Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/0001_reconcile_live_schema.sql` (idempotent fix-up for DBs from the pre-squash history), `drizzle/0002_user_bans.sql` (ban columns), `drizzle/0003_match_substitutions.sql` (subs table), `drizzle/0004_sub_signups.sql` (signup kind), plus `drizzle/meta/`. See [DATA-MODEL.md](DATA-MODEL.md) → Migrations.
 
 ## Business logic (`src/lib`)
 
 - `src/lib/utils.ts` — `cn()` from clsx + tailwind-merge.
 - `src/lib/env.ts` — t3-env + zod schema. See [ENV.md](ENV.md).
-- `src/lib/seasons.ts` — `SEASON_STATES`, `TRANSITIONS` state machine, `nextStates`, `canTransition`, `SEASON_STATE_LABELS`, `GAME_LABELS`, `PUBLIC_STATES`, `isPublic`, `isValidSlug`, `slugify`.
+- `src/lib/seasons.ts` — `SEASON_STATES`, `SUB_SIGNUP_STATES` + `openSignupKind` (player vs sub signups), `TRANSITIONS` state machine, `nextStates`, `canTransition`, `SEASON_STATE_LABELS`, `GAME_LABELS`, `PUBLIC_STATES`, `isPublic`, `isValidSlug`, `slugify`.
 - `src/lib/draft.ts` — `PICKS_PER_TEAM`, `captainOrderForPick` (snake), `totalPicks`, `getDraftSnapshot` (incl. solo-queue rank per pool player), `finalizeDraft`. See [DRAFT.md](DRAFT.md).
 - `src/lib/schedule.ts` — `buildRoundRobin` (circle method), `generateSchedule`, `computeStandings`, `seedPlayoffs`, `getTeamForCaptain` (captain *or* rostered member). See [MATCHES.md](MATCHES.md).
 - `src/lib/homepage.ts` — `getHomepageData()` (discriminated union of 6 home states), `formatRank`, rank-sorting helpers, podium builder.

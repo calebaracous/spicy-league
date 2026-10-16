@@ -85,6 +85,17 @@ Per-state copy lives in `StatusPanel` in `src/app/seasons/[slug]/page.tsx`:
 | `playoffs` | "Matches & standings" — same |
 | `complete` | "Final standings" + champion name lookup |
 
+**Sub signups.** From `signups_closed` through `playoffs` (and during
+`signups_open` once `signupClosesAt` has passed) the overview also shows
+"Missed signups? Join as a sub." → the same `/seasons/[slug]/signup` page in
+sub mode. `openSignupKind(season)` in `src/lib/seasons.ts` decides
+`"player" | "sub" | null`; `SUB_SIGNUP_STATES` lists the sub states. Sub
+signups (`season_signups.kind = 'sub'`) never enter the draft pool, can't be
+captains and don't count toward signup totals; they appear under
+**Available subs** on the Teams page and first in the match-page sub picker.
+A sub signup can leave the list (`leaveSubList`) unless they hold an
+approved slot in an unplayed match.
+
 ### Home page
 
 `getHomepageData()` in `src/lib/homepage.ts` takes the newest season in a
@@ -140,8 +151,10 @@ Each user-facing action checks that the season is in the expected state
 before mutating. Grep for `state:` and `state,` in the `where` clauses of
 server actions to find them. Examples:
 
-- `submitSignup` — requires `seasons.state = 'signups_open'` AND current
-  time within `signupOpensAt..signupClosesAt` window (both optional).
+- `submitSignup` — takes whatever `openSignupKind(season)` allows: a
+  `player` signup during `signups_open` inside the
+  `signupOpensAt..signupClosesAt` window, a `sub` signup after that until the
+  season completes, nothing otherwise.
 - `submitPick` — requires `drafts.state = 'in_progress'`.
 - `reportMatch` — does not check season state; just requires the match
   itself is not `confirmed`.

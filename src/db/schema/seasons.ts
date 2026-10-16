@@ -52,6 +52,10 @@ export type NewSeason = typeof seasons.$inferInsert;
 export type SeasonState = Season["state"];
 export type Game = Season["game"];
 
+// "player" = regular signup (draft pool). "sub" = signed up after regular
+// signups closed, only to be picked as a substitute — never drafted.
+export const signupKindEnum = pgEnum("signup_kind", ["player", "sub"]);
+
 export const seasonSignups = pgTable(
   "season_signups",
   {
@@ -66,6 +70,7 @@ export const seasonSignups = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     rolePrefs: jsonb("role_prefs"),
     notes: text("notes"),
+    kind: signupKindEnum("kind").notNull().default("player"),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   },
   (table) => [

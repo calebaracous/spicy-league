@@ -218,6 +218,8 @@ export type SubCandidate = {
   label: string;
   teamName: string | null;
   rank: string | null;
+  /** "sub" = joined the sub list after signups closed; "player" = undrafted or drafted signup. */
+  kind: "player" | "sub";
 };
 
 /**
@@ -226,7 +228,12 @@ export type SubCandidate = {
  */
 export async function getSubCandidates(match: Match): Promise<SubCandidate[]> {
   const rows = await db
-    .select({ userId: seasonSignups.userId, username: users.username, name: users.name })
+    .select({
+      userId: seasonSignups.userId,
+      username: users.username,
+      name: users.name,
+      kind: seasonSignups.kind,
+    })
     .from(seasonSignups)
     .innerJoin(users, eq(seasonSignups.userId, users.id))
     .where(eq(seasonSignups.seasonId, match.seasonId));
@@ -266,15 +273,106 @@ export async function getSubCandidates(match: Match): Promise<SubCandidate[]> {
     ]),
   );
 
-  return rows
-    .filter((r) => !inMatch.has(r.userId))
+  return (
+    rows
+      .filter((r) => !inMatch.has(r.userId))
+      .map((r) => ({
+        userId: r.userId,
+        label: r.name ?? r.username ?? "?",
+        teamName: teamOf.get(r.userId) ?? null,
+        kind: r.kind,
+        rank: rankOf.get(r.userId) ?? null,
+      }))
+      // Sub-list signups first, then undrafted players, then other teams.
+      .sort(
+        (a, b) =>
+          Number(a.kind !== "sub") - Number(b.kind !== "sub") ||
+          Number(!!a.teamName) - Number(!!b.teamName) ||
+          a.label.localeCompare(b.label),
+      )
+  );
+}
+
+export type AvailableSub = {
+  userId: string;
+  username: string | null;
+  label: string;
+  kind: "player" | "sub";
+  rolePrefs: unknown;
+  notes: string | null;
+  rank: string | null;
+  joinedAt: Date;
+};
+
+/**
+ * Season signups who aren't on any team: the sub list (kind "sub") plus
+ * undrafted regular signups. Shown to captains on the Teams page.
+ */
+export async function getAvailableSubs(seasonId: string): Promise<AvailableSub[]> {
+  const [rows, drafted] = await Promise.all([
+    db
+      .select({
+        userId: seasonSignups.userId,
+        username: users.username,
+        name: users.name,
+        kind: seasonSignups.kind,
+        rolePrefs: seasonSignups.rolePrefs,
+        notes: seasonSignups.notes,
+        joinedAt: seasonSignups.createdAt,
+        bannedAt: users.bannedAt,
+        banExpiresAt: users.banExpiresAt,
+      })
+      .from(seasonSignups)
+      .innerJoin(users, eq(seasonSignups.userId, users.id))
+      .where(eq(seasonSignups.seasonId, seasonId)),
+    db
+      .select({ userId: teamMembers.userId })
+      .from(teamMembers)
+      .innerJoin(teams, eq(teamMembers.teamId, teams.id))
+      .where(eq(teams.seasonId, seasonId)),
+  ]);
+  const onTeam = new Set(drafted.map((d) => d.userId));
+  const now = new Date();
+  const free = rows.filter(
+    (r) => !onTeam.has(r.userId) && !(r.bannedAt && (!r.banExpiresAt || r.banExpiresAt > now)),
+  );
+  if (free.length === 0) return [];
+
+  const ranks = await db
+    .select({
+      userId: riotStatSnapshots.userId,
+      tier: riotStatSnapshots.tier,
+      rankDivision: riotStatSnapshots.rankDivision,
+    })
+    .from(riotStatSnapshots)
+    .where(
+      and(
+        eq(riotStatSnapshots.queue, "solo"),
+        inArray(
+          riotStatSnapshots.userId,
+          free.map((r) => r.userId),
+        ),
+      ),
+    );
+  const rankOf = new Map(
+    ranks.map((r) => [
+      r.userId,
+      r.tier ? `${r.tier[0]}${r.tier.slice(1).toLowerCase()} ${r.rankDivision ?? ""}`.trim() : null,
+    ]),
+  );
+
+  return free
     .map((r) => ({
       userId: r.userId,
+      username: r.username,
       label: r.name ?? r.username ?? "?",
-      teamName: teamOf.get(r.userId) ?? null,
+      kind: r.kind,
+      rolePrefs: r.rolePrefs,
+      notes: r.notes,
       rank: rankOf.get(r.userId) ?? null,
+      joinedAt: r.joinedAt,
     }))
-    .sort((a, b) => Number(!!a.teamName) - Number(!!b.teamName) || a.label.localeCompare(b.label));
+    .sort((a, b) => b.joinedAt.getTime() - a.joinedAt.getTime());
 }
 
 export type PlayerMatch = {

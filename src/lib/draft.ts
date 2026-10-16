@@ -92,7 +92,7 @@ export async function getDraftSnapshot(seasonSlug: string): Promise<DraftSnapsho
       })
       .from(seasonSignups)
       .innerJoin(users, eq(seasonSignups.userId, users.id))
-      .where(eq(seasonSignups.seasonId, season.id))
+      .where(and(eq(seasonSignups.seasonId, season.id), eq(seasonSignups.kind, "player")))
       .orderBy(asc(sql`COALESCE(${users.name}, ${users.username})`)),
     db
       .select({

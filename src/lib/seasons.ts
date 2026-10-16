@@ -46,6 +46,33 @@ export const GAME_LABELS: Record<Game, string> = {
   cs2: "Counter-Strike 2",
 };
 
+/** States where late joiners can still sign up — as subs only. */
+export const SUB_SIGNUP_STATES: readonly SeasonState[] = [
+  "signups_closed",
+  "captains_selected",
+  "drafting",
+  "group_stage",
+  "playoffs",
+];
+
+/**
+ * Which kind of signup a season accepts right now: "player" during the
+ * signup window (draft pool), "sub" once regular signups have closed until
+ * the season completes, otherwise null.
+ */
+export function openSignupKind(
+  season: { state: SeasonState; signupOpensAt: Date | null; signupClosesAt: Date | null },
+  now = new Date(),
+): "player" | "sub" | null {
+  if (season.state === "signups_open") {
+    if (season.signupOpensAt && now < season.signupOpensAt) return null;
+    // Window passed but an admin hasn't closed signups yet: late = sub.
+    if (season.signupClosesAt && now > season.signupClosesAt) return "sub";
+    return "player";
+  }
+  return SUB_SIGNUP_STATES.includes(season.state) ? "sub" : null;
+}
+
 export const PUBLIC_STATES: readonly SeasonState[] = SEASON_STATES.filter((s) => s !== "draft");
 
 export function isPublic(state: SeasonState): boolean {

@@ -247,7 +247,11 @@ export function MatchLineups({
                         <option key={c.userId} value={c.userId}>
                           {c.label}
                           {c.rank ? ` · ${c.rank}` : ""}
-                          {c.teamName ? ` · on ${c.teamName}` : " · free agent"}
+                          {c.teamName
+                            ? ` · on ${c.teamName}`
+                            : c.kind === "sub"
+                              ? " · sub list"
+                              : " · free agent"}
                         </option>
                       ))}
                     </select>

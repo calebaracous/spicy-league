@@ -14,15 +14,18 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LocalTime } from "@/components/ui/local-time";
 import { SeasonNav } from "@/components/season-nav";
 import { FlashToast } from "@/components/flash-toast";
+import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
+import { leaveSubList } from "./signup/actions";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { getTeamForCaptain } from "@/lib/schedule";
-import { GAME_LABELS, SEASON_STATE_LABELS } from "@/lib/seasons";
+import { GAME_LABELS, openSignupKind, SEASON_STATE_LABELS } from "@/lib/seasons";
+import { signInHref } from "@/lib/safe-redirect";
 import { cn } from "@/lib/utils";
 
 export const generateMetadata = seasonPageMetadata(null);
 
 type Params = Promise<{ slug: string }>;
-type SearchParams = Promise<{ "signed-up"?: string; error?: string }>;
+type SearchParams = Promise<{ "signed-up"?: string; "left-subs"?: string; error?: string }>;
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +35,8 @@ const SIGNUP_ERRORS: Record<string, string> = {
   "signups-not-open": "Signups for this season haven't opened yet.",
   "already-signed-up": "You're already signed up for this season.",
   banned: "Your account is suspended from Spicy League, so you can't sign up.",
+  "sub-booked":
+    "You're approved to sub in a match that hasn't been played yet. Ask the captain or an admin to release you first.",
 };
 
 function StatusPanel({
@@ -195,7 +200,7 @@ export default async function SeasonDetailPage({
   searchParams: SearchParams;
 }) {
   const { slug } = await params;
-  const { "signed-up": signedUp, error } = await searchParams;
+  const { "signed-up": signedUp, "left-subs": leftSubs, error } = await searchParams;
   const errorMessage = error ? (SIGNUP_ERRORS[error] ?? null) : null;
 
   const season = await db.query.seasons.findFirst({
@@ -204,14 +209,18 @@ export default async function SeasonDetailPage({
   if (!season) notFound();
 
   const session = await auth();
-  const alreadySignedUp = session?.user?.id
-    ? !!(await db.query.seasonSignups.findFirst({
+  const mySignup = session?.user?.id
+    ? await db.query.seasonSignups.findFirst({
         where: and(
           eq(seasonSignups.seasonId, season.id),
           eq(seasonSignups.userId, session.user.id),
         ),
-      }))
-    : false;
+        columns: { kind: true },
+      })
+    : undefined;
+  const alreadySignedUp = !!mySignup;
+  // Late joiners can sign up as subs once regular signups have closed.
+  const subSignupsOpen = openSignupKind(season) === "sub";
 
   let championName: string | null = null;
   if (season.state === "complete") {
@@ -276,8 +285,16 @@ export default async function SeasonDetailPage({
 
       <SeasonNav slug={season.slug} state={season.state} current="overview" />
 
+      {leftSubs ? <FlashToast param="left-subs" message="You've left the sub list." /> : null}
       {signedUp ? (
-        <FlashToast param="signed-up" message={`You're signed up for ${season.name}.`} />
+        <FlashToast
+          param="signed-up"
+          message={
+            signedUp === "sub"
+              ? `You're on the sub list for ${season.name}.`
+              : `You're signed up for ${season.name}.`
+          }
+        />
       ) : null}
 
       {errorMessage ? (
@@ -292,6 +309,54 @@ export default async function SeasonDetailPage({
         alreadySignedUp={alreadySignedUp}
         championName={championName}
       />
+
+      {mySignup?.kind === "sub" && season.state !== "complete" ? (
+        <section
+          aria-label="Sub list"
+          className="flex flex-wrap items-center justify-between gap-4 rounded-xl border p-5"
+        >
+          <div className="space-y-1">
+            <p className="text-label" style={{ color: "var(--accent-text)" }}>
+              You&apos;re on the sub list
+            </p>
+            <p className="text-muted-foreground text-sm">
+              Captains can request you for a match; an admin approves each sub. Your matches show up
+              in your match history.
+            </p>
+          </div>
+          <form action={leaveSubList.bind(null, season.slug)}>
+            <ConfirmSubmitButton
+              variant="outline"
+              confirmMessage="Leave the sub list? Any pending sub requests for you are withdrawn."
+            >
+              Leave sub list
+            </ConfirmSubmitButton>
+          </form>
+        </section>
+      ) : !mySignup && subSignupsOpen && !myTeam ? (
+        <section
+          aria-label="Sign up as a sub"
+          className="flex flex-wrap items-center justify-between gap-4 rounded-xl border p-5"
+        >
+          <div className="space-y-1">
+            <p className="font-medium">Missed signups? Join as a sub.</p>
+            <p className="text-muted-foreground text-sm">
+              You won&apos;t be drafted, but captains can bring you in for a match when they&apos;re
+              short.
+            </p>
+          </div>
+          <Link
+            href={
+              session
+                ? `/seasons/${season.slug}/signup`
+                : signInHref(`/seasons/${season.slug}/signup`)
+            }
+            className={cn(buttonVariants({ size: "lg" }))}
+          >
+            Sign up as a sub
+          </Link>
+        </section>
+      ) : null}
 
       {myTeam ? (
         <section

@@ -35,6 +35,7 @@ export async function GET(_req: Request, { params }: { params: Params }) {
       email: users.email,
       rolePrefs: seasonSignups.rolePrefs,
       notes: seasonSignups.notes,
+      kind: seasonSignups.kind,
       createdAt: seasonSignups.createdAt,
     })
     .from(seasonSignups)
@@ -44,8 +45,8 @@ export async function GET(_req: Request, { params }: { params: Params }) {
 
   const isLol = season.game === "lol";
   const headers = isLol
-    ? ["Display Name", "Email", "Primary Role", "Secondary Role", "Notes", "Signed Up"]
-    : ["Display Name", "Email", "Map Preferences", "Notes", "Signed Up"];
+    ? ["Display Name", "Email", "Type", "Primary Role", "Secondary Role", "Notes", "Signed Up"]
+    : ["Display Name", "Email", "Type", "Map Preferences", "Notes", "Signed Up"];
 
   const rows = signups.map((s) => {
     const prefs = s.rolePrefs as Record<string, unknown> | null;
@@ -54,6 +55,7 @@ export async function GET(_req: Request, { params }: { params: Params }) {
       return [
         escapeCell(displayName),
         escapeCell(s.email),
+        escapeCell(s.kind),
         escapeCell((prefs?.primaryRole as string) ?? ""),
         escapeCell((prefs?.secondaryRole as string) ?? ""),
         escapeCell(s.notes),
@@ -63,6 +65,7 @@ export async function GET(_req: Request, { params }: { params: Params }) {
     return [
       escapeCell(displayName),
       escapeCell(s.email),
+      escapeCell(s.kind),
       escapeCell(((prefs?.mapPrefs as string[]) ?? []).join("; ")),
       escapeCell(s.notes),
       escapeCell(s.createdAt.toISOString()),

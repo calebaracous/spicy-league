@@ -152,7 +152,7 @@ async function getSignupCount(seasonId: string): Promise<number> {
   const rows = await db
     .select({ userId: seasonSignups.userId })
     .from(seasonSignups)
-    .where(eq(seasonSignups.seasonId, seasonId));
+    .where(and(eq(seasonSignups.seasonId, seasonId), eq(seasonSignups.kind, "player")));
   return rows.length;
 }
 
@@ -164,7 +164,7 @@ async function getTopRankedPlayers(
   const signupRows = await db
     .select({ userId: seasonSignups.userId })
     .from(seasonSignups)
-    .where(eq(seasonSignups.seasonId, seasonId));
+    .where(and(eq(seasonSignups.seasonId, seasonId), eq(seasonSignups.kind, "player")));
 
   const allUserIds = signupRows.map((r) => r.userId);
   const eligibleIds = excludeUserIds.length
@@ -229,7 +229,7 @@ async function getRandomSignups(
   const signupRows = await db
     .select({ userId: seasonSignups.userId })
     .from(seasonSignups)
-    .where(eq(seasonSignups.seasonId, seasonId));
+    .where(and(eq(seasonSignups.seasonId, seasonId), eq(seasonSignups.kind, "player")));
 
   if (signupRows.length === 0) return [];
 

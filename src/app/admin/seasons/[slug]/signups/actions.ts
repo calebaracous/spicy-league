@@ -22,6 +22,7 @@ export async function promoteCaptain(slug: string, signupId: string) {
     where: and(eq(seasonSignups.id, signupId), eq(seasonSignups.seasonId, season.id)),
   });
   if (!signup) redirect(`/admin/seasons/${slug}/signups?error=not-found`);
+  if (signup.kind === "sub") redirect(`/admin/seasons/${slug}/signups?error=sub-captain`);
 
   const existing = await db.query.seasonCaptains.findFirst({
     where: and(eq(seasonCaptains.seasonId, season.id), eq(seasonCaptains.userId, signup.userId)),
@@ -57,18 +58,24 @@ export async function removeSignup(slug: string, signupId: string) {
 
   const season = await db.query.seasons.findFirst({ where: eq(seasons.slug, slug) });
   if (!season) redirect("/admin?error=not-found");
-  if (!(REMOVABLE_STATES as readonly string[]).includes(season.state)) {
-    redirect(`/admin/seasons/${slug}/signups?error=remove-too-late`);
-  }
-  const draft = await db.query.drafts.findFirst({ where: eq(drafts.seasonId, season.id) });
-  if (draft && draft.state !== "pending") {
-    redirect(`/admin/seasons/${slug}/signups?error=remove-too-late`);
-  }
 
   const signup = await db.query.seasonSignups.findFirst({
     where: and(eq(seasonSignups.id, signupId), eq(seasonSignups.seasonId, season.id)),
   });
   if (!signup) redirect(`/admin/seasons/${slug}/signups?error=not-found`);
+
+  // Sub signups were never in the draft pool, so they can go at any time.
+  // (An approved-but-unplayed sub slot fails its re-check on approval and
+  // shows "not signed up" if it's ever re-requested.)
+  if (signup.kind === "player") {
+    if (!(REMOVABLE_STATES as readonly string[]).includes(season.state)) {
+      redirect(`/admin/seasons/${slug}/signups?error=remove-too-late`);
+    }
+    const draft = await db.query.drafts.findFirst({ where: eq(drafts.seasonId, season.id) });
+    if (draft && draft.state !== "pending") {
+      redirect(`/admin/seasons/${slug}/signups?error=remove-too-late`);
+    }
+  }
 
   await db.transaction(async (tx) => {
     await tx
@@ -171,6 +178,6 @@ export async function getSignupStats(seasonId: string) {
   const [{ total }] = await db
     .select({ total: count() })
     .from(seasonSignups)
-    .where(eq(seasonSignups.seasonId, seasonId));
+    .where(and(eq(seasonSignups.seasonId, seasonId), eq(seasonSignups.kind, "player")));
   return { total, recommendedCaptains: Math.floor(total / 5) };
 }

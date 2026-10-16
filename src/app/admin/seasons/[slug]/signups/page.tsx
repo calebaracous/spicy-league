@@ -25,6 +25,7 @@ type SearchParams = Promise<{ saved?: string; error?: string; role?: string }>;
 const ERROR_MESSAGES: Record<string, string> = {
   "not-found": "Signup not found.",
   "already-captain": "This player is already a captain.",
+  "sub-captain": "Sub signups can't be captains — they joined after the draft pool closed.",
   "remove-too-late":
     "Players can only be removed before the draft starts. Once teams exist, removing someone would break rosters and the schedule.",
 };
@@ -73,6 +74,7 @@ export default async function AdminSignupsPage({
       id: seasonSignups.id,
       userId: seasonSignups.userId,
       rolePrefs: seasonSignups.rolePrefs,
+      kind: seasonSignups.kind,
       notes: seasonSignups.notes,
       createdAt: seasonSignups.createdAt,
       username: users.username,
@@ -271,6 +273,7 @@ export default async function AdminSignupsPage({
                 <tbody className="divide-y">
                   {filteredSignups.map((s) => {
                     const isCaptain = captainUserIds.has(s.userId);
+                    const isSub = s.kind === "sub";
                     return (
                       <tr key={s.id} className="hover:bg-muted/50">
                         <td className="py-2 pr-4">
@@ -279,6 +282,11 @@ export default async function AdminSignupsPage({
                             {isCaptain ? (
                               <Badge variant="secondary" className="text-xs">
                                 Captain
+                              </Badge>
+                            ) : null}
+                            {isSub ? (
+                              <Badge variant="outline" className="text-xs">
+                                Sub
                               </Badge>
                             ) : null}
                           </div>
@@ -295,14 +303,14 @@ export default async function AdminSignupsPage({
                         </td>
                         <td className="py-2">
                           <div className="flex items-center justify-end gap-1">
-                            {!isCaptain ? (
+                            {!isCaptain && !isSub ? (
                               <form action={promoteWithSlug.bind(null, s.id)}>
                                 <Button type="submit" variant="outline" size="sm">
                                   Make captain
                                 </Button>
                               </form>
                             ) : null}
-                            {canRemove ? (
+                            {canRemove || isSub ? (
                               <form action={removeWithSlug.bind(null, s.id)}>
                                 <ConfirmSubmitButton
                                   size="sm"

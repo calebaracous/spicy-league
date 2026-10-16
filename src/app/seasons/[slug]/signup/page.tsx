@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 
@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { LocalTime } from "@/components/ui/local-time";
 import { Textarea } from "@/components/ui/textarea";
 import { seasonPageMetadata } from "@/lib/season-meta";
-import { GAME_LABELS } from "@/lib/seasons";
+import { GAME_LABELS, openSignupKind } from "@/lib/seasons";
 import { signInHref } from "@/lib/safe-redirect";
 
 export const generateMetadata = seasonPageMetadata("Sign up");
@@ -61,14 +61,15 @@ export default async function SignupPage({
   const { error } = await searchParams;
 
   const season = await db.query.seasons.findFirst({
-    where: and(eq(seasons.slug, slug), eq(seasons.state, "signups_open")),
+    where: and(eq(seasons.slug, slug), ne(seasons.state, "draft")),
   });
   if (!season) notFound();
 
   const now = new Date();
-  const isOpen =
-    (!season.signupOpensAt || now >= season.signupOpensAt) &&
-    (!season.signupClosesAt || now <= season.signupClosesAt);
+  // "player" during the signup window, "sub" after it, null otherwise.
+  const kind = openSignupKind(season, now);
+  const isOpen = kind !== null;
+  const isSub = kind === "sub";
 
   const session = await auth();
   const alreadySignedUp = session?.user?.id
@@ -139,7 +140,9 @@ export default async function SignupPage({
         </Link>
         <Alert>
           <AlertDescription>
-            {season.signupOpensAt && now < season.signupOpensAt ? (
+            {season.state === "complete" ? (
+              "This season is over."
+            ) : season.signupOpensAt && now < season.signupOpensAt ? (
               <>
                 Signups open <LocalTime date={season.signupOpensAt} />.
               </>
@@ -162,10 +165,16 @@ export default async function SignupPage({
         <Link href={`/seasons/${slug}`} className="text-muted-foreground text-xs hover:underline">
           ← Back to season
         </Link>
-        <h1 className="text-heading">Sign up</h1>
+        <h1 className="text-heading">{isSub ? "Sign up as a sub" : "Sign up"}</h1>
         <p className="text-muted-foreground text-sm">
           {season.name} · {GAME_LABELS[season.game]}
         </p>
+        {isSub ? (
+          <p className="text-muted-foreground text-sm">
+            Regular signups have closed, so you won&apos;t be drafted. Captains will see you on the
+            available subs list and can request you for a match; an admin approves each sub.
+          </p>
+        ) : null}
       </header>
 
       {errorMessage ? (
@@ -244,7 +253,11 @@ export default async function SignupPage({
                 name="notes"
                 maxLength={500}
                 rows={3}
-                placeholder="Anything captains should know about your schedule or availability…"
+                placeholder={
+                  isSub
+                    ? "When are you usually free to sub? Captains see this."
+                    : "Anything captains should know about your schedule or availability…"
+                }
               />
             </div>
 
@@ -255,7 +268,7 @@ export default async function SignupPage({
               >
                 Cancel
               </Link>
-              <Button type="submit">Submit signup</Button>
+              <Button type="submit">{isSub ? "Join the sub list" : "Submit signup"}</Button>
             </div>
           </form>
         </CardContent>

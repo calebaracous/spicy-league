@@ -27,6 +27,7 @@ files are in git history before the squash commit):
 
 - `0002_user_bans.sql` — adds the four nullable ban columns to `users`.
 - `0003_match_substitutions.sql` — `substitution_status` enum + `match_substitutions`.
+- `0004_sub_signups.sql` — `signup_kind` enum + `season_signups.kind`.
 
 **Why the baseline's `when` is old.** Drizzle's migrator applies a journal
 entry only if its `when` is greater than the newest `created_at` in
@@ -117,7 +118,12 @@ One row per (season, user). Enforced by a unique constraint
   - LoL: `{ primaryRole, secondaryRole }` (one of `top | jungle | mid | adc | support | fill`)
   - CS2: `{ mapPrefs: [...] }` (subset of 7 map strings)
   - Schema lives in the server action: `src/app/seasons/[slug]/signup/actions.ts`
-- `notes` — free text
+- `notes` — free text (for subs: when they're available)
+- `kind` enum `signup_kind` (`player | sub`, default `player`; migration
+  `0004_sub_signups`). `sub` = joined after regular signups closed — excluded
+  from the draft pool (`getDraftSnapshot`, `startDraft`, `submitPick`),
+  captain promotion and signup counts. Every query that means "draft pool"
+  must filter `kind = 'player'`.
 - Cascade delete from season or user
 
 ### `seasonCaptains`

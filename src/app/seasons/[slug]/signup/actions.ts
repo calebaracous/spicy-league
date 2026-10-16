@@ -1,15 +1,17 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { db } from "@/db/client";
+import { matches, matchSubstitutions } from "@/db/schema/matches";
 import { seasons } from "@/db/schema/seasons";
 import { seasonSignups } from "@/db/schema/seasons";
 import { requireOnboarded } from "@/lib/auth-helpers";
 import { getActiveBan } from "@/lib/bans";
+import { openSignupKind } from "@/lib/seasons";
 
 const LOL_ROLES = ["top", "jungle", "mid", "adc", "support", "fill"] as const;
 const CS2_MAPS = ["dust2", "mirage", "inferno", "nuke", "overpass", "anubis", "ancient"] as const;
@@ -28,19 +30,16 @@ export async function submitSignup(slug: string, formData: FormData) {
   if (await getActiveBan(session.user.id)) redirect(`/seasons/${slug}?error=banned`);
 
   const season = await db.query.seasons.findFirst({
-    where: and(eq(seasons.slug, slug), eq(seasons.state, "signups_open")),
+    where: and(eq(seasons.slug, slug), ne(seasons.state, "draft")),
   });
+  if (!season) redirect(`/seasons/${slug}?error=signups-closed`);
 
-  if (!season) {
-    redirect(`/seasons/${slug}?error=signups-closed`);
-  }
-
-  const now = new Date();
-  if (season.signupOpensAt && now < season.signupOpensAt) {
-    redirect(`/seasons/${slug}?error=signups-not-open`);
-  }
-  if (season.signupClosesAt && now > season.signupClosesAt) {
-    redirect(`/seasons/${slug}?error=signups-closed`);
+  // Regular signups during the window; sub signups after it until the
+  // season completes (see openSignupKind).
+  const kind = openSignupKind(season);
+  if (!kind) {
+    const notYet = season.signupOpensAt && new Date() < season.signupOpensAt;
+    redirect(`/seasons/${slug}?error=${notYet ? "signups-not-open" : "signups-closed"}`);
   }
 
   const existing = await db.query.seasonSignups.findFirst({
@@ -77,8 +76,68 @@ export async function submitSignup(slug: string, formData: FormData) {
     userId: session.user.id,
     rolePrefs,
     notes,
+    kind,
   });
 
   revalidatePath(`/seasons/${slug}`);
-  redirect(`/seasons/${slug}?signed-up=1`);
+  revalidatePath(`/seasons/${slug}/teams`);
+  revalidatePath(`/admin/seasons/${slug}/signups`);
+  redirect(`/seasons/${slug}?signed-up=${kind === "sub" ? "sub" : "1"}`);
+}
+
+/**
+ * A sub signup takes themself off the sub list. Pending sub requests for
+ * them are withdrawn; refused while they hold an approved slot in a match
+ * that hasn't been reported yet (a captain or admin must release it first).
+ */
+export async function leaveSubList(slug: string) {
+  const session = await requireOnboarded();
+  const season = await db.query.seasons.findFirst({ where: eq(seasons.slug, slug) });
+  if (!season) redirect("/seasons");
+
+  const signup = await db.query.seasonSignups.findFirst({
+    where: and(
+      eq(seasonSignups.seasonId, season.id),
+      eq(seasonSignups.userId, session.user.id),
+      eq(seasonSignups.kind, "sub"),
+    ),
+  });
+  if (!signup) redirect(`/seasons/${slug}`);
+
+  const booked = await db
+    .select({ id: matchSubstitutions.id })
+    .from(matchSubstitutions)
+    .innerJoin(matches, eq(matchSubstitutions.matchId, matches.id))
+    .where(
+      and(
+        eq(matches.seasonId, season.id),
+        eq(matches.state, "scheduled"),
+        eq(matchSubstitutions.subUserId, session.user.id),
+        eq(matchSubstitutions.status, "approved"),
+      ),
+    )
+    .limit(1);
+  if (booked.length) redirect(`/seasons/${slug}?error=sub-booked`);
+
+  await db.transaction(async (tx) => {
+    await tx
+      .update(matchSubstitutions)
+      .set({ status: "withdrawn", decidedBy: session.user.id, decidedAt: new Date() })
+      .where(
+        and(
+          eq(matchSubstitutions.subUserId, session.user.id),
+          eq(matchSubstitutions.status, "pending"),
+          inArray(
+            matchSubstitutions.matchId,
+            tx.select({ id: matches.id }).from(matches).where(eq(matches.seasonId, season.id)),
+          ),
+        ),
+      );
+    await tx.delete(seasonSignups).where(eq(seasonSignups.id, signup.id));
+  });
+
+  revalidatePath(`/seasons/${slug}`);
+  revalidatePath(`/seasons/${slug}/teams`);
+  revalidatePath(`/admin/seasons/${slug}/signups`);
+  redirect(`/seasons/${slug}?left-subs=1`);
 }
