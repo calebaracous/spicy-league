@@ -4,7 +4,7 @@ import * as schema from "../../../src/db/schema";
 import { db, userIdsByUsername } from "./db";
 import { E2E_EMAIL_DOMAIN, E2E_SLUG_PREFIX } from "./env";
 
-const { users, accounts, seasons, seasonSignups, seasonCaptains, drafts } = schema;
+const { users, accounts, accountLinks, seasons, seasonSignups, seasonCaptains, drafts } = schema;
 
 export const PLAYER_COUNT = 24;
 
@@ -70,6 +70,18 @@ export async function seedUsers(): Promise<void> {
       password: hash,
     });
   }
+}
+
+/** A fake Riot link so player n passes the LoL signup gate. The PUUID never
+ *  resolves, so stat refreshes skip it. Cascade-deleted with the user. */
+export async function seedRiotLink(n: number): Promise<void> {
+  const ids = await userIdsByUsername([player(n).username]);
+  await db.insert(accountLinks).values({
+    userId: ids.get(player(n).username)!,
+    provider: "riot",
+    externalId: `e2e-${run().id}-p${pad(n)}`,
+    externalHandle: `E2E P${pad(n)}#E2E`,
+  });
 }
 
 const LOL_ROLES = ["top", "jungle", "mid", "adc", "support"] as const;

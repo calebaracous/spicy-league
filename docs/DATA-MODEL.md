@@ -70,7 +70,9 @@ wiring in `src/lib/auth.ts`).
     (Renamed from `display_name` before the migration squash.) Regex: `[a-zA-Z0-9_-]{3,24}`.
     `input: false` means clients cannot set it via Better Auth's endpoints.
   - `role` enum `user_role` (`user | admin`), default `user`
-  - `bio`, `pronouns`, `opggUrl` — free-text profile fields
+  - `bio`, `pronouns`, `opggUrl` — free-text profile fields. `opggUrl` is an
+    optional *custom* link (e.g. a multi-search); every Riot link already gets
+    a derived OP.GG link (`opggUrlForRiotId`, `src/lib/opgg.ts`).
   - `bannedAt`, `banReason`, `banExpiresAt`, `bannedBy` — league ban
     (migration `0002_user_bans`). Active while `bannedAt` is set and
     `banExpiresAt` is null or in the future (`isBanActive` in
@@ -129,7 +131,8 @@ One row per (season, user). Enforced by a unique constraint
 - `notes` — free text (for subs: when they're available)
 - `quandary` — free-text answer to the signup form's moral quandary (`SIGNUP_QUANDARY` in
   `src/lib/seasons.ts`; migration `0006_signup_quandary`). Shown wherever `notes` is: admin
-  signups table, CSV export, Teams page subs list.
+  signups table, CSV export, Teams page subs list. Required on new signups
+  (`submitSignup`); the column stays nullable because older rows predate it.
 - `kind` enum `signup_kind` (`player | sub`, default `player`; migration
   `0004_sub_signups`). `sub` = chose "Sub only" on the signup form, or joined after regular
   signups closed (`resolveSignupKind`) — excluded

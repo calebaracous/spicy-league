@@ -11,6 +11,7 @@ import { accountLinks, riotStatSnapshots } from "@/db/schema/stats";
 import { signOut } from "@/auth";
 import { cookies } from "next/headers";
 import { requireOnboarded } from "@/lib/auth-helpers";
+import { opggUrlForRiotId } from "@/lib/opgg";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -203,8 +204,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
         <CardHeader>
           <CardTitle>League of Legends</CardTitle>
           <CardDescription>
-            Link up to {MAX_RIOT_ACCOUNTS} Riot accounts to display rank and champion stats on your
-            profile.
+            Link up to {MAX_RIOT_ACCOUNTS} Riot accounts to display rank, champion stats and OP.GG
+            on your profile. Required to sign up for League of Legends seasons.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -213,13 +214,26 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
               {riotLinks.map((link) => {
                 const linkSnaps = riotSnapshots.filter((s) => s.accountLinkId === link.id);
                 const solo = linkSnaps.find((s) => s.queue === "solo");
+                const opgg = opggUrlForRiotId(link.externalHandle);
                 return (
                   <div
                     key={link.id}
                     className="flex items-center justify-between rounded-lg border px-4 py-3"
                   >
                     <div>
-                      <p className="text-sm font-medium">{link.externalHandle}</p>
+                      <p className="flex items-baseline gap-2 text-sm font-medium">
+                        {link.externalHandle}
+                        {opgg ? (
+                          <Link
+                            href={opgg}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-accent-text text-xs underline-offset-4 hover:underline"
+                          >
+                            OP.GG →
+                          </Link>
+                        ) : null}
+                      </p>
                       {solo?.tier ? (
                         <p className="text-muted-foreground text-xs">
                           {solo.tier} {solo.rankDivision} · {solo.lp} LP · {solo.wins}W{" "}
@@ -283,15 +297,19 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
 
           <div className="space-y-1.5">
             <Label htmlFor="opggUrl">
-              OP.GG URL <span className="text-muted-foreground">(optional)</span>
+              Custom OP.GG URL <span className="text-muted-foreground">(optional)</span>
             </Label>
+            <p className="text-muted-foreground text-xs">
+              Each linked Riot account gets an OP.GG link automatically. Use this for a multi-search
+              or another page.
+            </p>
             <form action={saveOpggUrl} className="flex gap-2">
               <Input
                 id="opggUrl"
                 name="opggUrl"
                 type="url"
                 defaultValue={user.opggUrl ?? ""}
-                placeholder="https://op.gg/summoners/na/YourName-NA1"
+                placeholder="https://op.gg/lol/multisearch/na?summoners=…"
               />
               <Button type="submit" variant="outline">
                 Save

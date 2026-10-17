@@ -11,6 +11,7 @@ import { seasons } from "@/db/schema/seasons";
 import { seasonSignups } from "@/db/schema/seasons";
 import { requireOnboarded } from "@/lib/auth-helpers";
 import { getActiveBan } from "@/lib/bans";
+import { hasRiotLink } from "@/lib/riot-links";
 import { openSignupKind, resolveSignupKind } from "@/lib/seasons";
 
 const LOL_ROLES = ["top", "jungle", "mid", "adc", "support", "fill"] as const;
@@ -50,6 +51,12 @@ export async function submitSignup(slug: string, formData: FormData) {
     redirect(`/seasons/${slug}?error=already-signed-up`);
   }
 
+  // LoL signups need a linked Riot account (captains scout via rank/OP.GG).
+  // Only gates new signups; existing ones are never revisited.
+  if (season.game === "lol" && !(await hasRiotLink(session.user.id))) {
+    redirect(`/seasons/${slug}/signup`);
+  }
+
   let rolePrefs: unknown;
 
   if (season.game === "lol") {
@@ -71,7 +78,8 @@ export async function submitSignup(slug: string, formData: FormData) {
   }
 
   const notes = (formData.get("notes") as string | null)?.trim() || null;
-  const quandary = (formData.get("quandary") as string | null)?.trim() || null;
+  const quandary = (formData.get("quandary") as string | null)?.trim() ?? "";
+  if (!quandary) redirect(`/seasons/${slug}/signup?error=quandary`);
 
   await db.insert(seasonSignups).values({
     seasonId: season.id,

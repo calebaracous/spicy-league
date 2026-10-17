@@ -22,7 +22,7 @@ import {
   signedInPage,
   SSE_TIMEOUT,
 } from "./support/pages";
-import { admin, player, run, seasonSlug, seedSignups } from "./support/seed";
+import { admin, player, run, seasonSlug, seedRiotLink, seedSignups } from "./support/seed";
 
 /**
  * Duo captains, end to end, through the real UI. One season with a mix of
@@ -116,11 +116,13 @@ test("duo captains: setup, draft, teams and subs", async ({ browser }) => {
 
   // ── Signups ──────────────────────────────────────────────────────────────
   await test.step("P16 signs up as sub only through the form", async () => {
+    await seedRiotLink(16);
     const page = await signedInPage(browser, P(16).username);
     await page.goto(`/seasons/${slug}/signup`);
     await expect(page.getByRole("radio", { name: /Play in the draft/ })).toBeChecked();
     await page.getByRole("radio", { name: /Sub only/ }).check();
     await page.getByLabel("Primary role").selectOption("support");
+    await page.getByLabel("Moral quandary").fill("No, never.");
     await page.getByRole("button", { name: "Submit signup" }).click();
     await page.waitForURL(`**/seasons/${slug}?signed-up=sub`);
     await expect(page.getByText(`You're on the sub list for ${seasonName}.`)).toBeVisible();

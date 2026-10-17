@@ -164,7 +164,12 @@ server actions to find them. Examples:
 - `submitSignup` — takes whatever `openSignupKind(season)` allows: a
   `player` signup during `signups_open` inside the
   `signupOpensAt..signupClosesAt` window, a `sub` signup after that until the
-  season completes, nothing otherwise.
+  season completes, nothing otherwise. LoL signups (player and sub) also
+  need at least one linked Riot account (`hasRiotLink`,
+  `src/lib/riot-links.ts`) — the page shows a "link your Riot account" notice
+  instead of the form. Every signup needs a non-empty moral-quandary answer.
+  Both rules only gate *new* signups; existing rows are never revisited, so
+  unlinking later doesn't affect a signup.
 - `submitPick` — requires `drafts.state = 'in_progress'`.
 - `reportMatch` — does not check season state; just requires the match
   itself is not `confirmed`.

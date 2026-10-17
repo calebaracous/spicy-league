@@ -15,6 +15,7 @@ import { LocalTime } from "@/components/ui/local-time";
 import { Textarea } from "@/components/ui/textarea";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { GAME_LABELS, SIGNUP_QUANDARY, openSignupKind } from "@/lib/seasons";
+import { hasRiotLink } from "@/lib/riot-links";
 import { signInHref } from "@/lib/safe-redirect";
 
 export const generateMetadata = seasonPageMetadata("Sign up");
@@ -59,6 +60,7 @@ const SIGNUP_KINDS = [
 
 const ERROR_MESSAGES: Record<string, string> = {
   invalid: "Some fields are invalid. Please check your selections.",
+  quandary: "Answer the moral quandary to sign up.",
 };
 
 const selectClass =
@@ -142,6 +144,26 @@ export default async function SignupPage({
         </Link>
         <Alert>
           <AlertDescription>You&apos;re already signed up for {season.name}.</AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+
+  if (isOpen && season.game === "lol" && !(await hasRiotLink(session.user.id))) {
+    return (
+      <div className="page flex-1 space-y-4 [--page-max:36rem]">
+        <Link href={`/seasons/${slug}`} className="text-muted-foreground text-xs hover:underline">
+          ← Back to season
+        </Link>
+        <Alert>
+          <AlertDescription>
+            Link your Riot account before signing up for {season.name}. Captains use your rank and
+            OP.GG to scout the draft.{" "}
+            <Link href="/profile" className="underline underline-offset-2">
+              Link it on your profile
+            </Link>
+            , then come back here.
+          </AlertDescription>
         </Alert>
       </div>
     );
@@ -301,13 +323,12 @@ export default async function SignupPage({
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="quandary">
-                Moral quandary <span className="text-muted-foreground">(optional)</span>
-              </Label>
+              <Label htmlFor="quandary">Moral quandary</Label>
               <p className="text-muted-foreground text-xs">{SIGNUP_QUANDARY}</p>
               <Textarea
                 id="quandary"
                 name="quandary"
+                required
                 maxLength={500}
                 rows={3}
                 placeholder="Yes or no, and why…"

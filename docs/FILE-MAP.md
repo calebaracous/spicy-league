@@ -29,6 +29,7 @@ Trivial shadcn primitives get a single entry at the bottom.
 - `tests/unit/draft-order.test.ts`, `tests/unit/round-robin.test.ts` — snake order and round-robin logic.
 - `tests/unit/substitution-rules.test.ts` — substitution eligibility rules.
 - `tests/unit/signup-kind.test.ts` — when player vs sub signups are open.
+- `tests/unit/opgg.test.ts` — OP.GG URL derivation from Riot IDs.
 - `tests/unit/player-stats.test.ts` — directory W–L tallies (subs, sat-out, 10-man) and rank ordering.
 - `tests/unit/season-schedule.test.ts` — `seasonSchedule` ordering, skipping unset dates, group stage range.
 - `playwright.config.ts` — e2e config: serial, builds + starts the app on :3100 with auth URLs overridden to localhost.
@@ -66,8 +67,8 @@ Rendered by `src/app/page.tsx`:
 
 - `src/app/seasons/page.tsx` — list of non-draft seasons (active + past split).
 - `src/app/seasons/[slug]/page.tsx` — season detail. `StatusPanel` renders per-state CTA. Looks up champion from `matches` when complete.
-- `src/app/seasons/[slug]/signup/page.tsx` — signup form (LoL: roles, CS2: maps).
-- `src/app/seasons/[slug]/signup/actions.ts` — `submitSignup`. Validates state + window + one-per-user.
+- `src/app/seasons/[slug]/signup/page.tsx` — signup form (LoL: roles, CS2: maps). LoL without a Riot link → "link your Riot account" notice instead of the form.
+- `src/app/seasons/[slug]/signup/actions.ts` — `submitSignup`. Validates state + window + one-per-user + Riot link (LoL) + required quandary answer.
 - `src/app/seasons/[slug]/captains/page.tsx` — announced captain list (duos grouped on one line).
 - `src/app/seasons/[slug]/draft/page.tsx` — live draft viewer. Fetches initial snapshot, renders `<LiveBoard>`.
 - `src/app/seasons/[slug]/draft/live-board.tsx` — client component; SSE-subscribes to `/api/draft/[slug]/stream`; shows solo-queue rank per pool player (LoL).
@@ -172,6 +173,8 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/backdrop-clips.ts` — home-row backdrop clip registry (`backdropClip(game, index)`, `otherGame`). Clips have `sources: []` until real footage lands.
 - `src/lib/live-season.ts` — `getLiveSeason`, `LIVE_STATE_COPY`, `liveSeasonHref`. Used by header pill + home hero.
 - `src/lib/ten-man.ts` — `PICK_ORDER_C1_C2`, `getActiveTenMan`, `getTenManSnapshot`, `getRecentTenMans`, `electCaptains`. See [TEN-MAN.md](TEN-MAN.md).
+- `src/lib/riot-links.ts` — `hasRiotLink(userId)`: the LoL season signup gate.
+- `src/lib/opgg.ts` — pure `opggUrlForRiotId(handle)`: NA OP.GG URL from a stored `gameName#tagLine`.
 - `src/lib/riot-api.ts` — Riot API client. `getAccountByRiotId`, `getRankEntries`, `getTopChampions`, `getChampionName` (Data Dragon).
 - `src/lib/stat-refresh.ts` — `refreshRiotStats(userId)` (all of a user's Riot links), `refreshAllRiotStats` (every Riot link); per-link delete-then-insert, 1200ms sleep between links.
 - `src/lib/rate-limit.ts` — Upstash sliding-window. Specs: `magicLink` (unused), `statRefresh`. Fails open if Upstash env missing.

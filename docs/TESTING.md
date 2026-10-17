@@ -63,7 +63,9 @@ Workers = 1: specs share one admin and one database.
 Through the real UI, with DB assertions after each step:
 
 1. Admin creates a LoL season, opens signups.
-2. Player 20 signs up via the form; players 1–19 are seeded as signups.
+2. Player 20 sees the Riot-link notice instead of the form, gets a fake Riot
+   link (`seedRiotLink`), then signs up via the form (quandary answered);
+   players 1–19 are seeded as signups.
 3. Admin closes signups, promotes players 1–4, moves #4 above #3
    (order P1, P2, P4, P3), marks captains selected, starts the draft.
 4. Four captain sessions, one anonymous spectator and an admin board.

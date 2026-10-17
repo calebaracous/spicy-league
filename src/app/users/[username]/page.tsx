@@ -8,6 +8,7 @@ import { db } from "@/db/client";
 import { users } from "@/db/schema/auth";
 import { accountLinks, riotStatSnapshots } from "@/db/schema/stats";
 import { formatRank } from "@/lib/rank";
+import { opggUrlForRiotId } from "@/lib/opgg";
 import { getChampionName } from "@/lib/riot-api";
 import { getPlayerMatchHistory } from "@/lib/substitutions";
 import { Card, CardContent } from "@/components/ui/card";
@@ -73,6 +74,7 @@ export default async function PublicProfilePage({ params }: Props) {
 
   const history = await getPlayerMatchHistory(user.id);
   const hasLolData = riotLinks.length > 0 || !!user.opggUrl;
+  const derivedOpgg = new Set(riotLinks.map((l) => opggUrlForRiotId(l.externalHandle)));
   const hasCs2Data = !!steamLink;
   const hasAnyStats = hasLolData || hasCs2Data;
 
@@ -82,7 +84,7 @@ export default async function PublicProfilePage({ params }: Props) {
     <div className="space-y-5">
       {linkAccountData.map(({ link, solo, flex, champNames, lastRefreshed }) => (
         <div key={link.id} className="space-y-3">
-          <p className="text-sm font-medium">{link.externalHandle}</p>
+          <OpggHandle handle={link.externalHandle} />
           {solo ? (
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
               <div className="rounded-lg border p-3">
@@ -129,7 +131,7 @@ export default async function PublicProfilePage({ params }: Props) {
           ) : null}
         </div>
       ))}
-      {user.opggUrl ? (
+      {user.opggUrl && !derivedOpgg.has(user.opggUrl) ? (
         <Link
           href={user.opggUrl}
           target="_blank"
@@ -201,5 +203,24 @@ export default async function PublicProfilePage({ params }: Props) {
 
       <MatchHistory matches={history} />
     </div>
+  );
+}
+
+function OpggHandle({ handle }: { handle: string | null }) {
+  const href = opggUrlForRiotId(handle);
+  return (
+    <p className="flex items-baseline gap-2 text-sm font-medium">
+      {handle}
+      {href ? (
+        <Link
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-accent-text text-xs underline-offset-4 hover:underline"
+        >
+          OP.GG →
+        </Link>
+      ) : null}
+    </p>
   );
 }

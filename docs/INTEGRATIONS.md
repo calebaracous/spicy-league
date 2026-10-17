@@ -75,7 +75,11 @@ every 24h).
 `src/lib/stat-refresh.ts`:
 
 Users can link up to 3 Riot accounts; snapshots are stored per link
-(`riot_stat_snapshots.account_link_id`).
+(`riot_stat_snapshots.account_link_id`). At least one Riot link is required
+to sign up for a LoL season (`hasRiotLink`, `src/lib/riot-links.ts`). Linking
+only checks the Riot ID exists — ownership is not verified (no RSO). Each
+link shows a derived OP.GG link (`opggUrlForRiotId`, `src/lib/opgg.ts`) on
+`/profile` and `/users/[username]`.
 
 - `refreshRiotLink(link)` (internal) — fetches rank entries + top 3 champs
   for one PUUID. If the rank call returns `null`, bails *without* touching
