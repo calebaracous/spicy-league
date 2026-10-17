@@ -43,6 +43,13 @@
       "when": 1792192732511,
       "tag": "0005_season_schedule",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792251031137,
+      "tag": "0006_signup_quandary",
+      "breakpoints": true
     }
   ]
 }

@@ -71,12 +71,14 @@ export async function submitSignup(slug: string, formData: FormData) {
   }
 
   const notes = (formData.get("notes") as string | null)?.trim() || null;
+  const quandary = (formData.get("quandary") as string | null)?.trim() || null;
 
   await db.insert(seasonSignups).values({
     seasonId: season.id,
     userId: session.user.id,
     rolePrefs,
     notes,
+    quandary,
     kind,
   });
 

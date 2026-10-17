@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { LocalTime } from "@/components/ui/local-time";
 import { Textarea } from "@/components/ui/textarea";
 import { seasonPageMetadata } from "@/lib/season-meta";
-import { GAME_LABELS, openSignupKind } from "@/lib/seasons";
+import { GAME_LABELS, SIGNUP_QUANDARY, openSignupKind } from "@/lib/seasons";
 import { signInHref } from "@/lib/safe-redirect";
 
 export const generateMetadata = seasonPageMetadata("Sign up");
@@ -297,6 +297,20 @@ export default async function SignupPage({
                     ? "When are you usually free to sub? Captains see this."
                     : "Anything captains should know about your schedule or availability…"
                 }
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="quandary">
+                Moral quandary <span className="text-muted-foreground">(optional)</span>
+              </Label>
+              <p className="text-muted-foreground text-xs">{SIGNUP_QUANDARY}</p>
+              <Textarea
+                id="quandary"
+                name="quandary"
+                maxLength={500}
+                rows={3}
+                placeholder="Yes or no, and why…"
               />
             </div>
 

@@ -300,6 +300,7 @@ export type AvailableSub = {
   kind: "player" | "sub";
   rolePrefs: unknown;
   notes: string | null;
+  quandary: string | null;
   rank: string | null;
   joinedAt: Date;
 };
@@ -318,6 +319,7 @@ export async function getAvailableSubs(seasonId: string): Promise<AvailableSub[]
         kind: seasonSignups.kind,
         rolePrefs: seasonSignups.rolePrefs,
         notes: seasonSignups.notes,
+        quandary: seasonSignups.quandary,
         joinedAt: seasonSignups.createdAt,
         bannedAt: users.bannedAt,
         banExpiresAt: users.banExpiresAt,
@@ -369,6 +371,7 @@ export async function getAvailableSubs(seasonId: string): Promise<AvailableSub[]
       kind: r.kind,
       rolePrefs: r.rolePrefs,
       notes: r.notes,
+      quandary: r.quandary,
       rank: rankOf.get(r.userId) ?? null,
       joinedAt: r.joinedAt,
     }))

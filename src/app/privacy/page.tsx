@@ -59,7 +59,7 @@ export default function PrivacyPage() {
       <ul>
         <li>
           Season signups, including your role preferences (LoL), map preferences (CS2), and any
-          notes you write.
+          notes and moral-quandary answer you write.
         </li>
         <li>
           Captain status, draft picks made and received, team membership, and match results you

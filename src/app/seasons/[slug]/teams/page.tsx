@@ -195,6 +195,9 @@ export default async function TeamsPage({ params }: { params: Params }) {
                     </span>
                   </div>
                   {p.notes ? <p className="text-muted-foreground text-xs">“{p.notes}”</p> : null}
+                  {p.quandary ? (
+                    <p className="text-muted-foreground text-xs">Button: “{p.quandary}”</p>
+                  ) : null}
                 </li>
               ))}
             </ul>

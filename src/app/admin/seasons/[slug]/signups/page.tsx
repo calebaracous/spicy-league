@@ -86,6 +86,7 @@ export default async function AdminSignupsPage({
       rolePrefs: seasonSignups.rolePrefs,
       kind: seasonSignups.kind,
       notes: seasonSignups.notes,
+      quandary: seasonSignups.quandary,
       createdAt: seasonSignups.createdAt,
       username: users.username,
       name: users.name,
@@ -343,6 +344,7 @@ export default async function AdminSignupsPage({
                       {season.game === "lol" ? "Roles" : "Maps"}
                     </th>
                     <th className="pr-4 pb-2 font-medium">Notes</th>
+                    <th className="pr-4 pb-2 font-medium">Quandary</th>
                     <th className="pr-4 pb-2 font-medium">Signed up</th>
                     <th className="pb-2 font-medium"></th>
                   </tr>
@@ -374,6 +376,9 @@ export default async function AdminSignupsPage({
                         </td>
                         <td className="text-muted-foreground max-w-xs py-2 pr-4 text-xs">
                           {s.notes ?? "—"}
+                        </td>
+                        <td className="text-muted-foreground max-w-xs py-2 pr-4 text-xs">
+                          {s.quandary ?? "—"}
                         </td>
                         <td className="text-muted-foreground py-2 pr-4 text-xs whitespace-nowrap">
                           <LocalTime date={s.createdAt} preset="date-short" />

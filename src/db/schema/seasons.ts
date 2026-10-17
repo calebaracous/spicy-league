@@ -75,6 +75,8 @@ export const seasonSignups = pgTable(
       .references(() => users.id, { onDelete: "cascade" }),
     rolePrefs: jsonb("role_prefs"),
     notes: text("notes"),
+    // Free-text answer to the signup form's moral quandary (SIGNUP_QUANDARY).
+    quandary: text("quandary"),
     kind: signupKindEnum("kind").notNull().default("player"),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   },

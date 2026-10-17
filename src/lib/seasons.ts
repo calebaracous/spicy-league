@@ -84,6 +84,10 @@ export function resolveSignupKind(
   return open === "player" && requested !== "sub" ? "player" : "sub";
 }
 
+/** Moral quandary posed on the season signup form; answers are stored in `seasonSignups.quandary`. */
+export const SIGNUP_QUANDARY =
+  "A stranger hands you a box with a button. If you press it, your team is guaranteed to win this Spicy League season and you get $1 million. Somewhere in the world, a person you'll never meet will die. Do you press it?";
+
 export const PUBLIC_STATES: readonly SeasonState[] = SEASON_STATES.filter((s) => s !== "draft");
 
 export function isPublic(state: SeasonState): boolean {

@@ -1,0 +1,1 @@
+ALTER TABLE "season_signups" ADD COLUMN "quandary" text;

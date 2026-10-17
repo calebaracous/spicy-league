@@ -29,6 +29,7 @@ files are in git history before the squash commit):
 - `0003_match_substitutions.sql` — `substitution_status` enum + `match_substitutions`.
 - `0004_sub_signups.sql` — `signup_kind` enum + `season_signups.kind`.
 - `0005_season_schedule.sql` — `seasons.draft_at`, `group_stage_ends_at`, `semis_at`, `final_at`.
+- `0006_signup_quandary.sql` — nullable `season_signups.quandary`.
 
 **Why the baseline's `when` is old.** Drizzle's migrator applies a journal
 entry only if its `when` is greater than the newest `created_at` in
@@ -126,6 +127,9 @@ One row per (season, user). Enforced by a unique constraint
   - CS2: `{ mapPrefs: [...] }` (subset of 7 map strings)
   - Schema lives in the server action: `src/app/seasons/[slug]/signup/actions.ts`
 - `notes` — free text (for subs: when they're available)
+- `quandary` — free-text answer to the signup form's moral quandary (`SIGNUP_QUANDARY` in
+  `src/lib/seasons.ts`; migration `0006_signup_quandary`). Shown wherever `notes` is: admin
+  signups table, CSV export, Teams page subs list.
 - `kind` enum `signup_kind` (`player | sub`, default `player`; migration
   `0004_sub_signups`). `sub` = chose "Sub only" on the signup form, or joined after regular
   signups closed (`resolveSignupKind`) — excluded

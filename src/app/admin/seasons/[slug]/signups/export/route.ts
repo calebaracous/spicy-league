@@ -35,6 +35,7 @@ export async function GET(_req: Request, { params }: { params: Params }) {
       email: users.email,
       rolePrefs: seasonSignups.rolePrefs,
       notes: seasonSignups.notes,
+      quandary: seasonSignups.quandary,
       kind: seasonSignups.kind,
       createdAt: seasonSignups.createdAt,
     })
@@ -45,8 +46,17 @@ export async function GET(_req: Request, { params }: { params: Params }) {
 
   const isLol = season.game === "lol";
   const headers = isLol
-    ? ["Display Name", "Email", "Type", "Primary Role", "Secondary Role", "Notes", "Signed Up"]
-    : ["Display Name", "Email", "Type", "Map Preferences", "Notes", "Signed Up"];
+    ? [
+        "Display Name",
+        "Email",
+        "Type",
+        "Primary Role",
+        "Secondary Role",
+        "Notes",
+        "Quandary",
+        "Signed Up",
+      ]
+    : ["Display Name", "Email", "Type", "Map Preferences", "Notes", "Quandary", "Signed Up"];
 
   const rows = signups.map((s) => {
     const prefs = s.rolePrefs as Record<string, unknown> | null;
@@ -59,6 +69,7 @@ export async function GET(_req: Request, { params }: { params: Params }) {
         escapeCell((prefs?.primaryRole as string) ?? ""),
         escapeCell((prefs?.secondaryRole as string) ?? ""),
         escapeCell(s.notes),
+        escapeCell(s.quandary),
         escapeCell(s.createdAt.toISOString()),
       ].join(",");
     }
@@ -68,6 +79,7 @@ export async function GET(_req: Request, { params }: { params: Params }) {
       escapeCell(s.kind),
       escapeCell(((prefs?.mapPrefs as string[]) ?? []).join("; ")),
       escapeCell(s.notes),
+      escapeCell(s.quandary),
       escapeCell(s.createdAt.toISOString()),
     ].join(",");
   });
