@@ -102,7 +102,7 @@ considered. Runs inside the `castVote` transaction.
 Fixed 8-pick snake for 2 captains: `PICK_ORDER_C1_C2 = [1, 2, 2, 1, 1, 2, 2, 1]`
 in `src/lib/ten-man.ts`. Duplicated (for the client) as `SNAKE_ORDER` in
 `src/components/ui/snake-order-strip.tsx` — change both together. This is
-independent of the season draft's `captainOrderForPick`.
+independent of the season draft's `snakeOrder`.
 
 `onTheClock` is derived in `getTenManSnapshot` from `picks.length`, never stored.
 

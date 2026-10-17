@@ -11,9 +11,10 @@ the real UI against a real database and is run on demand.
 
 ## Unit tests (`tests/unit/`, `vitest.config.mts`)
 
-- `draft-order.test.ts` — `captainOrderForPick` snake order for 2–8
-  captains, `PICKS_PER_TEAM` per captain, back-to-back picks at the turn,
-  `totalPicks`.
+- `draft-order.test.ts` — `snakeOrder` for 2–8 solo captains (unchanged
+  order, `PICKS_PER_TEAM` each, back-to-back picks at the turn), all-duo
+  and mixed solo/duo drafts (full teams sit out, every team reaches
+  `TEAM_SIZE`), `groupCaptainTeams` / `teamForPick` / `totalPicks`.
 - `round-robin.test.ts` — `buildRoundRobin`: every pair once, `n-1` rounds
 - `signup-kind.test.ts` — `openSignupKind`: player window, sub states, closed states; `resolveSignupKind`: sub-only choice
 - `season-schedule.test.ts` — `seasonSchedule`: order, unset dates skipped, group stage range

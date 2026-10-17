@@ -23,7 +23,14 @@ type LolRolePrefs = {
 type Snapshot = {
   draft: { id: string; state: "pending" | "in_progress" | "paused" | "completed" };
   season: { id: string; slug: string; name: string; game: "lol" | "cs2" };
-  captains: Array<{ userId: string; displayName: string; captainOrder: number }>;
+  /** One entry per team; `userIds` holds both captains of a duo. */
+  captains: Array<{
+    userId: string;
+    userIds: string[];
+    displayName: string;
+    captainOrder: number;
+    picks: number;
+  }>;
   pool: Array<{
     userId: string;
     displayName: string;
@@ -43,6 +50,7 @@ type Snapshot = {
   onTheClock: {
     pickNumber: number;
     captainUserId: string;
+    captainUserIds: string[];
     captainDisplayName: string;
     captainOrder: number;
   } | null;
@@ -135,11 +143,15 @@ export function LiveBoard({
   const liveStatus = useSnapshotStream<Snapshot>(`/api/draft/${slug}/stream`, setSnap);
 
   const onClock = snap.onTheClock;
+  // Either captain of a duo is on the clock for their team.
   const isMyTurn =
-    !!onClock && viewerUserId === onClock.captainUserId && snap.draft.state === "in_progress";
+    !!onClock &&
+    !!viewerUserId &&
+    onClock.captainUserIds.includes(viewerUserId) &&
+    snap.draft.state === "in_progress";
   const canPick = (isMyTurn || isAdmin) && snap.draft.state === "in_progress";
   const isLol = snap.season.game === "lol";
-  const isCaptain = snap.captains.some((c) => c.userId === viewerUserId);
+  const isCaptain = !!viewerUserId && snap.captains.some((c) => c.userIds.includes(viewerUserId));
   const [soundOn] = useTurnSoundPref();
   useTurnAlert(isMyTurn, soundOn);
 
@@ -243,12 +255,17 @@ export function LiveBoard({
                       </span>{" "}
                       {cap.displayName}
                     </CardTitle>
-                    {isOnClock ? <Badge>On the clock</Badge> : null}
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      {cap.userIds.length > 1 ? <Badge variant="outline">Duo</Badge> : null}
+                      {isOnClock ? <Badge>On the clock</Badge> : null}
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent>
                   {roster.length === 0 ? (
-                    <p className="text-muted-foreground text-xs">No picks yet.</p>
+                    <p className="text-muted-foreground text-xs">
+                      No picks yet · {cap.picks} to make.
+                    </p>
                   ) : (
                     <ol className="space-y-1">
                       {roster.map((r) => (

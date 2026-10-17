@@ -227,8 +227,8 @@ API:
   `src/lib/homepage.ts`.
 - …the header pill is wrong → `src/components/site-header.tsx` +
   `LIVE_STATE_COPY` in `src/lib/live-season.ts`.
-- …the draft pick order is surprising → `captainOrderForPick` in
-  `src/lib/draft.ts` (snake algorithm). 10-man uses the fixed
+- …the draft pick order is surprising → `snakeOrder` / `teamForPick` in
+  `src/lib/draft.ts` (snake algorithm; duo-captain teams make 3 picks). 10-man uses the fixed
   `PICK_ORDER_C1_C2` in `src/lib/ten-man.ts`.
 - …match standings look off → `computeStandings` in `src/lib/schedule.ts`
   (tiebreakers: wins → game diff → team name).

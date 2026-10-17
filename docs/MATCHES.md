@@ -179,7 +179,8 @@ rationale: [design/SUBSTITUTIONS.md](design/SUBSTITUTIONS.md).
   `getSubCandidates`, `getPlayerMatchHistory`, `getPendingSubsForSeason`,
   `getPendingSubsBySeason`.
 - **Actions** — `src/app/seasons/[slug]/matches/sub-actions.ts`:
-  `requestSub` (team captain, or admin for either team), `withdrawSub`
+  `requestSub` (team captain — either of a duo, via `getCaptainedTeamId` —
+  or admin for either team), `withdrawSub`
   (pending only), `decideSub` (admin: approve → re-checks eligibility,
   reject, revoke an approved sub while the match is still scheduled).
   Every sub needs admin approval.

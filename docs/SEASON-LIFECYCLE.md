@@ -136,17 +136,23 @@ Between `signups_closed` and `drafting`:
 1. Admin visits `/admin/seasons/[slug]/signups`.
 2. For each signup they want to promote → `promoteCaptain` action appends
    a row to `seasonCaptains` with `captainOrder = max + 1`.
-3. Admin can reorder with `moveCaptain` (up/down) — three-step swap via a
-   `-1` placeholder (defensive; there's no unique constraint on order today).
-4. Admin can demote with `demoteCaptain` — and remaining captains are
-   automatically re-numbered to 1..N.
-5. Recommended captain count is `floor(signups / 5)` — exposed as
-   `getSignupStats` in the same file. Not enforced, just surfaced.
+3. **Duo captains:** "Pair with…" on a solo captain (`pairCaptain`) moves
+   another solo captain onto the same `captainOrder` — one team, either
+   captain drafts, 3 picks instead of 4. "Split" (`splitCaptain`) sends one
+   of a duo to the end of the order as a solo team.
+4. Admin can reorder teams with `moveCaptain` (up/down; a duo moves as one)
+   — three-step swap via a `-1` placeholder.
+5. Admin can demote with `demoteCaptain` (a duo partner stays on, solo) —
+   teams are re-numbered to 1..N (`renumberCaptains`).
+6. Recommended team count is `floor(draft-pool signups / 5)`; a duo counts
+   once. Not enforced, just surfaced.
+7. All of the above are refused (`captains-locked`) once the draft has
+   started.
 
 Once happy, admin transitions to `captains_selected`, then starts the
 draft from `/admin/seasons/[slug]/draft` (`startDraft`), which moves the
 season to `drafting`. It refuses (`pool-too-small`) unless there are at
-least 4 non-captain signups per captain. Using the generic transition to
+least 4 non-captain signups per solo team (3 per duo team). Using the generic transition to
 `drafting` instead would flip the label without creating a drafts row.
 
 ## Guards on user actions

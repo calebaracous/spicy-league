@@ -26,7 +26,8 @@ export function DraftSection({ season, captains, topNonCaptains }: DraftSectionP
         <Reveal className="mb-14 flex flex-col gap-4">
           <SectionLabel>CAPTAINS</SectionLabel>
           <h2 className="text-heading" style={{ color: "var(--text)" }}>
-            {captains.length} <span style={{ color: "var(--accent-text)" }}>captains</span>
+            {captains.reduce((n, c) => n + c.size, 0)}{" "}
+            <span style={{ color: "var(--accent-text)" }}>captains</span>
           </h2>
           <p
             className="text-sm leading-relaxed"

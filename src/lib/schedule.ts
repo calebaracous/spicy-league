@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, inArray, ne } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne, or } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { teams, teamMembers } from "@/db/schema/drafts";
@@ -86,14 +86,35 @@ export async function computeStandings(seasonId: string): Promise<StandingRow[]>
     .from(teams)
     .where(eq(teams.seasonId, seasonId));
 
-  const captainIds = seasonTeams.map((t) => t.captainUserId);
+  // Every captain is a pickNumber-null member, so duo captains both show
+  // ("A & B"), primary (teams.captainUserId) first.
   const captainNames: Map<string, string> = new Map();
-  if (captainIds.length > 0) {
+  if (seasonTeams.length > 0) {
     const captainRows = await db
-      .select({ id: users.id, name: users.name, username: users.username })
-      .from(users)
-      .where(inArray(users.id, captainIds));
-    for (const c of captainRows) captainNames.set(c.id, c.name ?? c.username ?? "?");
+      .select({
+        teamId: teamMembers.teamId,
+        userId: teamMembers.userId,
+        name: users.name,
+        username: users.username,
+      })
+      .from(teamMembers)
+      .innerJoin(users, eq(teamMembers.userId, users.id))
+      .where(
+        and(
+          inArray(
+            teamMembers.teamId,
+            seasonTeams.map((t) => t.id),
+          ),
+          isNull(teamMembers.pickNumber),
+        ),
+      );
+    for (const t of seasonTeams) {
+      const names = captainRows
+        .filter((c) => c.teamId === t.id)
+        .sort((a, b) => Number(b.userId === t.captainUserId) - Number(a.userId === t.captainUserId))
+        .map((c) => c.name ?? c.username ?? "?");
+      if (names.length) captainNames.set(t.id, names.join(" & "));
+    }
   }
 
   // Group stage only: once playoffs are played, counting semis/final here
@@ -146,7 +167,7 @@ export async function computeStandings(seasonId: string): Promise<StandingRow[]>
     return {
       teamId: t.id,
       teamName: t.name,
-      captainDisplayName: captainNames.get(t.captainUserId) ?? "?",
+      captainDisplayName: captainNames.get(t.id) ?? "?",
       wins: s.wins,
       losses: s.losses,
       gameDiff: s.gamesWon - s.gamesLost,
@@ -217,4 +238,31 @@ export async function getTeamForCaptain(
 
   if (member[0]) return { id: member[0].teamId, name: member[0].teamName };
   return null;
+}
+
+/**
+ * The team this user captains in the season, or null. Covers both duo
+ * captains: every captain is a team member with pickNumber null (only the
+ * primary is teams.captainUserId).
+ */
+export async function getCaptainedTeamId(seasonId: string, userId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ teamId: teams.id })
+    .from(teams)
+    .leftJoin(
+      teamMembers,
+      and(
+        eq(teamMembers.teamId, teams.id),
+        eq(teamMembers.userId, userId),
+        isNull(teamMembers.pickNumber),
+      ),
+    )
+    .where(
+      and(
+        eq(teams.seasonId, seasonId),
+        or(eq(teams.captainUserId, userId), eq(teamMembers.userId, userId)),
+      ),
+    )
+    .limit(1);
+  return row?.teamId ?? null;
 }

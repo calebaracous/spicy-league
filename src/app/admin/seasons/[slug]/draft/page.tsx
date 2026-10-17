@@ -20,7 +20,7 @@ import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { FlashToast } from "@/components/flash-toast";
-import { getDraftSnapshot, totalPicks } from "@/lib/draft";
+import { getDraftSnapshot, loadCaptainTeams, totalPicks } from "@/lib/draft";
 import { cn } from "@/lib/utils";
 
 export const generateMetadata = seasonPageMetadata("Draft · Admin");
@@ -31,7 +31,7 @@ type SearchParams = Promise<{ saved?: string; error?: string }>;
 const ERROR_MESSAGES: Record<string, string> = {
   "need-captains": "You need at least 2 captains to start the draft.",
   "pool-too-small":
-    "Not enough players to fill every team. Each captain needs 4 non-captain signups — add signups or remove a captain.",
+    "Not enough players to fill every team. Each team needs 4 non-captain signups (3 for a duo-captain team) — add signups or remove a captain.",
   "already-complete": "This draft is already complete.",
   "no-draft": "No draft has been created yet.",
   "no-picks": "There are no picks to undo.",
@@ -61,7 +61,10 @@ export default async function AdminDraftPage({
   if (!season) notFound();
 
   const draft = await db.query.drafts.findFirst({ where: eq(drafts.seasonId, season.id) });
-  const snap = await getDraftSnapshot(slug);
+  const [snap, captainTeams] = await Promise.all([
+    getDraftSnapshot(slug),
+    loadCaptainTeams(season.id),
+  ]);
   const errorMessage = error ? ERROR_MESSAGES[error] : null;
 
   const startWithSlug = startDraft.bind(null, slug);
@@ -69,8 +72,8 @@ export default async function AdminDraftPage({
   const resumeWithSlug = resumeDraft.bind(null, slug);
   const undoWithSlug = undoLastPick.bind(null, slug);
 
-  const captainCount = snap?.captains.length ?? 0;
-  const expectedTotal = totalPicks(captainCount);
+  const teamCount = captainTeams.length;
+  const expectedTotal = totalPicks(captainTeams);
   const pickCount = snap?.picks.length ?? 0;
 
   return (
@@ -91,8 +94,7 @@ export default async function AdminDraftPage({
           )}
         </div>
         <p className="text-muted-foreground text-sm">
-          {captainCount} captain{captainCount === 1 ? "" : "s"} · {pickCount} / {expectedTotal}{" "}
-          picks
+          {teamCount} team{teamCount === 1 ? "" : "s"} · {pickCount} / {expectedTotal} picks
         </p>
       </header>
 
@@ -162,29 +164,31 @@ export default async function AdminDraftPage({
               href={`/admin/seasons/${slug}/signups`}
               className={cn(buttonVariants({ variant: "outline" }))}
             >
-              Reorder captains
+              Arrange captains
             </Link>
           </div>
         </CardContent>
       </Card>
 
-      {snap && snap.captains.length > 0 ? (
+      {captainTeams.length > 0 ? (
         <Card>
           <CardHeader>
             <CardTitle>Captain order</CardTitle>
             <CardDescription>
-              This is the snake order for round 1. Round 2 reverses, round 3 forward, round 4
-              reverse — 4 picks per captain, 5-player teams.
+              This is the snake order for round 1; each round reverses the last. Teams are 5
+              players: a solo captain makes 4 picks, a duo makes 3 and sits out the final round.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <ol className="space-y-1 text-sm">
-              {snap.captains.map((c) => (
-                <li key={c.userId} className="flex items-center gap-3">
+              {captainTeams.map((t) => (
+                <li key={t.primaryUserId} className="flex items-center gap-3">
                   <span className="text-muted-foreground w-6 text-right font-mono text-xs">
-                    {c.captainOrder}.
+                    {t.captainOrder}.
                   </span>
-                  <span>{c.displayName}</span>
+                  <span>{t.displayName}</span>
+                  {t.captains.length > 1 ? <Badge variant="outline">Duo</Badge> : null}
+                  <span className="text-muted-foreground ml-auto text-xs">{t.picks} picks</span>
                 </li>
               ))}
             </ol>

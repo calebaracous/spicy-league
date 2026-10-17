@@ -67,7 +67,7 @@ Rendered by `src/app/page.tsx`:
 - `src/app/seasons/[slug]/page.tsx` — season detail. `StatusPanel` renders per-state CTA. Looks up champion from `matches` when complete.
 - `src/app/seasons/[slug]/signup/page.tsx` — signup form (LoL: roles, CS2: maps).
 - `src/app/seasons/[slug]/signup/actions.ts` — `submitSignup`. Validates state + window + one-per-user.
-- `src/app/seasons/[slug]/captains/page.tsx` — announced captain list.
+- `src/app/seasons/[slug]/captains/page.tsx` — announced captain list (duos grouped on one line).
 - `src/app/seasons/[slug]/draft/page.tsx` — live draft viewer. Fetches initial snapshot, renders `<LiveBoard>`.
 - `src/app/seasons/[slug]/draft/live-board.tsx` — client component; SSE-subscribes to `/api/draft/[slug]/stream`; shows solo-queue rank per pool player (LoL).
 - `src/app/seasons/[slug]/draft/actions.ts` — `submitPick`, `startDraft`, `pauseDraft`, `resumeDraft`, `undoLastPick`. Full validation chain in `submitPick` — see [DRAFT.md](DRAFT.md).
@@ -98,8 +98,8 @@ Rendered by `src/app/page.tsx`:
 - `src/app/admin/seasons/new/page.tsx` — create season form.
 - `src/app/admin/seasons/actions.ts` — `createSeason`, `updateSeason`, `transitionSeasonState`. zod-validated.
 - `src/app/admin/seasons/[slug]/page.tsx` — edit metadata + state transition buttons.
-- `src/app/admin/seasons/[slug]/signups/page.tsx` — signup roster, captain promotion UI.
-- `src/app/admin/seasons/[slug]/signups/actions.ts` — `promoteCaptain`, `demoteCaptain`, `moveCaptain` (swap via a `-1` placeholder), `removeSignup` (pre-draft only; drops captain spot + renumbers), `getSignupStats`.
+- `src/app/admin/seasons/[slug]/signups/page.tsx` — signup roster, captain promotion UI, captains grouped by team with Pair with… / Split for duo captains.
+- `src/app/admin/seasons/[slug]/signups/actions.ts` — `promoteCaptain`, `demoteCaptain`, `moveCaptain` (whole team; swap via a `-1` placeholder), `pairCaptain` / `splitCaptain` (duo captains), `removeSignup` (pre-draft only; drops captain spot + renumbers), `getSignupStats`. Captain changes lock once the draft starts; `renumberCaptains` keeps duos on one order.
 - `src/app/admin/seasons/[slug]/signups/export/route.ts` — CSV download of signup roster.
 - `src/app/admin/seasons/[slug]/draft/page.tsx` — admin draft board with start/pause/resume/undo controls.
 - `src/app/admin/seasons/[slug]/matches/page.tsx` — schedule generation + playoff seeding + confirm/dispute/reset buttons.
@@ -160,8 +160,8 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/utils.ts` — `cn()` from clsx + tailwind-merge.
 - `src/lib/env.ts` — t3-env + zod schema. See [ENV.md](ENV.md).
 - `src/lib/seasons.ts` — `SEASON_STATES`, `SUB_SIGNUP_STATES` + `openSignupKind` (player vs sub signups) + `resolveSignupKind` (sub-only choice), `TRANSITIONS` state machine, `nextStates`, `canTransition`, `SEASON_STATE_LABELS`, `GAME_LABELS`, `PUBLIC_STATES`, `isPublic`, `isValidSlug`, `slugify`, `seasonSchedule` (ordered key-dates list).
-- `src/lib/draft.ts` — `PICKS_PER_TEAM`, `captainOrderForPick` (snake), `totalPicks`, `getDraftSnapshot` (incl. solo-queue rank per pool player), `finalizeDraft`. See [DRAFT.md](DRAFT.md).
-- `src/lib/schedule.ts` — `buildRoundRobin` (circle method), `generateSchedule`, `computeStandings`, `seedPlayoffs`, `getTeamForCaptain` (captain *or* rostered member). See [MATCHES.md](MATCHES.md).
+- `src/lib/draft.ts` — `TEAM_SIZE`, `PICKS_PER_TEAM`, `picksForTeam`, `snakeOrder` (skips full teams), `groupCaptainTeams` / `loadCaptainTeams` (solo + duo captains), `teamForPick`, `totalPicks`, `getDraftSnapshot` (incl. solo-queue rank per pool player), `finalizeDraft`. See [DRAFT.md](DRAFT.md).
+- `src/lib/schedule.ts` — `buildRoundRobin` (circle method), `generateSchedule`, `computeStandings`, `seedPlayoffs`, `getTeamForCaptain` (captain *or* rostered member), `getCaptainedTeamId` (captains only, either of a duo). See [MATCHES.md](MATCHES.md).
 - `src/lib/homepage.ts` — `getHomepageData()` (discriminated union of 6 home states), `formatRank`, rank-sorting helpers, podium builder.
 - `src/lib/backdrop-clips.ts` — home-row backdrop clip registry (`backdropClip(game, index)`, `otherGame`). Clips have `sources: []` until real footage lands.
 - `src/lib/live-season.ts` — `getLiveSeason`, `LIVE_STATE_COPY`, `liveSeasonHref`. Used by header pill + home hero.

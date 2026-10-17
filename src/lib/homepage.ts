@@ -22,8 +22,11 @@ export type PlayerInfo = {
   rank: string | null;
 };
 
+/** One per team: a duo's usernames are joined ("raze & jamileo"). */
 export type CaptainInfo = {
   username: string;
+  /** Captains on the team: 1, or 2 for duo captains. */
+  size: number;
 };
 
 export type NextMatchInfo = {
@@ -205,7 +208,7 @@ async function getTopRankedPlayers(
   }));
 }
 
-type CaptainFull = { userId: string; username: string };
+type CaptainFull = { userId: string; username: string; captainOrder: number };
 
 async function getCaptains(seasonId: string): Promise<CaptainFull[]> {
   const rows = await db
@@ -217,8 +220,12 @@ async function getCaptains(seasonId: string): Promise<CaptainFull[]> {
     .from(seasonCaptains)
     .innerJoin(users, eq(users.id, seasonCaptains.userId))
     .where(eq(seasonCaptains.seasonId, seasonId))
-    .orderBy(asc(seasonCaptains.captainOrder));
-  return rows.map((r) => ({ userId: r.userId, username: r.username ?? "unknown" }));
+    .orderBy(asc(seasonCaptains.captainOrder), asc(seasonCaptains.createdAt));
+  return rows.map((r) => ({
+    userId: r.userId,
+    username: r.username ?? "unknown",
+    captainOrder: r.captainOrder,
+  }));
 }
 
 async function getRandomSignups(
@@ -418,7 +425,11 @@ export async function getHomepageData(): Promise<HomepageData> {
     return {
       state: "draft",
       season: active,
-      captains: captainsFull.map((c) => ({ username: c.username })),
+      // Duo captains share a captainOrder: one badge per team.
+      captains: [...new Set(captainsFull.map((c) => c.captainOrder))].map((order) => {
+        const team = captainsFull.filter((c) => c.captainOrder === order);
+        return { username: team.map((c) => c.username).join(" & "), size: team.length };
+      }),
       topNonCaptains,
       pastSeasons,
     };

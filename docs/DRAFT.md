@@ -7,27 +7,43 @@ This file covers the **season** draft. The 10-man flow has its own,
 simpler 2-captain draft with a fixed pick order — see
 [TEN-MAN.md](TEN-MAN.md). It reuses the same SSE pattern.
 
+## Teams, solo and duo captains
+
+The draft runs over **teams**, not captains. A team is one captain, or two
+**duo captains** — `season_captains` rows that share a `captainOrder`
+(admin "Pair with…", see [SEASON-LIFECYCLE.md](SEASON-LIFECYCLE.md)).
+`loadCaptainTeams(seasonId)` / `groupCaptainTeams(rows)` in
+`src/lib/draft.ts` build `CaptainTeam`s: `captains` (primary first),
+`primaryUserId`, `displayName` (`"RAZE & JAMILEO"`), `picks`.
+
+- Teams are `TEAM_SIZE = 5`. `picksForTeam(captains)` = 5 − captains: a
+  solo team picks 4 (`PICKS_PER_TEAM`), a duo picks 3.
+- **Primary captain** = the first-promoted of a duo (`createdAt`). Their id
+  is the team's identity: `draft_picks.captain_user_id` and
+  `teams.captain_user_id` hold it whichever duo captain clicked.
+- Either duo captain can pick; both get the "Your pick" alert.
+
 ## Snake order
 
 ```ts
-captainOrderForPick(pickNumber, captainCount)
+snakeOrder(picksPerTeam)        // 0-indexed team per pick, in pick order
+teamForPick(captainTeams, pickNumber)
+totalPicks(captainTeams)        // sum of each team's picks
 // src/lib/draft.ts
 ```
 
-- `pickNumber` is 1-indexed across the entire draft.
-- `captainCount` is the number of captains.
-- Returns the 1-indexed `captainOrder` for whoever is on the clock.
+Odd rounds go in captain order (1..N), even rounds reverse (N..1). A team
+that has all its picks sits out the later rounds, so solo and duo teams can
+mix (a duo misses the 4th round). All-solo drafts are unchanged.
 
-Odd rounds go in captain order (1..N). Even rounds reverse (N..1).
-
-Total picks = `PICKS_PER_TEAM * captainCount` where `PICKS_PER_TEAM = 4`.
-Team size is 5 (captain + 4 picks).
-
-Example with 4 captains:
+Example with 4 solo captains:
 ```
 Pick #:     1 2 3 4   5 6 7 8   9 10 11 12   13 14 15 16
 Captain #:  1 2 3 4   4 3 2 1   1  2  3  4    4  3  2  1
 ```
+
+Six duo teams (Season 11's format) is 3 rounds, 18 picks. Teams 1 and 3
+solo with team 2 a duo: `1 2 3 · 3 2 1 · 1 2 3 · 3 1`.
 
 ## Authoritative state
 
@@ -50,7 +66,8 @@ board renders next to each player.
 ## The "on the clock" derivation
 
 `onTheClock` is **not stored** — it's computed from `picks.length` and the
-snake order. That means:
+snake order (`teamForPick`). It names the team's primary in `captainUserId`
+and every captain in `captainUserIds`. That means:
 
 - Undoing a pick automatically rewinds who's on the clock.
 - There is no separate "timer" row. If we ever add a pick clock it'll be
@@ -121,10 +138,11 @@ Order of checks:
 2. Season exists (else redirect `/admin?error=not-found`).
 3. Draft exists → `no-draft`.
 4. Draft `state === "in_progress"` (rejects paused / pending / completed) → `not-running`.
-5. Fetch captains + existing picks.
+5. Fetch captain teams (`loadCaptainTeams`) + existing picks.
 6. If `existingPicks.length >= total` → `draft-complete`.
-7. Compute `nextPickNumber` and `onClockCaptain` (missing → `internal`).
-8. `!isAdmin && userId !== onClockCaptain.userId` → `not-your-turn`.
+7. Compute `nextPickNumber` and `onClockTeam` (missing → `internal`).
+8. `!isAdmin` and the caller isn't one of `onClockTeam.captains` →
+   `not-your-turn`. The pick is stored under the team's primary captain.
 9. Picked user is not themselves a captain → `cant-pick-captain`.
 10. Picked user not already picked → `already-picked`.
 11. Picked user is in `seasonSignups` → `not-in-pool`.
@@ -151,7 +169,7 @@ All in `src/app/seasons/[slug]/draft/actions.ts`, all gated by
 
 | Action | Effect |
 |---|---|
-| `startDraft(slug)` | Creates or resumes the `drafts` row (`state=in_progress`). Also transitions `seasons.state` to `drafting` if not already. Bails with `need-captains` if `< 2` captains, `pool-too-small` if non-captain signups `< totalPicks(captains)` (otherwise the pool runs dry before the last pick and the draft can never finalize), `already-complete` if the draft is completed. |
+| `startDraft(slug)` | Creates or resumes the `drafts` row (`state=in_progress`). Also transitions `seasons.state` to `drafting` if not already. Bails with `need-captains` if `< 2` teams, `pool-too-small` if non-captain signups `< totalPicks(captainTeams)` (otherwise the pool runs dry before the last pick and the draft can never finalize), `already-complete` if the draft is completed. |
 | `pauseDraft(slug)` | `state=paused` (only if currently `in_progress`). |
 | `resumeDraft(slug)` | `state=in_progress` (only if currently `paused`). |
 | `undoLastPick(slug)` | Deletes the row with max `pickNumber` (`no-draft` / `no-picks` errors). Does nothing to the draft state or the season. If you undo past a `finalizeDraft` call, you'll need to also wipe teams and reset draft/season state manually. |
@@ -166,14 +184,16 @@ order the admin set — no randomisation.
 
 Plain sequential writes — **not** wrapped in a transaction.
 
-1. Fetch the draft, captains, picks.
-2. Bail if pick count isn't exactly `totalPicks(captains.length)`.
+1. Fetch the draft, captain teams, picks.
+2. Bail if pick count isn't exactly `totalPicks(captainTeams)`.
 3. Bail if any `teams` row already exists for this season (idempotent
    guard — safe to call twice).
-4. For each captain:
-   - Insert a `teams` row with `name = "Team ${displayName}"`.
-   - Insert a `teamMembers` row for the captain (`pickNumber: null`).
-   - Insert `teamMembers` rows for each of their picks (preserving
+4. For each captain team:
+   - Insert a `teams` row with `name = "Team ${displayName}"` ("Team RAZE &
+     JAMILEO" for a duo) and `captainUserId` = the primary.
+   - Insert a `teamMembers` row for **every** captain (`pickNumber: null`) —
+     that's what marks a captain from here on (`getCaptainedTeamId`).
+   - Insert `teamMembers` rows for each of the team's picks (preserving
      `pickNumber`).
 5. Update `drafts.state = 'completed'`, set `completedAt`.
 6. Update `seasons.state = 'group_stage'`.
@@ -186,14 +206,15 @@ an admin-recover flow.
 
 Captains are registered in `seasonCaptains` by admin action (see
 [SEASON-LIFECYCLE.md](SEASON-LIFECYCLE.md)). `captainOrder` is the 1-indexed
-seed and drives snake order. `moveCaptain` in
-`src/app/admin/seasons/[slug]/signups/actions.ts` re-ranks with a
-three-step swap through `-1`. There's no unique constraint on
-`(seasonId, captainOrder)` today, so this is defensive — keep it if you
-refactor, in case one is added.
+team seed and drives snake order; **two rows on one `captainOrder` are duo
+captains** — so never add a unique constraint on `(seasonId, captainOrder)`.
+`moveCaptain` in `src/app/admin/seasons/[slug]/signups/actions.ts` moves a
+whole team with a three-step swap through `-1`.
 
-Once `drafting` begins, admins should avoid reordering captains (the snake
-computation doesn't consult existing picks — you'd skew the order).
+Captain changes (promote, remove, move, pair, split) are refused with
+`captains-locked` once the draft has left `pending` — the snake and each
+team's pick count are derived from them, so a mid-draft change would hand
+picks to the wrong team.
 
 ## Where to look when…
 
@@ -202,10 +223,10 @@ computation doesn't consult existing picks — you'd skew the order).
 - …the SSE stream isn't updating → `snapshotHash` is the serialized
   snapshot; a ping instead of an update means `getDraftSnapshot` really
   returned identical data.
-- …"Start draft" says not enough players → each captain needs
-  `PICKS_PER_TEAM` (4) non-captain signups. Add signups or demote a captain.
+- …"Start draft" says not enough players → each team needs its picks (4
+  solo, 3 duo) in non-captain signups. Add signups or demote a captain.
 - …`finalizeDraft` didn't run → check the pick count matches
-  `totalPicks(captains.length)` exactly. A manual DB insert with a wrong
+  `totalPicks(captainTeams)` exactly. A manual DB insert with a wrong
   pickNumber breaks this.
 - …you need to re-run the draft → delete rows from `draftPicks`, `teams`,
   and `team_members` for the season, set `drafts.state` back to

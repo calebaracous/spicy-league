@@ -5,10 +5,10 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { db } from "@/db/client";
-import { teams } from "@/db/schema/drafts";
 import { matches, matchSubstitutions } from "@/db/schema/matches";
 import { seasons } from "@/db/schema/seasons";
 import { requireAdmin, requireOnboarded } from "@/lib/auth-helpers";
+import { getCaptainedTeamId } from "@/lib/schedule";
 import { checkSubEligibility } from "@/lib/substitutions";
 
 /**
@@ -57,12 +57,10 @@ async function managedTeamId(
       ? requestedTeamId
       : null;
   }
-  // Captains only — not every roster member.
-  const team = await db.query.teams.findFirst({
-    where: and(eq(teams.seasonId, seasonId), eq(teams.captainUserId, userId)),
-  });
-  if (!team) return null;
-  return team.id === match.homeTeamId || team.id === match.awayTeamId ? team.id : null;
+  // Captains only (either of a duo) — not every roster member.
+  const teamId = await getCaptainedTeamId(seasonId, userId);
+  if (!teamId) return null;
+  return teamId === match.homeTeamId || teamId === match.awayTeamId ? teamId : null;
 }
 
 export async function requestSub(slug: string, matchId: string, formData: FormData) {

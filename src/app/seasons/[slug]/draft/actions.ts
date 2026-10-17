@@ -1,14 +1,14 @@
 "use server";
 
-import { and, asc, desc, eq } from "drizzle-orm";
+import { and, desc, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db/client";
 import { draftPicks, drafts } from "@/db/schema/drafts";
-import { seasonCaptains, seasonSignups, seasons } from "@/db/schema/seasons";
+import { seasonSignups, seasons } from "@/db/schema/seasons";
 import { requireAdmin, requireOnboarded } from "@/lib/auth-helpers";
-import { captainOrderForPick, finalizeDraft, totalPicks as totalPicksFor } from "@/lib/draft";
+import { finalizeDraft, loadCaptainTeams, teamForPick, totalPicks } from "@/lib/draft";
 
 async function getSeasonOrFail(slug: string) {
   const season = await db.query.seasons.findFirst({ where: eq(seasons.slug, slug) });
@@ -20,23 +20,20 @@ export async function startDraft(slug: string) {
   await requireAdmin();
   const season = await getSeasonOrFail(slug);
 
-  const captains = await db
-    .select({ userId: seasonCaptains.userId })
-    .from(seasonCaptains)
-    .where(eq(seasonCaptains.seasonId, season.id));
-  if (captains.length < 2) {
+  const captainTeams = await loadCaptainTeams(season.id);
+  if (captainTeams.length < 2) {
     redirect(`/admin/seasons/${slug}/draft?error=need-captains`);
   }
 
-  // Every team needs PICKS_PER_TEAM non-captain players, otherwise the pool
-  // runs out before the last pick and the draft can never finalize.
-  const captainIds = new Set(captains.map((c) => c.userId));
+  // Every team needs its picks (4 solo, 3 duo) from the pool, otherwise the
+  // pool runs out before the last pick and the draft can never finalize.
+  const captainIds = new Set(captainTeams.flatMap((t) => t.captains.map((c) => c.userId)));
   const signups = await db
     .select({ userId: seasonSignups.userId })
     .from(seasonSignups)
     .where(and(eq(seasonSignups.seasonId, season.id), eq(seasonSignups.kind, "player")));
   const poolSize = signups.filter((s) => !captainIds.has(s.userId)).length;
-  if (poolSize < totalPicksFor(captains.length)) {
+  if (poolSize < totalPicks(captainTeams)) {
     redirect(`/admin/seasons/${slug}/draft?error=pool-too-small`);
   }
 
@@ -144,14 +141,8 @@ export async function submitPick(slug: string, pickedUserId: string, expectedPic
     redirect(`/seasons/${slug}/draft?error=not-running`);
   }
 
-  const captains = await db
-    .select({ userId: seasonCaptains.userId, captainOrder: seasonCaptains.captainOrder })
-    .from(seasonCaptains)
-    .where(eq(seasonCaptains.seasonId, season.id))
-    .orderBy(asc(seasonCaptains.captainOrder));
-
-  const captainCount = captains.length;
-  const total = totalPicksFor(captainCount);
+  const captainTeams = await loadCaptainTeams(season.id);
+  const total = totalPicks(captainTeams);
 
   const existingPicks = await db
     .select({ pickedUserId: draftPicks.pickedUserId, pickNumber: draftPicks.pickNumber })
@@ -163,18 +154,18 @@ export async function submitPick(slug: string, pickedUserId: string, expectedPic
   }
 
   const nextPickNumber = existingPicks.length + 1;
-  const order = captainOrderForPick(nextPickNumber, captainCount);
-  const onClockCaptain = captains.find((c) => c.captainOrder === order);
-  if (!onClockCaptain) {
+  const onClockTeam = teamForPick(captainTeams, nextPickNumber);
+  if (!onClockTeam) {
     redirect(`/seasons/${slug}/draft?error=internal`);
   }
 
+  // Either captain of a duo may pick for their team.
   const isAdmin = session.user.role === "admin";
-  if (!isAdmin && session.user.id !== onClockCaptain.userId) {
+  if (!isAdmin && !onClockTeam.captains.some((c) => c.userId === session.user.id)) {
     redirect(`/seasons/${slug}/draft?error=not-your-turn`);
   }
 
-  const captainIds = new Set(captains.map((c) => c.userId));
+  const captainIds = new Set(captainTeams.flatMap((t) => t.captains.map((c) => c.userId)));
   if (captainIds.has(pickedUserId)) {
     redirect(`/seasons/${slug}/draft?error=cant-pick-captain`);
   }
@@ -206,7 +197,8 @@ export async function submitPick(slug: string, pickedUserId: string, expectedPic
     await db.insert(draftPicks).values({
       draftId: draft.id,
       pickNumber: nextPickNumber,
-      captainUserId: onClockCaptain.userId,
+      // The team's primary captain, whichever of a duo clicked.
+      captainUserId: onClockTeam.primaryUserId,
       pickedUserId,
     });
   } catch (err) {

@@ -30,7 +30,7 @@ import { admin, player, run, seasonSlug, seedSignups } from "./support/seed";
  */
 
 // Snake order for 4 captains, by captain *order* (1-based). Written out by hand
-// on purpose — an independent oracle for captainOrderForPick.
+// on purpose — an independent oracle for snakeOrder.
 const SNAKE_4 = [1, 2, 3, 4, 4, 3, 2, 1, 1, 2, 3, 4, 4, 3, 2, 1];
 
 test.afterEach(closeContexts);

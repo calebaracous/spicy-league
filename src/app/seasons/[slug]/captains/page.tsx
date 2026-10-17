@@ -46,7 +46,13 @@ export default async function CaptainsPage({ params }: { params: Params }) {
     .from(seasonCaptains)
     .innerJoin(users, eq(seasonCaptains.userId, users.id))
     .where(eq(seasonCaptains.seasonId, season.id))
-    .orderBy(asc(seasonCaptains.captainOrder));
+    .orderBy(asc(seasonCaptains.captainOrder), asc(seasonCaptains.createdAt));
+
+  // Captains sharing a captainOrder are duo captains of one team.
+  const captainTeams = [...new Set(captains.map((c) => c.captainOrder))].map((order) => ({
+    order,
+    captains: captains.filter((c) => c.captainOrder === order),
+  }));
 
   return (
     <div className="page flex-1 space-y-8 [--page-max:42rem]">
@@ -69,17 +75,29 @@ export default async function CaptainsPage({ params }: { params: Params }) {
         <p className="text-muted-foreground text-sm">No captains have been announced yet.</p>
       ) : (
         <ol className="space-y-3">
-          {captains.map((c) => (
-            <li key={c.id} className="flex items-center gap-4 rounded-xl border px-5 py-3">
+          {captainTeams.map((team) => (
+            <li key={team.order} className="flex items-center gap-4 rounded-xl border px-5 py-3">
               <span className="text-muted-foreground w-6 text-right font-mono text-sm">
-                {c.captainOrder}.
+                {team.order}.
               </span>
-              <Link
-                href={`/users/${c.username}`}
-                className="font-medium underline-offset-2 hover:underline"
-              >
-                {c.name ?? c.username}
-              </Link>
+              <span className="flex flex-wrap items-center gap-x-1.5">
+                {team.captains.map((c, i) => (
+                  <span key={c.id}>
+                    {i > 0 ? <span className="text-muted-foreground">&amp; </span> : null}
+                    <Link
+                      href={`/users/${c.username}`}
+                      className="font-medium underline-offset-2 hover:underline"
+                    >
+                      {c.name ?? c.username}
+                    </Link>
+                  </span>
+                ))}
+              </span>
+              {team.captains.length > 1 ? (
+                <Badge variant="outline" className="ml-auto">
+                  Duo
+                </Badge>
+              ) : null}
             </li>
           ))}
         </ol>

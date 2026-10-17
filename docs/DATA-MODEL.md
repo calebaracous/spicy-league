@@ -136,12 +136,15 @@ One row per (season, user). Enforced by a unique constraint
 
 ### `seasonCaptains`
 One row per (season, user) — unique. `captainOrder` is 1-indexed and drives
-the snake draft. Order is mutable via `promoteCaptain` / `demoteCaptain` /
-`moveCaptain` in `src/app/admin/seasons/[slug]/signups/actions.ts`.
-There is **no** unique constraint on `(seasonId, captainOrder)` — order
-uniqueness is maintained by those actions only. `moveCaptain` still swaps
-through a `-1` placeholder (three writes) so it stays safe if such a
-constraint is ever added.
+the snake draft. **Two rows sharing a `captainOrder` are duo captains of one
+team** (no extra column; `groupCaptainTeams` in `src/lib/draft.ts`). The
+first-promoted (`createdAt`) is the team's primary. Mutated via
+`promoteCaptain` / `demoteCaptain` / `moveCaptain` / `pairCaptain` /
+`splitCaptain` in `src/app/admin/seasons/[slug]/signups/actions.ts`, which
+keep orders contiguous with `renumberCaptains` (duos stay on one number).
+There is deliberately **no** unique constraint on `(seasonId, captainOrder)`
+— adding one would make duos impossible. `moveCaptain` swaps through a `-1`
+placeholder (three writes).
 
 ## drafts.ts — drafts, picks, teams, team_members
 
@@ -158,9 +161,9 @@ One-to-one with seasons (`seasonId` has `unique`). `state` enum `draft_state`:
   - `(draftId, pickedUserId)` — a user can't be picked twice
 - `captainUserId`, `pickedUserId` — both FK → users
 
-Snake math: see `captainOrderForPick(pickNumber, captainCount)` in
-`src/lib/draft.ts`. Pick count per team is `PICKS_PER_TEAM = 4` → each
-team ends up with captain + 4 = 5 players.
+Snake math: see `snakeOrder` / `teamForPick` in `src/lib/draft.ts`. Every
+team ends up with `TEAM_SIZE = 5` players: a solo captain + 4 picks, or duo
+captains + 3 picks.
 
 ### `teams`, `teamMembers`
 Created in one batch by `finalizeDraft()` in `src/lib/draft.ts` once all

@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { LocalTime } from "@/components/ui/local-time";
 import { FlashToast } from "@/components/flash-toast";
 import { seasonPageMetadata } from "@/lib/season-meta";
-import { getTeamForCaptain } from "@/lib/schedule";
+import { getCaptainedTeamId, getTeamForCaptain } from "@/lib/schedule";
 import { SUB_ERROR_MESSAGES } from "@/lib/substitution-rules";
 import { getMatchLineups, getSubCandidates } from "@/lib/substitutions";
 import { MatchLineups } from "./_components/lineups";
@@ -86,15 +86,20 @@ export default async function MatchDetailPage({
   const userId = session?.user?.id ?? null;
   const isAdmin = session?.user?.role === "admin";
 
-  const myTeam = userId ? await getTeamForCaptain(season.id, userId) : null;
+  const [myTeam, captainedTeamId] = userId
+    ? await Promise.all([
+        getTeamForCaptain(season.id, userId),
+        getCaptainedTeamId(season.id, userId),
+      ])
+    : [null, null];
   const isOnThisMatch =
     myTeam && (myTeam.id === match.homeTeamId || myTeam.id === match.awayTeamId);
   const canReport = (isOnThisMatch || isAdmin) && match.state !== "confirmed";
 
-  // Subs: captains manage their own team; admins either team.
+  // Subs: captains (either of a duo) manage their own team; admins either team.
   const managedTeamIds = isAdmin
     ? [match.homeTeamId, match.awayTeamId]
-    : [homeTeam, awayTeam].filter((t) => t && t.captainUserId === userId).map((t) => t!.id);
+    : [match.homeTeamId, match.awayTeamId].filter((id) => id === captainedTeamId);
   const [lineups, candidates] = await Promise.all([
     getMatchLineups(match),
     match.state === "scheduled" && managedTeamIds.length > 0

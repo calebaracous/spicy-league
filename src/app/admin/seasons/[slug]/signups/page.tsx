@@ -2,7 +2,14 @@ import { asc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { promoteCaptain, demoteCaptain, moveCaptain, removeSignup } from "./actions";
+import {
+  promoteCaptain,
+  demoteCaptain,
+  moveCaptain,
+  pairCaptain,
+  removeSignup,
+  splitCaptain,
+} from "./actions";
 import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { db } from "@/db/client";
 import { seasons } from "@/db/schema/seasons";
@@ -25,7 +32,10 @@ type SearchParams = Promise<{ saved?: string; error?: string; role?: string }>;
 const ERROR_MESSAGES: Record<string, string> = {
   "not-found": "Signup not found.",
   "already-captain": "This player is already a captain.",
-  "sub-captain": "Sub signups can't be captains — they joined after the draft pool closed.",
+  "sub-captain": "Sub signups can't be captains: they're not in the draft pool.",
+  "already-paired": "Both captains must be solo to pair them as duo captains.",
+  "captains-locked":
+    "Captains can't change once the draft has started: the pick order and each team's pick count depend on them.",
   "remove-too-late":
     "Players can only be removed before the draft starts. Once teams exist, removing someone would break rosters and the schedule.",
 };
@@ -97,11 +107,21 @@ export default async function AdminSignupsPage({
     .from(seasonCaptains)
     .innerJoin(users, eq(seasonCaptains.userId, users.id))
     .where(eq(seasonCaptains.seasonId, season.id))
-    .orderBy(asc(seasonCaptains.captainOrder));
+    .orderBy(asc(seasonCaptains.captainOrder), asc(seasonCaptains.createdAt));
 
+  // Captains sharing a captainOrder are duo captains of one team.
+  const captainTeams = [...new Set(captainRows.map((c) => c.captainOrder))].map((order) => ({
+    order,
+    captains: captainRows.filter((c) => c.captainOrder === order),
+  }));
+  const soloCaptains = captainTeams
+    .filter((t) => t.captains.length === 1)
+    .map((t) => t.captains[0]);
   const captainUserIds = new Set(captainRows.map((c) => c.userId));
+  // Teams of 5 — the recommendation counts teams, so a duo counts once.
   const total = allSignups.length;
-  const recommended = Math.floor(total / 5);
+  const draftPoolSize = allSignups.filter((s) => s.kind === "player").length;
+  const recommended = Math.floor(draftPoolSize / 5);
   const errorMessage = error ? ERROR_MESSAGES[error] : null;
 
   // Filter signups by role (LoL only)
@@ -118,6 +138,8 @@ export default async function AdminSignupsPage({
   const canRemove = ["signups_open", "signups_closed", "captains_selected"].includes(season.state);
   const demoteWithSlug = demoteCaptain.bind(null, slug);
   const moveWithSlug = moveCaptain.bind(null, slug);
+  const pairWithSlug = pairCaptain.bind(null, slug);
+  const splitWithSlug = splitCaptain.bind(null, slug);
 
   const lolRoles = ["top", "jungle", "mid", "adc", "support", "fill"];
 
@@ -145,7 +167,15 @@ export default async function AdminSignupsPage({
       </header>
 
       {saved ? (
-        <FlashToast message={saved === "removed" ? "Player removed from the season." : "Saved."} />
+        <FlashToast
+          message={
+            saved === "removed"
+              ? "Player removed from the season."
+              : saved === "paired"
+                ? "Duo captains paired."
+                : "Saved."
+          }
+        />
       ) : null}
       {errorMessage ? (
         <Alert variant="destructive">
@@ -158,56 +188,103 @@ export default async function AdminSignupsPage({
         <CardHeader>
           <CardTitle>Captains</CardTitle>
           <CardDescription>
-            {captainRows.length} selected · {recommended} recommended (floor({total} / 5))
+            {captainTeams.length} team{captainTeams.length !== 1 ? "s" : ""} · {recommended}{" "}
+            recommended (floor({draftPoolSize} / 5)). Pair two captains to make them duo captains of
+            one team: either can draft, and the team picks 3 players instead of 4.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {captainRows.length === 0 ? (
+          {captainTeams.length === 0 ? (
             <p className="text-muted-foreground text-sm">
               No captains yet. Promote players from the roster below.
             </p>
           ) : (
             <div className="space-y-2">
-              {captainRows.map((c, i) => (
-                <div
-                  key={c.id}
-                  className="flex items-center justify-between gap-3 rounded-lg border px-4 py-2"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-muted-foreground w-5 text-right font-mono text-sm">
-                      {c.captainOrder}.
-                    </span>
-                    <span className="text-sm font-medium">{c.name ?? c.username}</span>
+              {captainTeams.map((team, i) => {
+                const isDuo = team.captains.length > 1;
+                const solo = isDuo ? null : team.captains[0];
+                const partners = solo ? soloCaptains.filter((c) => c.id !== solo.id) : [];
+                return (
+                  <div
+                    key={team.order}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-2"
+                  >
+                    <div className="flex min-w-0 items-start gap-3">
+                      <span className="text-muted-foreground w-5 pt-1 text-right font-mono text-sm">
+                        {team.order}.
+                      </span>
+                      <ul className="space-y-1">
+                        {team.captains.map((c) => (
+                          <li key={c.id} className="flex flex-wrap items-center gap-1">
+                            <span className="text-sm font-medium">{c.name ?? c.username}</span>
+                            {isDuo ? (
+                              <form action={splitWithSlug.bind(null, c.id)}>
+                                <Button type="submit" variant="ghost" size="sm">
+                                  Split
+                                </Button>
+                              </form>
+                            ) : null}
+                            <form action={demoteWithSlug.bind(null, c.id)}>
+                              <Button
+                                type="submit"
+                                variant="ghost"
+                                size="sm"
+                                className="text-destructive hover:text-destructive"
+                              >
+                                Remove
+                              </Button>
+                            </form>
+                          </li>
+                        ))}
+                      </ul>
+                      {isDuo ? <Badge variant="outline">Duo</Badge> : null}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1">
+                      {solo && partners.length > 0 ? (
+                        <form
+                          action={pairWithSlug.bind(null, solo.id)}
+                          className="flex items-center gap-1"
+                        >
+                          <select
+                            name="partnerId"
+                            required
+                            defaultValue=""
+                            aria-label={`Duo partner for ${solo.name ?? solo.username}`}
+                            className="border-input h-7 rounded-md border bg-transparent px-1.5 text-xs"
+                          >
+                            <option value="" disabled>
+                              Pair with…
+                            </option>
+                            {partners.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.name ?? p.username}
+                              </option>
+                            ))}
+                          </select>
+                          <Button type="submit" variant="outline" size="sm">
+                            Pair
+                          </Button>
+                        </form>
+                      ) : null}
+                      <form action={moveWithSlug.bind(null, team.order, "up")}>
+                        <Button type="submit" variant="ghost" size="sm" disabled={i === 0}>
+                          ↑
+                        </Button>
+                      </form>
+                      <form action={moveWithSlug.bind(null, team.order, "down")}>
+                        <Button
+                          type="submit"
+                          variant="ghost"
+                          size="sm"
+                          disabled={i === captainTeams.length - 1}
+                        >
+                          ↓
+                        </Button>
+                      </form>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <form action={moveWithSlug.bind(null, c.id, "up")}>
-                      <Button type="submit" variant="ghost" size="sm" disabled={i === 0}>
-                        ↑
-                      </Button>
-                    </form>
-                    <form action={moveWithSlug.bind(null, c.id, "down")}>
-                      <Button
-                        type="submit"
-                        variant="ghost"
-                        size="sm"
-                        disabled={i === captainRows.length - 1}
-                      >
-                        ↓
-                      </Button>
-                    </form>
-                    <form action={demoteWithSlug.bind(null, c.id)}>
-                      <Button
-                        type="submit"
-                        variant="ghost"
-                        size="sm"
-                        className="text-destructive hover:text-destructive"
-                      >
-                        Remove
-                      </Button>
-                    </form>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
               <div className="pt-2">
                 <Link
                   href={`/admin/seasons/${slug}/draft`}
