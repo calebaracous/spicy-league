@@ -218,7 +218,7 @@ export type SubCandidate = {
   label: string;
   teamName: string | null;
   rank: string | null;
-  /** "sub" = joined the sub list after signups closed; "player" = undrafted or drafted signup. */
+  /** "sub" = sub-only or late signup (never drafted); "player" = undrafted or drafted signup. */
   kind: "player" | "sub";
 };
 

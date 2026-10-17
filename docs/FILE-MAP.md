@@ -159,7 +159,7 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 
 - `src/lib/utils.ts` — `cn()` from clsx + tailwind-merge.
 - `src/lib/env.ts` — t3-env + zod schema. See [ENV.md](ENV.md).
-- `src/lib/seasons.ts` — `SEASON_STATES`, `SUB_SIGNUP_STATES` + `openSignupKind` (player vs sub signups), `TRANSITIONS` state machine, `nextStates`, `canTransition`, `SEASON_STATE_LABELS`, `GAME_LABELS`, `PUBLIC_STATES`, `isPublic`, `isValidSlug`, `slugify`, `seasonSchedule` (ordered key-dates list).
+- `src/lib/seasons.ts` — `SEASON_STATES`, `SUB_SIGNUP_STATES` + `openSignupKind` (player vs sub signups) + `resolveSignupKind` (sub-only choice), `TRANSITIONS` state machine, `nextStates`, `canTransition`, `SEASON_STATE_LABELS`, `GAME_LABELS`, `PUBLIC_STATES`, `isPublic`, `isValidSlug`, `slugify`, `seasonSchedule` (ordered key-dates list).
 - `src/lib/draft.ts` — `PICKS_PER_TEAM`, `captainOrderForPick` (snake), `totalPicks`, `getDraftSnapshot` (incl. solo-queue rank per pool player), `finalizeDraft`. See [DRAFT.md](DRAFT.md).
 - `src/lib/schedule.ts` — `buildRoundRobin` (circle method), `generateSchedule`, `computeStandings`, `seedPlayoffs`, `getTeamForCaptain` (captain *or* rostered member). See [MATCHES.md](MATCHES.md).
 - `src/lib/homepage.ts` — `getHomepageData()` (discriminated union of 6 home states), `formatRank`, rank-sorting helpers, podium builder.

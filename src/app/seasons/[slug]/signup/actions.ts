@@ -11,7 +11,7 @@ import { seasons } from "@/db/schema/seasons";
 import { seasonSignups } from "@/db/schema/seasons";
 import { requireOnboarded } from "@/lib/auth-helpers";
 import { getActiveBan } from "@/lib/bans";
-import { openSignupKind } from "@/lib/seasons";
+import { openSignupKind, resolveSignupKind } from "@/lib/seasons";
 
 const LOL_ROLES = ["top", "jungle", "mid", "adc", "support", "fill"] as const;
 const CS2_MAPS = ["dust2", "mirage", "inferno", "nuke", "overpass", "anubis", "ancient"] as const;
@@ -34,13 +34,14 @@ export async function submitSignup(slug: string, formData: FormData) {
   });
   if (!season) redirect(`/seasons/${slug}?error=signups-closed`);
 
-  // Regular signups during the window; sub signups after it until the
-  // season completes (see openSignupKind).
-  const kind = openSignupKind(season);
-  if (!kind) {
+  // Regular signups during the window (or sub-only, if chosen); sub signups
+  // after it until the season completes (see openSignupKind).
+  const open = openSignupKind(season);
+  if (!open) {
     const notYet = season.signupOpensAt && new Date() < season.signupOpensAt;
     redirect(`/seasons/${slug}?error=${notYet ? "signups-not-open" : "signups-closed"}`);
   }
+  const kind = resolveSignupKind(open, formData.get("kind"));
 
   const existing = await db.query.seasonSignups.findFirst({
     where: and(eq(seasonSignups.seasonId, season.id), eq(seasonSignups.userId, session.user.id)),

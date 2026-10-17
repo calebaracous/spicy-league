@@ -15,7 +15,7 @@ the real UI against a real database and is run on demand.
   captains, `PICKS_PER_TEAM` per captain, back-to-back picks at the turn,
   `totalPicks`.
 - `round-robin.test.ts` — `buildRoundRobin`: every pair once, `n-1` rounds
-- `signup-kind.test.ts` — `openSignupKind`: player window, sub states, closed states
+- `signup-kind.test.ts` — `openSignupKind`: player window, sub states, closed states; `resolveSignupKind`: sub-only choice
 - `season-schedule.test.ts` — `seasonSchedule`: order, unset dates skipped, group stage range
 - `substitution-rules.test.ts` — `evaluateSubRequest`: eligibility, lineup
   lock, cross-team flag, per-team sub limit

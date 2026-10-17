@@ -127,7 +127,8 @@ One row per (season, user). Enforced by a unique constraint
   - Schema lives in the server action: `src/app/seasons/[slug]/signup/actions.ts`
 - `notes` — free text (for subs: when they're available)
 - `kind` enum `signup_kind` (`player | sub`, default `player`; migration
-  `0004_sub_signups`). `sub` = joined after regular signups closed — excluded
+  `0004_sub_signups`). `sub` = chose "Sub only" on the signup form, or joined after regular
+  signups closed (`resolveSignupKind`) — excluded
   from the draft pool (`getDraftSnapshot`, `startDraft`, `submitPick`),
   captain promotion and signup counts. Every query that means "draft pool"
   must filter `kind = 'player'`.

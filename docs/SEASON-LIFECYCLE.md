@@ -89,7 +89,11 @@ Per-state copy lives in `StatusPanel` in `src/app/seasons/[slug]/page.tsx`:
 `signups_open` once `signupClosesAt` has passed) the overview also shows
 "Missed signups? Join as a sub." → the same `/seasons/[slug]/signup` page in
 sub mode. `openSignupKind(season)` in `src/lib/seasons.ts` decides
-`"player" | "sub" | null`; `SUB_SIGNUP_STATES` lists the sub states. Sub
+`"player" | "sub" | null`; `SUB_SIGNUP_STATES` lists the sub states. During
+the regular window the form also offers **Play in the draft** / **Sub only**
+(`kind` field); `resolveSignupKind` maps the open kind + choice to the stored
+kind, so a late signup is always a sub. A sub who changes their mind before
+signups close leaves the sub list and signs up again. Sub
 signups (`season_signups.kind = 'sub'`) never enter the draft pool, can't be
 captains and don't count toward signup totals; they appear under
 **Available subs** on the Teams page and first in the match-page sub picker.

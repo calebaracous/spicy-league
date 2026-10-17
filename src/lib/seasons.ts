@@ -73,6 +73,17 @@ export function openSignupKind(
   return SUB_SIGNUP_STATES.includes(season.state) ? "sub" : null;
 }
 
+/**
+ * The kind a signup is stored as. During the signup window a player may
+ * choose to join as a sub only (not drafted); after it, everyone is a sub.
+ */
+export function resolveSignupKind(
+  open: "player" | "sub",
+  requested: FormDataEntryValue | null,
+): "player" | "sub" {
+  return open === "player" && requested !== "sub" ? "player" : "sub";
+}
+
 export const PUBLIC_STATES: readonly SeasonState[] = SEASON_STATES.filter((s) => s !== "draft");
 
 export function isPublic(state: SeasonState): boolean {

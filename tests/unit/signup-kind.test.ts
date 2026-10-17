@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { openSignupKind } from "@/lib/seasons";
+import { openSignupKind, resolveSignupKind } from "@/lib/seasons";
 
 const now = new Date("2026-10-16T12:00:00Z");
 const before = new Date("2026-10-15T12:00:00Z");
@@ -35,5 +35,18 @@ describe("openSignupKind", () => {
 
   it.each(["draft", "complete"] as const)("takes no signups during %s", (state) => {
     expect(openSignupKind(season(state), now)).toBeNull();
+  });
+});
+
+describe("resolveSignupKind", () => {
+  it("keeps a regular signup in the draft pool unless sub-only is chosen", () => {
+    expect(resolveSignupKind("player", "player")).toBe("player");
+    expect(resolveSignupKind("player", null)).toBe("player");
+    expect(resolveSignupKind("player", "sub")).toBe("sub");
+  });
+
+  it("makes every late signup a sub, whatever the form says", () => {
+    expect(resolveSignupKind("sub", "player")).toBe("sub");
+    expect(resolveSignupKind("sub", null)).toBe("sub");
   });
 });

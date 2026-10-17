@@ -42,12 +42,12 @@ const SIGNUP_ERRORS: Record<string, string> = {
 function StatusPanel({
   state,
   slug,
-  alreadySignedUp,
+  signupKind,
   championName,
 }: {
   state: SeasonState;
   slug: string;
-  alreadySignedUp: boolean;
+  signupKind: "player" | "sub" | null;
   championName?: string | null;
 }) {
   switch (state) {
@@ -58,14 +58,20 @@ function StatusPanel({
             <CardTitle>Signups are open</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-wrap items-center justify-between gap-3">
-            {alreadySignedUp ? (
+            {signupKind === "sub" ? (
+              <p className="text-muted-foreground text-sm">
+                You signed up as a sub, so you won&apos;t be drafted. Captains can request you for a
+                match once teams are set.
+              </p>
+            ) : signupKind ? (
               <p className="text-muted-foreground text-sm">
                 You are signed up. Captains draft from the signup list after signups close.
               </p>
             ) : (
               <>
                 <p className="text-muted-foreground text-sm">
-                  All signed-up players are eligible to be drafted by captains.
+                  Captains draft from the signup list. Can&apos;t commit to a team? Sign up as a sub
+                  instead.
                 </p>
                 <Link
                   href={`/seasons/${slug}/signup`}
@@ -218,9 +224,10 @@ export default async function SeasonDetailPage({
         columns: { kind: true },
       })
     : undefined;
-  const alreadySignedUp = !!mySignup;
   // Late joiners can sign up as subs once regular signups have closed.
-  const subSignupsOpen = openSignupKind(season) === "sub";
+  const openKind = openSignupKind(season);
+  const subSignupsOpen = openKind === "sub";
+  const playerSignupsOpen = openKind === "player";
 
   let championName: string | null = null;
   if (season.state === "complete") {
@@ -304,7 +311,7 @@ export default async function SeasonDetailPage({
       <StatusPanel
         state={season.state}
         slug={season.slug}
-        alreadySignedUp={alreadySignedUp}
+        signupKind={mySignup?.kind ?? null}
         championName={championName}
       />
 
@@ -320,6 +327,9 @@ export default async function SeasonDetailPage({
             <p className="text-muted-foreground text-sm">
               Captains can request you for a match; an admin approves each sub. Your matches show up
               in your match history.
+              {playerSignupsOpen
+                ? " Want to be drafted instead? Leave the sub list and sign up again before signups close."
+                : null}
             </p>
           </div>
           <form action={leaveSubList.bind(null, season.slug)}>

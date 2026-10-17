@@ -187,8 +187,8 @@ rationale: [design/SUBSTITUTIONS.md](design/SUBSTITUTIONS.md).
   struck-through "sat out" players, the requests list and the request form.
   Admin matches page: "Sub requests" card with Approve / Reject. `/admin`
   dashboard: "N sub requests" item. Player profiles: match history.
-- **Sub list** — late joiners sign up as subs (`season_signups.kind =
-  'sub'`, see [SEASON-LIFECYCLE.md](SEASON-LIFECYCLE.md)). They're eligible
+- **Sub list** — players who pick "Sub only" at signup, and late joiners,
+  are subs (`season_signups.kind = 'sub'`, see [SEASON-LIFECYCLE.md](SEASON-LIFECYCLE.md)). They're eligible
   like any undrafted signup, listed first in the picker ("sub list"), and
   shown with undrafted players under **Available subs** on the Teams page
   (`getAvailableSubs`). Admins can remove a sub signup at any time.

@@ -43,6 +43,20 @@ const CS2_MAPS = [
   { value: "ancient", label: "Ancient" },
 ] as const;
 
+const SIGNUP_KINDS = [
+  {
+    value: "player",
+    label: "Play in the draft",
+    description: "Captains can draft you onto a team for the whole season.",
+  },
+  {
+    value: "sub",
+    label: "Sub only",
+    description:
+      "You won't be drafted. Once teams are set, captains see you on the available subs list and can request you for a match.",
+  },
+] as const;
+
 const ERROR_MESSAGES: Record<string, string> = {
   invalid: "Some fields are invalid. Please check your selections.",
 };
@@ -66,7 +80,8 @@ export default async function SignupPage({
   if (!season) notFound();
 
   const now = new Date();
-  // "player" during the signup window, "sub" after it, null otherwise.
+  // "player" during the signup window (the form also offers sub-only), "sub"
+  // after it, null otherwise.
   const kind = openSignupKind(season, now);
   const isOpen = kind !== null;
   const isSub = kind === "sub";
@@ -189,6 +204,30 @@ export default async function SignupPage({
         </CardHeader>
         <CardContent>
           <form action={action} className="space-y-5">
+            {isSub ? null : (
+              <fieldset className="space-y-2">
+                <legend className="mb-2 text-sm font-medium">How do you want to play?</legend>
+                {SIGNUP_KINDS.map((k) => (
+                  <label
+                    key={k.value}
+                    className="has-checked:border-ring flex cursor-pointer items-start gap-3 rounded-lg border p-3 text-sm"
+                  >
+                    <input
+                      type="radio"
+                      name="kind"
+                      value={k.value}
+                      defaultChecked={k.value === "player"}
+                      className="mt-0.5"
+                    />
+                    <span className="space-y-0.5">
+                      <span className="block font-medium">{k.label}</span>
+                      <span className="text-muted-foreground block text-xs">{k.description}</span>
+                    </span>
+                  </label>
+                ))}
+              </fieldset>
+            )}
+
             {season.game === "lol" ? (
               <>
                 <div className="space-y-1.5">
