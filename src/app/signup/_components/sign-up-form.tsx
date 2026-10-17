@@ -61,6 +61,10 @@ export function SignUpForm() {
           required
           disabled={isPending}
         />
+        <p className="text-muted-foreground text-xs">
+          We&apos;ll send a verification link here. If it doesn&apos;t show up, check your spam or
+          junk folder.
+        </p>
       </div>
 
       <div className="space-y-1.5">

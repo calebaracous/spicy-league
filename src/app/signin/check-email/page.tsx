@@ -1,5 +1,7 @@
+import { MailWarningIcon } from "lucide-react";
 import Link from "next/link";
 
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -26,15 +28,23 @@ export default async function CheckEmailPage({ searchParams }: { searchParams: S
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3 text-sm">
+          <Alert className="border-amber-500/50 bg-amber-500/10">
+            <MailWarningIcon className="text-amber-600 dark:text-amber-400" />
+            <AlertTitle>Don&apos;t see it? Check your spam or junk folder.</AlertTitle>
+            <AlertDescription>
+              Our emails sometimes get filtered there. If you find it, mark it as &quot;Not
+              spam&quot; so future emails reach your inbox.
+            </AlertDescription>
+          </Alert>
           <p className="text-muted-foreground">
-            Didn&apos;t get it? Check your spam folder, or{" "}
+            Still nothing after a few minutes?{" "}
             {isReset ? (
               <Link href="/forgot-password" className="underline underline-offset-4">
-                request a new link
+                Request a new link
               </Link>
             ) : (
               <Link href="/signup" className="underline underline-offset-4">
-                try signing up again
+                Try signing up again
               </Link>
             )}
             .
