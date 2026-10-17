@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "spicy-league-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
+    },
+    {
+      "name": "spicy-league-prod-build",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["next", "start", "-p", "3100"],
+      "port": 3100
+    }
+  ]
+}
