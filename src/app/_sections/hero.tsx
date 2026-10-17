@@ -35,18 +35,14 @@ export function Hero({ liveHref, liveLabel, game }: HeroProps) {
           className="text-display animate-fade-up mb-8 delay-100"
           style={{ color: "var(--text)", maxWidth: "17ch" }}
         >
-          Captains-draft
-          <br />
-          <span style={{ color: "var(--accent-text)" }}>tournaments</span> for LoL and CS2
+          Gucci <span style={{ color: "var(--accent-text)" }}>Gang</span>
         </h1>
 
         <p
           className="animate-fade-up mb-12 text-lg leading-relaxed delay-200 md:text-xl"
           style={{ color: "var(--muted)", maxWidth: "52ch" }}
         >
-          Players sign up for a season and are drafted onto teams of five by captains. Teams play a
-          round-robin group stage, and the top four advance to a single-elimination bracket. Seasons
-          are run for League of Legends and Counter-Strike 2.
+          cashmoney
         </p>
 
         <div className="animate-fade-up mb-20 flex flex-wrap items-center gap-4 delay-300">
