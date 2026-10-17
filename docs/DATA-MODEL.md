@@ -229,7 +229,9 @@ distinguish "unranked" from "never refreshed".
 
 Consumers that want "a user's rank" (draft pool, home page) filter
 `queue = 'solo'` by `userId`; with multiple linked accounts they get
-whichever row comes first, not the best one.
+whichever row comes first, not the best one. The player directory
+(`src/lib/players.ts`) instead picks the best across links via `rankScore`
+(`src/lib/rank.ts`).
 
 - `topChamps` jsonb — `[{ championId, championPoints, championLevel }]`
 

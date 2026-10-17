@@ -7,6 +7,7 @@ const navLinks = [
   { href: "/seasons", label: "Seasons" },
   { href: "/history", label: "History" },
   { href: "/10-man", label: "10-man" },
+  { href: "/users", label: "Players" },
 ];
 
 // Muted links brighten to body text on hover (opacity was already 1, so the

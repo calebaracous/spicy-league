@@ -12,6 +12,7 @@ const navLinks = [
   { href: "/seasons", label: "Seasons" },
   { href: "/history", label: "History" },
   { href: "/10-man", label: "10-man" },
+  { href: "/users", label: "Players" },
 ];
 
 export interface SiteHeaderUser {
@@ -97,7 +98,7 @@ export function SiteHeaderClient({
           </Link>
 
           {/* Desktop nav */}
-          <nav className="hidden items-center gap-8 md:flex">
+          <nav className="hidden items-center gap-6 md:flex lg:gap-8">
             {/* Live pill sits in the nav row (an absolutely centred pill
                 collided with the links once Admin was added). Full label on
                 wide screens, just "Live" below xl. */}

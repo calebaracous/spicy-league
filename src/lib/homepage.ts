@@ -14,6 +14,7 @@ import {
   users,
 } from "@/db/schema";
 import type { Season } from "@/db/schema/seasons";
+import { formatRank, rankScore } from "@/lib/rank";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -91,45 +92,6 @@ export type HomepageData =
       podium: PodiumEntry[];
       pastSeasons: PastSeasonCard[];
     };
-
-// ─── Rank helpers ─────────────────────────────────────────────────────────────
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
-}
-
-export function formatRank(
-  tier: string | null,
-  division: string | null,
-  lp: number | null,
-): string {
-  if (!tier) return "Unranked";
-  const apex = ["MASTER", "GRANDMASTER", "CHALLENGER"];
-  if (apex.includes(tier)) return `${capitalize(tier)} · ${lp ?? 0} LP`;
-  return `${capitalize(tier)} ${division ?? ""} · ${lp ?? 0} LP`;
-}
-
-const TIER_WEIGHT: Record<string, number> = {
-  CHALLENGER: 0,
-  GRANDMASTER: 1,
-  MASTER: 2,
-  DIAMOND: 3,
-  EMERALD: 4,
-  PLATINUM: 5,
-  GOLD: 6,
-  SILVER: 7,
-  BRONZE: 8,
-  IRON: 9,
-};
-
-const DIVISION_WEIGHT: Record<string, number> = { I: 0, II: 1, III: 2, IV: 3 };
-
-function rankScore(tier: string | null, division: string | null, lp: number | null): number {
-  if (!tier) return 999_999;
-  const w = (TIER_WEIGHT[tier] ?? 10) * 10_000;
-  const d = (DIVISION_WEIGHT[division ?? ""] ?? 0) * 1_000;
-  return w + d - (lp ?? 0);
-}
 
 // ─── DB helpers ───────────────────────────────────────────────────────────────
 

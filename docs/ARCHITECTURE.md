@@ -34,7 +34,7 @@ src/
     admin/              # Admin-only pages. Every server action is wrapped in requireAdmin().
     api/                # Route handlers — better-auth, season-draft SSE, 10-man SSE, cron.
     seasons/            # Public season pages + server actions (signup, draft, matches).
-    users/[username]/   # Public profile with LoL/CS2 stats tabs.
+    users/              # /users player directory (A–Z + stats); [username]/ public profile with LoL/CS2 stats tabs.
     terms/, privacy/    # Static legal pages (LegalPage chrome).
     globals.css         # Design tokens + shadcn tokens + animation utilities + .legal-prose.
     layout.tsx          # Root layout: SiteHeader + main + SiteFooter, metadata/icons/manifest.
@@ -184,6 +184,10 @@ card (team + next scheduled match) for signed-in players once teams exist.
 - `/10-man` — 10-man landing (redirects to the active session if any)
 - `/10-man/[id]` — live 10-man board (SSE-fed). See [TEN-MAN.md](TEN-MAN.md).
 - `/history` — static season archive (hard-coded in the page)
+- `/users` — player directory: every onboarded user A–Z with career stats
+  (seasons, titles, captaincies, season W–L incl. subs, 10-man W–L, best
+  solo rank) — `getPlayerDirectory` in `src/lib/players.ts`. "Players" in
+  the header + footer nav.
 - `/users/[username]` — public profile + match history (confirmed matches,
   tagged Sub / Sat out — `getPlayerMatchHistory`)
 - `/terms`, `/privacy` — static legal docs. Required by the Discord

@@ -29,6 +29,7 @@ Trivial shadcn primitives get a single entry at the bottom.
 - `tests/unit/draft-order.test.ts`, `tests/unit/round-robin.test.ts` — snake order and round-robin logic.
 - `tests/unit/substitution-rules.test.ts` — substitution eligibility rules.
 - `tests/unit/signup-kind.test.ts` — when player vs sub signups are open.
+- `tests/unit/player-stats.test.ts` — directory W–L tallies (subs, sat-out, 10-man) and rank ordering.
 - `tests/unit/season-schedule.test.ts` — `seasonSchedule` ordering, skipping unset dates, group stage range.
 - `playwright.config.ts` — e2e config: serial, builds + starts the app on :3100 with auth URLs overridden to localhost.
 - `tests/e2e/global-setup.ts` / `global-teardown.ts` — seed run-scoped admin + players; delete all e2e-tagged data afterwards.
@@ -123,6 +124,8 @@ Rendered by `src/app/page.tsx`:
 
 - `src/app/history/page.tsx` — hardcoded season archive (13 entries: Seasons 1–11 incl. separate S11 LoL/CS2, plus Zero Space special; images from `public/history/`). Jump-to-season chip nav (`seasonAnchor` ids).
 - `src/app/history/_components/zoomable-image.tsx` — client; tap a screenshot to open it full-size in a native `<dialog>`.
+- `src/app/users/page.tsx` — public player directory ("Players" in the nav).
+- `src/app/users/_components/player-directory.tsx` — client; search box, A–Z jump bar, grouped player rows with stats + rank.
 - `src/app/users/[username]/page.tsx` — public profile; per-Riot-account rank + top champs, Steam/Leetify links.
 - `src/app/users/[username]/_components/stats-tabs.tsx` — client tab switcher (LoL / CS2).
 - `src/app/terms/page.tsx`, `src/app/privacy/page.tsx` — static legal pages using `LegalPage`.
@@ -162,7 +165,10 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/seasons.ts` — `SEASON_STATES`, `SUB_SIGNUP_STATES` + `openSignupKind` (player vs sub signups) + `resolveSignupKind` (sub-only choice), `TRANSITIONS` state machine, `nextStates`, `canTransition`, `SEASON_STATE_LABELS`, `GAME_LABELS`, `PUBLIC_STATES`, `isPublic`, `isValidSlug`, `slugify`, `seasonSchedule` (ordered key-dates list).
 - `src/lib/draft.ts` — `TEAM_SIZE`, `PICKS_PER_TEAM`, `picksForTeam`, `snakeOrder` (skips full teams), `groupCaptainTeams` / `loadCaptainTeams` (solo + duo captains), `teamForPick`, `totalPicks`, `getDraftSnapshot` (incl. solo-queue rank per pool player), `finalizeDraft`. See [DRAFT.md](DRAFT.md).
 - `src/lib/schedule.ts` — `buildRoundRobin` (circle method), `generateSchedule`, `computeStandings`, `seedPlayoffs`, `getTeamForCaptain` (captain *or* rostered member), `getCaptainedTeamId` (captains only, either of a duo). See [MATCHES.md](MATCHES.md).
-- `src/lib/homepage.ts` — `getHomepageData()` (discriminated union of 6 home states), `formatRank`, rank-sorting helpers, podium builder.
+- `src/lib/homepage.ts` — `getHomepageData()` (discriminated union of 6 home states), podium builder.
+- `src/lib/rank.ts` — pure LoL rank helpers: `formatRank` ("Gold II · 45 LP"), `formatTier` ("Gold II"), `rankScore` (lower = better), `capitalize`.
+- `src/lib/player-stats.ts` — pure tallies for the player directory: `tallyMatchRecords` (derived lineups, sat-out excluded), `tallyTenManRecords`.
+- `src/lib/players.ts` — `getPlayerDirectory()`: onboarded users A–Z with career stats, from whole-table queries tallied in memory.
 - `src/lib/backdrop-clips.ts` — home-row backdrop clip registry (`backdropClip(game, index)`, `otherGame`). Clips have `sources: []` until real footage lands.
 - `src/lib/live-season.ts` — `getLiveSeason`, `LIVE_STATE_COPY`, `liveSeasonHref`. Used by header pill + home hero.
 - `src/lib/ten-man.ts` — `PICK_ORDER_C1_C2`, `getActiveTenMan`, `getTenManSnapshot`, `getRecentTenMans`, `electCaptains`. See [TEN-MAN.md](TEN-MAN.md).
@@ -179,8 +185,8 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 ## Site chrome
 
 - `src/components/site-header.tsx` — server; calls `auth()`, `getLiveSeason()`, `getActiveTenMan()`; builds the live pill (season first, else 10-man).
-- `src/components/site-header-client.tsx` — sticky nav (live pill inline — "Live" below xl, full label at xl — then Seasons / History / 10-man / Admin), scroll blur, mobile hamburger overlay (also shows the pill).
-- `src/components/site-footer.tsx` — async server component; nav links (Seasons / History / 10-man), session-aware Account links, Terms / Privacy, Riot "Legal Jibber Jabber" / Valve footage notice.
+- `src/components/site-header-client.tsx` — sticky nav (live pill inline — "Live" below xl, full label at xl — then Seasons / History / 10-man / Players / Admin), scroll blur, mobile hamburger overlay (also shows the pill).
+- `src/components/site-footer.tsx` — async server component; nav links (Seasons / History / 10-man / Players), session-aware Account links, Terms / Privacy, Riot "Legal Jibber Jabber" / Valve footage notice.
 - `src/components/legal-page.tsx` — `LegalPage` chrome for `/terms` + `/privacy`.
 - `src/components/flash-toast.tsx` — client; turns a `?saved=` flag into a sonner toast and removes it from the URL.
 - `src/components/season-nav.tsx` — `SeasonNav` tabs for `/seasons/[slug]/*`, gated by season state.

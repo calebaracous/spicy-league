@@ -7,6 +7,7 @@ import { StatsTabs } from "./_components/stats-tabs";
 import { db } from "@/db/client";
 import { users } from "@/db/schema/auth";
 import { accountLinks, riotStatSnapshots } from "@/db/schema/stats";
+import { formatRank } from "@/lib/rank";
 import { getChampionName } from "@/lib/riot-api";
 import { getPlayerMatchHistory } from "@/lib/substitutions";
 import { Card, CardContent } from "@/components/ui/card";
@@ -18,17 +19,6 @@ type Props = { params: Promise<{ username: string }> };
 export async function generateMetadata({ params }: Props) {
   const { username } = await params;
   return { title: username };
-}
-
-function formatRank(tier: string | null, division: string | null, lp: number | null): string {
-  if (!tier) return "Unranked";
-  const apex = ["MASTER", "GRANDMASTER", "CHALLENGER"];
-  if (apex.includes(tier)) return `${capitalize(tier)} · ${lp ?? 0} LP`;
-  return `${capitalize(tier)} ${division ?? ""} · ${lp ?? 0} LP`;
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 }
 
 function winRate(wins: number | null, losses: number | null): string {
