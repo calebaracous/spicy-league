@@ -46,7 +46,7 @@ export function SignInForm({ callbackUrl }: { callbackUrl?: string }) {
           id="username"
           name="username"
           autoComplete="username"
-          placeholder="spicy_caleb"
+          placeholder="spicy_boy"
           pattern="[a-zA-Z0-9_\-]{3,24}"
           minLength={3}
           maxLength={24}
