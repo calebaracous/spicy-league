@@ -91,6 +91,39 @@ Pick-to-spectator latency is recorded as a test annotation.
 keeps showing Pick buttons the live board would have hidden — the only way
 to exercise the server-side checks in `submitPick` from the UI.
 
+### `draft-duo.spec.ts` — duo captains, end to end
+
+One season seeded into `signups_open` with P1–P15 signed up, then all
+through the UI with DB assertions. Teams: P1 & P2 (duo), P3 (solo),
+P4 & P5 (duo) → 10 picks, hand-written oracle `ORDER = [1,2,3,3,2,1,1,2,3,2]`
+(the solo team takes the last pick alone).
+
+1. P16 signs up choosing **Sub only** → `kind = 'sub'`, sub toast and status.
+2. Admin promotes P1–P5 (P16 has no Make captain), then Pair with… (twice),
+   Split + re-pair, ↑/↓ a duo as one team, Remove one of a duo (partner
+   stays solo) + re-promote and re-pair. `getCaptainTeams` after each.
+3. Captains page groups duos with a Duo badge; admin draft page shows
+   `3 teams · 0 / 10 picks` and per-team pick counts.
+4. Start draft → Split is refused with `captains-locked`, order unchanged.
+5. Ten picks from five captain pages + a spectator. Before each: every
+   board shows `Pick n / 10` and the right team on the clock; both duo
+   captains see Pick buttons and "Your pick", others none. Duo captains
+   alternate clicks; each pick is credited to the team's primary.
+6. Teams: names `Team A & B`, five members, both duo captains
+   `pickNumber null`; P16 on no team. Teams page marks both captains and
+   lists P16 under Available subs.
+7. Schedule (3 matches); standings show `(A & B)`.
+8. A drafted member of the duo team gets no sub form; the non-primary duo
+   captain (P2) requests P16 for a named player → pending row with
+   `requestedBy = P2`; admin approves.
+
+Two waits matter. Admin actions redirect to `?saved=…` and FlashToast
+strips it: `settle()` waits for the strip before the next click, otherwise
+`waitForURL` matches the previous flag and the still-mounted toast swallows
+the next one. And before each pick the picker's board must show
+`Pick n / 10`: at a snake turn the same team stays on the clock, and a click
+from a board that hasn't caught up is (correctly) rejected as `stale-pick`.
+
 ### `draft-edge-cases.spec.ts`
 
 Seasons seeded straight into `captains_selected` / `drafting`

@@ -1,11 +1,22 @@
 import { neon } from "@neondatabase/serverless";
-import { asc, eq, inArray, like } from "drizzle-orm";
+import { and, asc, eq, inArray, like } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/neon-http";
 
 import * as schema from "../../../src/db/schema";
 import { DATABASE_URL, E2E_EMAIL_DOMAIN, E2E_SLUG_PREFIX } from "./env";
 
-const { users, seasons, seasonCaptains, drafts, draftPicks, teams, teamMembers, matches } = schema;
+const {
+  users,
+  seasons,
+  seasonSignups,
+  seasonCaptains,
+  drafts,
+  draftPicks,
+  teams,
+  teamMembers,
+  matches,
+  matchSubstitutions,
+} = schema;
 
 if (!DATABASE_URL) throw new Error("E2E: DATABASE_URL is not set (.env.local or E2E_DATABASE_URL)");
 
@@ -51,6 +62,31 @@ export async function getCaptainOrder(slug: string): Promise<string[]> {
   return rows.map((r) => r.username!);
 }
 
+/** Captain teams in draft order: usernames per captainOrder, primary first
+ *  (two on one order = duo captains). */
+export async function getCaptainTeams(slug: string): Promise<string[][]> {
+  const season = await getSeason(slug);
+  const rows = await db
+    .select({ username: users.username, order: seasonCaptains.captainOrder })
+    .from(seasonCaptains)
+    .innerJoin(users, eq(users.id, seasonCaptains.userId))
+    .where(eq(seasonCaptains.seasonId, season.id))
+    .orderBy(asc(seasonCaptains.captainOrder), asc(seasonCaptains.createdAt));
+  const byOrder = new Map<number, string[]>();
+  for (const r of rows) byOrder.set(r.order, [...(byOrder.get(r.order) ?? []), r.username!]);
+  return [...byOrder.values()];
+}
+
+export async function getSignupKind(slug: string, username: string) {
+  const season = await getSeason(slug);
+  const [row] = await db
+    .select({ kind: seasonSignups.kind })
+    .from(seasonSignups)
+    .innerJoin(users, eq(users.id, seasonSignups.userId))
+    .where(and(eq(seasonSignups.seasonId, season.id), eq(users.username, username)));
+  return row?.kind ?? null;
+}
+
 export async function getDraft(slug: string) {
   const season = await getSeason(slug);
   return db.query.drafts.findFirst({ where: eq(drafts.seasonId, season.id) });
@@ -81,27 +117,45 @@ export async function getPicks(slug: string) {
     }));
 }
 
-/** Teams with members (usernames + pick numbers), keyed by captain username. */
+/** Teams with members (usernames + pick numbers), keyed by the team's
+ *  (primary) captain username — teams.captain_user_id. `captains` lists every
+ *  pickNumber-null member, so both duo captains. */
 export async function getTeams(slug: string) {
   const season = await getSeason(slug);
   const teamRows = await db.select().from(teams).where(eq(teams.seasonId, season.id));
   const result = new Map<
     string,
-    { name: string; members: { username: string; pickNumber: number | null }[] }
+    {
+      id: string;
+      name: string;
+      captains: string[];
+      members: { username: string; pickNumber: number | null }[];
+    }
   >();
   for (const t of teamRows) {
     const members = await db
-      .select({ username: users.username, pickNumber: teamMembers.pickNumber })
+      .select({ userId: users.id, username: users.username, pickNumber: teamMembers.pickNumber })
       .from(teamMembers)
       .innerJoin(users, eq(users.id, teamMembers.userId))
       .where(eq(teamMembers.teamId, t.id));
-    const captain = members.find((m) => m.pickNumber === null)?.username ?? "?";
-    result.set(captain, {
+    const primary = members.find((m) => m.userId === t.captainUserId)?.username ?? "?";
+    result.set(primary, {
+      id: t.id,
       name: t.name,
+      captains: members.filter((m) => m.pickNumber === null).map((m) => m.username!),
       members: members.map((m) => ({ username: m.username!, pickNumber: m.pickNumber })),
     });
   }
   return result;
+}
+
+export async function getMatches(slug: string) {
+  const season = await getSeason(slug);
+  return db.select().from(matches).where(eq(matches.seasonId, season.id));
+}
+
+export async function getSubRequests(matchId: string) {
+  return db.select().from(matchSubstitutions).where(eq(matchSubstitutions.matchId, matchId));
 }
 
 export async function countMatches(slug: string): Promise<number> {

@@ -33,8 +33,8 @@ Trivial shadcn primitives get a single entry at the bottom.
 - `tests/unit/season-schedule.test.ts` — `seasonSchedule` ordering, skipping unset dates, group stage range.
 - `playwright.config.ts` — e2e config: serial, builds + starts the app on :3100 with auth URLs overridden to localhost.
 - `tests/e2e/global-setup.ts` / `global-teardown.ts` — seed run-scoped admin + players; delete all e2e-tagged data afterwards.
-- `tests/e2e/support/` — `env.ts` (DB URL, markers), `db.ts` (assert helpers, `cleanupE2EData`), `seed.ts` (users, signups, `seedDraftSeason`), `pages.ts` (sign-in, live-board + admin-draft helpers, `freezeLiveUpdates`).
-- `tests/e2e/draft.spec.ts` — full season draft through the UI. `tests/e2e/draft-edge-cases.spec.ts` — captain limits, short pool, SSE undo race, simultaneous picks.
+- `tests/e2e/support/` — `env.ts` (DB URL, markers), `db.ts` (assert helpers incl. `getCaptainTeams` / `getTeams` keyed by primary captain, `cleanupE2EData`), `seed.ts` (users, signups, `seedDraftSeason`), `pages.ts` (sign-in, live-board + admin-draft helpers, `freezeLiveUpdates`).
+- `tests/e2e/draft.spec.ts` — full season draft through the UI. `tests/e2e/draft-edge-cases.spec.ts` — captain limits, short pool, SSE undo race, simultaneous picks. `tests/e2e/draft-duo.spec.ts` — duo captains: pair/split/move/remove, captain lock, mixed solo/duo draft, sub-only signup, sub request by the non-primary captain.
 
 ## Scripts
 
