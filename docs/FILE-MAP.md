@@ -30,8 +30,12 @@ Trivial shadcn primitives get a single entry at the bottom.
 - `tests/unit/substitution-rules.test.ts` — substitution eligibility rules.
 - `tests/unit/signup-kind.test.ts` — when player vs sub signups are open.
 - `tests/unit/opgg.test.ts` — OP.GG URL derivation from Riot IDs.
-- `tests/unit/player-stats.test.ts` — directory W–L tallies (subs, sat-out, 10-man) and rank ordering.
+- `tests/unit/player-stats.test.ts` — directory W–D–L tallies (subs, sat-out, Bo2 draws, 10-man) and rank helpers (`bestRankPerUser`).
 - `tests/unit/season-schedule.test.ts` — `seasonSchedule` ordering, skipping unset dates, group stage range.
+- `tests/unit/standings.test.ts` — `rankStandings`: Bo2 points, head-to-head, series wins, tiebreaker games, shared ranks.
+- `tests/unit/discord.test.ts` — `normalizeDiscordUsername`.
+- `tests/unit/team-name.test.ts` — team-name rules and the text-channel slug.
+- `tests/unit/discord-plan.test.ts`, `discord-format.test.ts`, `discord-verify.test.ts` — Discord sync decisions, message formatting, interaction signatures.
 - `playwright.config.ts` — e2e config: serial, builds + starts the app on :3100 with auth URLs overridden to localhost.
 - `tests/e2e/global-setup.ts` / `global-teardown.ts` — seed run-scoped admin + players; delete all e2e-tagged data afterwards.
 - `tests/e2e/support/` — `env.ts` (DB URL, markers), `db.ts` (assert helpers incl. `getCaptainTeams` / `getTeams` keyed by primary captain, `cleanupE2EData`), `seed.ts` (users, signups, `seedDraftSeason`), `pages.ts` (sign-in, live-board + admin-draft helpers, `freezeLiveUpdates`).

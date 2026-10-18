@@ -18,7 +18,7 @@ email verification; PLANNING says Pusher/Ably, we ship SSE polling).
 | Realtime (season draft + 10-man) | Server-Sent Events polling the DB every 2s — no Pusher/Ably |
 | Rate limiting | Upstash Redis (optional — falls open if env vars missing) |
 | Email | Resend |
-| Cron | Vercel Cron — daily Riot stat refresh |
+| Cron | Vercel Cron — daily Riot stat refresh + daily Discord reminders |
 | Validation | zod |
 
 Detail per concern: [AUTH.md](AUTH.md), [DATA-MODEL.md](DATA-MODEL.md),
@@ -32,7 +32,7 @@ src/
     _sections/          # Home-page sections. page.tsx renders one per HomepageData state.
     10-man/             # Standalone 10-man pickup flow (landing, live board, actions). See TEN-MAN.md.
     admin/              # Admin-only pages. Every server action is wrapped in requireAdmin().
-    api/                # Route handlers — better-auth, season-draft SSE, 10-man SSE, cron.
+    api/                # Route handlers — better-auth, season-draft SSE, 10-man SSE, crons, Discord interactions.
     seasons/            # Public season pages + server actions (signup, draft, matches).
     users/              # /users player directory (A–Z + stats); [username]/ public profile with LoL/CS2 stats tabs.
     terms/, privacy/    # Static legal pages (LegalPage chrome).
@@ -55,7 +55,10 @@ src/
     auth-client.ts      # Client-side better-auth/react — signIn, signUp, useSession.
     auth-helpers.ts     # requireAuth / requireAdmin / requireOnboarded for server code.
     draft.ts            # Season draft: snake math, snapshot query, finalizeDraft.
-    schedule.ts         # Round-robin circle method + standings + playoff seeding.
+    schedule.ts         # Round-robin circle method + standings (via standings.ts) + playoff seeding + tiebreakers.
+    standings.ts        # Pure group ranking: points, head-to-head, series wins, tiebreaker games.
+    match-format.ts     # Pure result helpers (draws, Bo2 results, round labels).
+    discord-*.ts        # Discord bot: REST client, roles, team channels, notifications, slash commands. See DISCORD.md.
     seasons.ts          # State machine (transitions, labels) + slug helpers.
     homepage.ts         # getHomepageData() — picks the home-page state + its data.
     live-season.ts      # getLiveSeason / LIVE_STATE_COPY / liveSeasonHref (header pill).
@@ -65,8 +68,8 @@ src/
     rate-limit.ts       # Upstash sliding-window limiter (optional).
     env.ts              # Zod-validated env via @t3-oss/env-nextjs.
     utils.ts            # cn() — clsx + tailwind-merge.
-drizzle/                # Squashed migrations: 0000_baseline + 0001_reconcile_live_schema. See DATA-MODEL.md.
-scripts/                # Dev scripts (test-season seeder, e2e cleanup).
+drizzle/                # Migrations: squashed 0000_baseline, then 0001–0011 in order. See DATA-MODEL.md.
+scripts/                # Dev + one-off scripts (test-season seeder, e2e cleanup, Season 12 setup, Discord command registration).
 tests/                  # unit/ (Vitest) and e2e/ (Playwright). See TESTING.md.
 docs/                   # You are here. docs/design/ holds design handoffs (not source of truth).
 .agents/                # Agent skills: Spicy League design-system reference, Neon skill.
@@ -173,19 +176,19 @@ Public:
 - `/seasons/[slug]/signup` — signup form (gated by state + window)
 - `/seasons/[slug]/captains` — announced captain list
 - `/seasons/[slug]/draft` — live draft viewer (SSE-fed)
-- `/seasons/[slug]/teams` — rosters per team (captain + picks, primary role, W–L), viewer's team highlighted
-- `/seasons/[slug]/matches` — standings (playoff cut line) + bracket + schedule with times
+- `/seasons/[slug]/teams` — rosters per team (captain + picks, primary role, record), viewer's team highlighted; captains rename their team here
+- `/seasons/[slug]/matches` — standings (W/D/L + maps for Bo2, shared ranks, playoff cut line) + bracket + tiebreakers + schedule with times
 
 Every `/seasons/[slug]/*` page renders `<SeasonNav>` (`src/components/season-nav.tsx`):
 Overview / Captains / Draft / Teams / Matches tabs, each shown once the season
 reaches the state where it has content. The overview also shows a "Your team"
 card (team + next scheduled match) for signed-in players once teams exist.
-- `/seasons/[slug]/matches/[matchId]` — match detail + report form
+- `/seasons/[slug]/matches/[matchId]` — match detail + report form (2–0 / 1–1 / 0–2 for Bo2 group matches), lineups, sub requests, "Ping the Sub list"
 - `/10-man` — 10-man landing (redirects to the active session if any)
 - `/10-man/[id]` — live 10-man board (SSE-fed). See [TEN-MAN.md](TEN-MAN.md).
 - `/history` — static season archive (hard-coded in the page)
 - `/users` — player directory: every onboarded user A–Z with career stats
-  (seasons, titles, captaincies, season W–L incl. subs, 10-man W–L, best
+  (seasons, titles, captaincies, season W–D–L incl. subs, 10-man W–L, best
   solo rank) — `getPlayerDirectory` in `src/lib/players.ts`. "Players" in
   the header + footer nav.
 - `/users/[username]` — public profile + match history (confirmed matches,
@@ -209,7 +212,7 @@ Admin (requires `role === "admin"`):
 - `/admin/users` — player search + filters (banned / unverified / admins),
   ban (reason + 1/7/30 days or permanent) and unban
 - `/admin/seasons/new` — create season
-- `/admin/seasons/[slug]` — edit + state transition
+- `/admin/seasons/[slug]` — edit (incl. group series length) + state transition + Discord card (match status, Sync, nudge emails, nicknames, old-channel cleanup)
 - `/admin/seasons/[slug]/signups` — promote/demote captains, reorder, remove a player (pre-draft only), CSV export (`/signups/export`)
 - `/admin/seasons/[slug]/draft` — start/pause/resume/undo controls
 - `/admin/seasons/[slug]/matches` — generate schedule, create tiebreaker games, seed playoffs, confirm results
@@ -221,6 +224,8 @@ API:
 - `/api/draft/[slug]/stream` — season draft SSE stream (2s poll)
 - `/api/ten-man/[id]/stream` — 10-man SSE stream (2s poll)
 - `/api/cron/refresh-stats` — daily Vercel Cron (06:00 UTC)
+- `/api/cron/discord-reminders` — daily Vercel Cron (15:00 UTC), Discord match reminders
+- `/api/discord/interactions` — Discord slash commands (Ed25519-verified). See [DISCORD.md](DISCORD.md).
 
 ## Where to look when…
 
@@ -248,10 +253,13 @@ API:
 - No `fetch` cache for app data. Every DB read is per-request.
 - No Pusher / Ably / Socket.io / LISTEN-NOTIFY. Realtime is SSE polling the DB.
 - No pick clock / auto-pick in either draft.
-- Only the draft has automated tests: unit tests in CI, a Playwright e2e
-  suite on demand. See [TESTING.md](TESTING.md).
+- Unit tests (in CI) cover pure logic only — draft order, standings, schedule,
+  subs, Discord helpers and the like; the only e2e suite (Playwright, on
+  demand) is the season draft. See [TESTING.md](TESTING.md).
 - No Sentry / PostHog / analytics wired yet.
 - No Vercel Blob usage yet (user avatars referenced in `users.image` but no
   upload flow).
-- No Discord integration yet.
+- No Discord gateway connection or separate bot process — the bot is REST +
+  HTTP interactions from the app ([DISCORD.md](DISCORD.md)), and posts no
+  channel announcements.
 - No Leetify or Steam API calls — only ID/URL storage in `account_links`.

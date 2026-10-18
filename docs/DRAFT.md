@@ -200,7 +200,8 @@ Plain sequential writes — **not** wrapped in a transaction.
 6. Update `seasons.state = 'group_stage'`.
 
 Called automatically by `submitPick` when the last pick is accepted, which
-then schedules `syncTeamRoles` (Discord team roles, after the response —
+then schedules `syncTeamRoles` + `syncSignupRoles` (Discord team roles and
+channels, and undrafted players onto the Sub list, after the response —
 see [DISCORD.md](DISCORD.md)). Never
 called manually from a server action — but it's exported in case we need
 an admin-recover flow.

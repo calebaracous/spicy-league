@@ -5,7 +5,7 @@ the real UI against a real database and is run on demand.
 
 | Command | What | Needs |
 |---|---|---|
-| `npm run test:unit` | Vitest — pure draft/schedule logic | nothing |
+| `npm run test:unit` | Vitest — pure logic (draft, standings, schedule, subs, Discord helpers) | nothing |
 | `npm run test:e2e` | Playwright — full season draft through the UI | `DATABASE_URL`, Chromium |
 | `npm run test:e2e:cleanup` | Delete leftover e2e data (add `-- --legacy` for the old seed data) | `DATABASE_URL` |
 
@@ -16,14 +16,21 @@ the real UI against a real database and is run on demand.
   and mixed solo/duo drafts (full teams sit out, every team reaches
   `TEAM_SIZE`), `groupCaptainTeams` / `teamForPick` / `totalPicks`.
 - `round-robin.test.ts` — `buildRoundRobin`: every pair once, `n-1` rounds
+  for even `n`, one bye per team for odd `n`.
 - `signup-kind.test.ts` — `openSignupKind`: player window, sub states, closed states; `resolveSignupKind`: sub-only choice
-- `player-stats.test.ts` — `tallyMatchRecords` (sub swaps, empty-slot subs, no-winner skip), `tallyTenManRecords`, `rankScore` / `formatTier`
+- `player-stats.test.ts` — `tallyMatchRecords` (sub swaps, empty-slot subs, Bo2 draws, no-result skip), `tallyTenManRecords`, `rankScore` / `formatTier` / `bestRankPerUser`
 - `season-schedule.test.ts` — `seasonSchedule`: order, unset dates skipped, group stage range
 - `substitution-rules.test.ts` — `evaluateSubRequest`: eligibility, lineup
   lock, cross-team flag, per-team sub limit
-  for even `n`, one bye per team for odd `n`.
+- `standings.test.ts` — `rankStandings`: Bo2 points, head-to-head mini-tables, series wins, tiebreaker games, shared ranks, which ties need a tiebreaker
+- `opgg.test.ts` — `opggUrlForRiotId`
+- `discord.test.ts` — `normalizeDiscordUsername`
+- `team-name.test.ts` — `normalizeTeamName`, `teamTextChannelName`
+- `discord-plan.test.ts` — `pickExactMember`, `roleHolderChanges`, `staleTeamRoles`
+- `discord-format.test.ts` — Discord timestamps, thread names, result lines, the standings table
+- `discord-verify.test.ts` — Ed25519 interaction signatures (real key pair)
 
-`src/lib/draft.ts` and `schedule.ts` import `server-only`, which throws
+`src/lib/draft.ts`, `schedule.ts` and other server modules import `server-only`, which throws
 outside a Next server bundle; `vitest.config.mts` aliases it to an empty stub
 (`tests/unit/server-only-stub.ts`). Importing those modules does not open a DB
 connection — the Neon `Pool` connects lazily.

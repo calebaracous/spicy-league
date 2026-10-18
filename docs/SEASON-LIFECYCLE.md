@@ -35,7 +35,7 @@ draft
 
 | Transition | Triggered by | Code |
 |---|---|---|
-| `draft → signups_open` | Admin UI | `transitionSeasonState` in `src/app/admin/seasons/actions.ts` |
+| `draft → signups_open` | Admin UI | `transitionSeasonState` in `src/app/admin/seasons/actions.ts` — any move into `signups_open` also re-syncs the Discord Signed up / Sub list roles in the background |
 | `signups_open ↔ signups_closed` | Admin UI | same |
 | `signups_closed → captains_selected` | Admin UI | same — also gives captains the Discord Captain role in the background (`syncCaptainRole`, [DISCORD.md](DISCORD.md)) |
 | `captains_selected → drafting` | `startDraft` action (admin draft page) | `src/app/seasons/[slug]/draft/actions.ts` — creates/resumes the drafts row with `state="in_progress"` and sets `seasons.state = 'drafting'` from **any** current state |

@@ -7,8 +7,9 @@ only bites on *malformed* values (e.g. a non-URL `DATABASE_URL`, a
 `BETTER_AUTH_SECRET` under 32 chars).
 
 Note: validation runs when `src/lib/env.ts` is first imported, not at
-boot — and only `riot-api.ts`, `rate-limit.ts`, `discord-api.ts` (so the
-admin season page and the Discord syncs) and the cron route import it. `src/db/client.ts` and `src/lib/auth.ts` read `process.env` directly,
+boot — and only `riot-api.ts`, `rate-limit.ts`, the `discord-*` modules
+(so the admin season page and every Discord sync) and the cron / Discord
+interaction routes import it. `src/db/client.ts` and `src/lib/auth.ts` read `process.env` directly,
 so a malformed auth/DB var won't be caught until one of those three
 modules loads.
 

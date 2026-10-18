@@ -235,8 +235,10 @@ rationale: [design/SUBSTITUTIONS.md](design/SUBSTITUTIONS.md).
   `requestSub` (team captain — either of a duo, via `getCaptainedTeamId` —
   or admin for either team), `withdrawSub`
   (pending only), `decideSub` (admin: approve → re-checks eligibility,
-  reject, revoke an approved sub while the match is still scheduled).
-  Every sub needs admin approval.
+  reject, revoke an approved sub while the match is still scheduled),
+  `pingSubListAction` (captain or admin: @-mentions the Discord Sub list in
+  the match thread, once per 30 minutes per match + team). Every sub needs
+  admin approval.
 - **UI** — match page `_components/lineups.tsx`: rosters with `Sub` badges /
   struck-through "sat out" players, the requests list and the request form.
   Admin matches page: "Sub requests" card with Approve / Reject. `/admin`

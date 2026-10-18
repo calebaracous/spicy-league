@@ -11,13 +11,13 @@ The web app that runs the Spicy League — a recurring captains-draft 5v5 tourna
 Each season follows the same lifecycle:
 
 1. **Signup** — players register, select their game (LoL or CS2), and set role/map preferences
-2. **Captain selection** — admin promotes signups to captains (`floor(signups / 5)` captains total)
+2. **Captain selection** — admin promotes signups to captains (`floor(signups / 5)` recommended; two can pair up as duo captains)
 3. **Snake draft** — captains draft live from the signup pool until every team has 5 players
-4. **Group stage** — round-robin, every team plays every other team once
+4. **Group stage** — round-robin, every team plays every other team once (a single game, or a best-of-2 series where 1–1 is a draw, set per season)
 5. **Playoffs** — top 4 teams, single-elimination bracket
 6. **Archive** — season is frozen and preserved in history
 
-The app handles all of it: signups, a live realtime draft, match reporting, standings with tiebreakers, and player profiles backed by Riot API stats.
+The app handles all of it: signups, a live realtime draft, match reporting, standings with tiebreakers, and player profiles backed by Riot API stats. A Discord bot keeps league roles, private team channels and match threads in step with the site, and answers slash commands like `/standings` (see [docs/DISCORD.md](docs/DISCORD.md)).
 
 It also runs **10-mans** — one-off 5v5 pickup games: the first 10 signups vote for two captains, who snake-draft the other eight live. See [docs/TEN-MAN.md](docs/TEN-MAN.md).
 
@@ -36,7 +36,8 @@ It also runs **10-mans** — one-off 5v5 pickup games: the first 10 signups vote
 | Email | Resend |
 | Realtime (drafts, 10-mans) | Server-Sent Events (DB polling, no external pub/sub) |
 | Rate limiting | Upstash Redis (optional — falls open if not configured) |
-| Cron | Vercel Cron — daily Riot stat refresh |
+| Cron | Vercel Cron — daily Riot stat refresh + Discord reminders |
+| Discord | REST bot + slash commands over the HTTP interactions endpoint (no separate process) |
 | Validation | Zod |
 | Deployment | Vercel |
 
@@ -59,7 +60,7 @@ npm run db:migrate   # build/upgrade the schema on your Neon branch (reads .env.
 npm run dev          # start dev server at http://localhost:3000
 ```
 
-The app validates env vars at boot via `@t3-oss/env-nextjs`. Set `SKIP_ENV_VALIDATION=1` to skip this (useful in CI).
+The app validates env vars via `@t3-oss/env-nextjs` (when `src/lib/env.ts` is first imported). Set `SKIP_ENV_VALIDATION=1` to skip this (useful in CI).
 
 ---
 
@@ -81,7 +82,8 @@ The app validates env vars at boot via `@t3-oss/env-nextjs`. Set `SKIP_ENV_VALID
 | `RIOT_PERSONAL_API_KEY` | Riot Games Personal API Key for LoL stats |
 | `UPSTASH_REDIS_REST_URL` | Upstash Redis URL for rate limiting |
 | `UPSTASH_REDIS_REST_TOKEN` | Paired with the URL |
-| `CRON_SECRET` | Bearer token for the Vercel Cron endpoint |
+| `CRON_SECRET` | Bearer token for the Vercel Cron endpoints |
+| `DISCORD_*` | Discord bot — token, server, channels, slash commands (setup in [docs/DISCORD.md](docs/DISCORD.md)) |
 
 See [docs/ENV.md](docs/ENV.md) for the full list and notes on what breaks without each one.
 
@@ -99,10 +101,10 @@ npm run db:studio     # open Drizzle Studio to browse the DB
 
 Schemas live in `src/db/schema/` — one file per domain (`auth`, `seasons`, `drafts`, `matches`, `stats`, `ten-mans`).
 
-To get a populated season locally, seed one (4 captain + 16 bot accounts; credentials are in the script header):
+To get a populated season locally, seed one (4 captain + 16 bot accounts; credentials are in the script header). It writes to whatever `DATABASE_URL` points at — in `.env.local` that's the live database — so prefer `npm run test:e2e` for automated testing:
 
 ```bash
-npx tsx --env-file=.env.local scripts/seed-test-season.ts
+ALLOW_TEST_SEED=1 npx tsx --env-file=.env.local scripts/seed-test-season.ts
 ```
 
 ---
@@ -115,7 +117,7 @@ npm run build      # production build
 npm run lint       # ESLint
 npm run typecheck  # tsc --noEmit
 npm run format     # Prettier (format:check is what CI runs)
-npm run test:unit  # Vitest — draft order, round-robin (runs in CI)
+npm run test:unit  # Vitest — pure logic: draft order, standings, schedule, subs, Discord helpers (runs in CI)
 npm run test:e2e   # Playwright — full season draft through the UI (see docs/TESTING.md)
 ```
 
@@ -131,12 +133,12 @@ src/
     admin/          # Admin-only pages (season management, draft controls)
     seasons/        # Public season pages (signup, draft viewer, matches)
     10-man/         # 10-man pickup flow (signup, vote, draft, result)
-    api/            # Route handlers (auth, draft + 10-man SSE streams, cron)
+    api/            # Route handlers (auth, draft + 10-man SSE streams, crons, Discord interactions)
   components/       # Shared UI components and shadcn primitives
   db/               # Drizzle client and schema
   lib/              # Server-side logic (auth, draft, schedule, Riot API, etc.)
 drizzle/            # Generated migration files
-scripts/            # Dev scripts (test-season seeder, one-off migration runner)
+scripts/            # Dev + one-off scripts (test-season seeder, e2e cleanup, Season 12 setup, Discord command registration)
 docs/               # Architecture and domain docs (good starting point)
 ```
 
@@ -149,7 +151,8 @@ docs/               # Architecture and domain docs (good starting point)
 - [DRAFT.md](docs/DRAFT.md) — snake algorithm and realtime architecture
 - [MATCHES.md](docs/MATCHES.md) — scheduling, standings, tiebreakers
 - [TEN-MAN.md](docs/TEN-MAN.md) — 10-man pickup flow
-- [INTEGRATIONS.md](docs/INTEGRATIONS.md) — Neon, Resend, Riot API, Upstash
+- [INTEGRATIONS.md](docs/INTEGRATIONS.md) — Neon, Resend, Riot API, Upstash, Discord, Vercel
+- [DISCORD.md](docs/DISCORD.md) — the Discord bot and its one-time setup
 - [DESIGN-SYSTEM.md](docs/DESIGN-SYSTEM.md) — tokens, typography, component conventions
 - [ENV.md](docs/ENV.md) — all env vars with notes
 - [FILE-MAP.md](docs/FILE-MAP.md) — one line per source file
@@ -159,6 +162,6 @@ docs/               # Architecture and domain docs (good starting point)
 
 ## Contributing
 
-Fork the repo, make your changes, and open a pull request. Keep commits small. CI (lint, typecheck, build) must pass. If you're adding non-trivial functionality or changing a flow, update the relevant doc in the same commit.
+Fork the repo, make your changes, and open a pull request. Keep commits small. CI (format, lint, typecheck, unit tests, build) must pass. If you're adding non-trivial functionality or changing a flow, update the relevant doc in the same commit.
 
 If you spot a bug or have an idea, open an issue first so we can discuss before you build it out.

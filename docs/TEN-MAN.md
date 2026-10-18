@@ -8,12 +8,6 @@ The original design handoff (screens, copy, prototype, engineering plan) is
 in `docs/design/10-man/`. Treat it as the *spec that was built from*, not as
 the current state — this file is the source of truth for what shipped.
 
-## Discord ping
-
-`start10Man` posts "@10-man a 10-man is open" in
-`DISCORD_TEN_MAN_CHANNEL_ID` (background, `pingTenMan`). The 10-man role is
-opt-in from `/profile`. See [DISCORD.md](DISCORD.md).
-
 ## Lifecycle
 
 ```
@@ -155,6 +149,12 @@ switches on `snap.tenMan.state` to render one phase board from
 - Live pill in `src/components/site-header.tsx`: a live **season** wins; if
   none, an active 10-man shows `10-MAN · n/10`, `· VOTING`, `· DRAFTING`, or
   `· READY` linking to the session.
+
+## Discord ping
+
+`start10Man` posts "@10-man a 10-man is open" in
+`DISCORD_TEN_MAN_CHANNEL_ID` (background, `pingTenMan`). The 10-man role is
+opt-in from `/profile`. See [DISCORD.md](DISCORD.md).
 
 ## Where to look when…
 
