@@ -19,6 +19,7 @@ interface LiveSectionProps {
 function matchLabel(round: number, stage: string): string {
   if (stage === "final") return "Final";
   if (stage === "semis") return "Semifinal";
+  if (stage === "tiebreaker") return "Tiebreaker";
   return `Group stage · Round ${round}`;
 }
 

@@ -11,7 +11,9 @@ import { LocalTime } from "@/components/ui/local-time";
 import { SeasonNav } from "@/components/season-nav";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { GAME_LABELS } from "@/lib/seasons";
+import { isDraw } from "@/lib/match-format";
 import { computeStandings } from "@/lib/schedule";
+import { PLAYOFF_SPOTS } from "@/lib/standings";
 
 export const generateMetadata = seasonPageMetadata("Matches");
 
@@ -28,8 +30,6 @@ const STATE_BADGE: Record<
   confirmed: { label: "Confirmed", variant: "secondary" },
   disputed: { label: "Disputed", variant: "destructive" },
 };
-
-const PLAYOFF_SPOTS = 4;
 
 type MatchRow = {
   id: string;
@@ -97,6 +97,50 @@ function BracketCard({
   );
 }
 
+/** One line in the group-stage / tiebreaker lists. */
+function MatchLine({
+  match: m,
+  slug,
+  teamName,
+}: {
+  match: MatchRow;
+  slug: string;
+  teamName: Map<string, string>;
+}) {
+  const sb = STATE_BADGE[m.state] ?? STATE_BADGE.scheduled;
+  const hasScore = m.homeScore !== null && m.awayScore !== null;
+  return (
+    <Link
+      href={`/seasons/${slug}/matches/${m.id}`}
+      className="hover:bg-muted/50 flex items-center justify-between gap-3 rounded-lg border px-4 py-3"
+    >
+      <div className="flex items-center gap-2 text-sm">
+        <span className={m.winnerTeamId === m.homeTeamId ? "font-bold" : ""}>
+          {teamName.get(m.homeTeamId) ?? "?"}
+        </span>
+        <span className="text-muted-foreground text-xs">vs</span>
+        <span className={m.winnerTeamId === m.awayTeamId ? "font-bold" : ""}>
+          {teamName.get(m.awayTeamId) ?? "?"}
+        </span>
+        {hasScore ? (
+          <span className="text-muted-foreground font-mono text-xs">
+            {m.homeScore}–{m.awayScore}
+            {isDraw(m) ? " draw" : ""}
+          </span>
+        ) : null}
+      </div>
+      <div className="flex shrink-0 items-center gap-3">
+        {m.scheduledAt && m.state === "scheduled" ? (
+          <span className="text-muted-foreground hidden text-xs sm:inline">
+            <LocalTime date={m.scheduledAt} preset="weekday-datetime" />
+          </span>
+        ) : null}
+        <Badge variant={sb.variant}>{sb.label}</Badge>
+      </div>
+    </Link>
+  );
+}
+
 export default async function MatchesPage({ params }: { params: Params }) {
   const { slug } = await params;
 
@@ -123,11 +167,20 @@ export default async function MatchesPage({ params }: { params: Params }) {
   const allTeams = await db.select().from(teams).where(eq(teams.seasonId, season.id));
   const teamName = new Map(allTeams.map((t) => [t.id, t.name]));
 
-  const standings = ["group_stage", "playoffs", "complete"].includes(season.state)
+  const table = ["group_stage", "playoffs", "complete"].includes(season.state)
     ? await computeStandings(season.id)
     : null;
+  const standings = table?.rows ?? null;
+  const bo2 = season.groupBestOf === 2;
 
   const groupMatches = allMatches.filter((m) => m.stage === "group");
+  const tiebreakerMatches = allMatches.filter((m) => m.stage === "tiebreaker");
+  const anyPlayed = standings?.some((s) => s.matchesPlayed > 0) ?? false;
+  const groupDone = groupMatches.length > 0 && groupMatches.every((m) => m.state === "confirmed");
+  const pendingTiebreaks =
+    groupDone && !allMatches.some((m) => m.stage === "semis")
+      ? (table?.tiebreakersNeeded ?? [])
+      : [];
   const semis = allMatches.filter((m) => m.stage === "semis").sort((a, b) => a.round - b.round);
   const finalMatch = allMatches.find((m) => m.stage === "final");
   const rounds = [...new Set(groupMatches.map((m) => m.round))].sort((a, b) => a - b);
@@ -159,8 +212,9 @@ export default async function MatchesPage({ params }: { params: Params }) {
                   <th className="px-4 py-2 font-medium">#</th>
                   <th className="px-4 py-2 font-medium">Team</th>
                   <th className="px-4 py-2 text-right font-medium">W</th>
+                  {bo2 ? <th className="px-4 py-2 text-right font-medium">D</th> : null}
                   <th className="px-4 py-2 text-right font-medium">L</th>
-                  <th className="px-4 py-2 text-right font-medium">+/-</th>
+                  <th className="px-4 py-2 text-right font-medium">{bo2 ? "Maps" : "+/-"}</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -179,7 +233,7 @@ export default async function MatchesPage({ params }: { params: Params }) {
                       className="px-4 py-2 font-mono text-xs"
                       style={{ color: i < PLAYOFF_SPOTS ? "var(--accent-text)" : "var(--muted)" }}
                     >
-                      {i + 1}
+                      {anyPlayed && s.tied ? `${s.rank}=` : i + 1}
                     </td>
                     <td className="px-4 py-2">
                       <span className="font-medium">{s.teamName}</span>
@@ -188,21 +242,45 @@ export default async function MatchesPage({ params }: { params: Params }) {
                       </span>
                     </td>
                     <td className="px-4 py-2 text-right font-medium">{s.wins}</td>
+                    {bo2 ? (
+                      <td className="text-muted-foreground px-4 py-2 text-right">{s.draws}</td>
+                    ) : null}
                     <td className="text-muted-foreground px-4 py-2 text-right">{s.losses}</td>
-                    <td className="text-muted-foreground px-4 py-2 text-right">
-                      {s.gameDiff > 0 ? `+${s.gameDiff}` : s.gameDiff}
+                    <td
+                      className="text-muted-foreground px-4 py-2 text-right font-mono text-xs"
+                      title={bo2 ? "Maps won–lost; standings rank on maps won" : undefined}
+                    >
+                      {bo2
+                        ? `${s.gamesWon}–${s.gamesLost}`
+                        : s.gamesWon - s.gamesLost > 0
+                          ? `+${s.gamesWon - s.gamesLost}`
+                          : s.gamesWon - s.gamesLost}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          {standings.length > PLAYOFF_SPOTS ? (
-            <p className="text-muted-foreground text-xs">
-              Top {PLAYOFF_SPOTS} advance to the playoffs (red line marks the cut). Ties break on
-              game difference, then team name.
+          {pendingTiebreaks.length > 0 ? (
+            <p className="text-sm" style={{ color: "var(--accent-text)" }}>
+              Tiebreaker needed:{" "}
+              {pendingTiebreaks
+                .map((g) => g.map((id) => teamName.get(id) ?? "?").join(" vs "))
+                .join("; ")}
+              . Seeding waits on the result.
             </p>
           ) : null}
+          <p className="text-muted-foreground text-xs">
+            {standings.length > PLAYOFF_SPOTS
+              ? `Top ${PLAYOFF_SPOTS} advance to the playoffs (red line marks the cut). `
+              : ""}
+            {bo2
+              ? "Group matches are best-of-2 and rank on maps won: 2 for a 2–0, 1 each for a 1–1 draw. "
+              : "Ranked on wins. "}
+            Teams level on that are separated by head-to-head results between them, then series wins
+            {bo2 ? "" : ", then game difference"}. If it still decides the top {PLAYOFF_SPOTS}, the
+            tied teams play a Bo1 tiebreaker game; a shared rank shows as “=”.
+          </p>
         </section>
       ) : null}
 
@@ -238,13 +316,26 @@ export default async function MatchesPage({ params }: { params: Params }) {
         </section>
       ) : null}
 
+      {tiebreakerMatches.length > 0 ? (
+        <section className="space-y-2">
+          <h2 className="text-muted-foreground text-sm font-medium tracking-wide uppercase">
+            Tiebreakers (Bo1)
+          </h2>
+          <div className="space-y-1">
+            {tiebreakerMatches.map((m) => (
+              <MatchLine key={m.id} match={m} slug={slug} teamName={teamName} />
+            ))}
+          </div>
+        </section>
+      ) : null}
+
       {allMatches.length === 0 ? (
         <p className="text-muted-foreground text-sm">Schedule not yet generated.</p>
       ) : rounds.length > 0 ? (
         <section className="space-y-6">
-          {semis.length > 0 ? (
+          {semis.length > 0 || tiebreakerMatches.length > 0 ? (
             <h2 className="text-muted-foreground text-sm font-medium tracking-wide uppercase">
-              Group stage
+              Group stage{bo2 ? " · best of 2" : ""}
             </h2>
           ) : null}
           {rounds.map((round) => {
@@ -255,42 +346,9 @@ export default async function MatchesPage({ params }: { params: Params }) {
                   Round {round}
                 </h2>
                 <div className="space-y-1">
-                  {roundMatches.map((m) => {
-                    const sb = STATE_BADGE[m.state] ?? STATE_BADGE.scheduled;
-                    const homeName = teamName.get(m.homeTeamId) ?? "?";
-                    const awayName = teamName.get(m.awayTeamId) ?? "?";
-                    const hasScore = m.homeScore !== null && m.awayScore !== null;
-                    return (
-                      <Link
-                        key={m.id}
-                        href={`/seasons/${slug}/matches/${m.id}`}
-                        className="hover:bg-muted/50 flex items-center justify-between gap-3 rounded-lg border px-4 py-3"
-                      >
-                        <div className="flex items-center gap-2 text-sm">
-                          <span className={m.winnerTeamId === m.homeTeamId ? "font-bold" : ""}>
-                            {homeName}
-                          </span>
-                          <span className="text-muted-foreground text-xs">vs</span>
-                          <span className={m.winnerTeamId === m.awayTeamId ? "font-bold" : ""}>
-                            {awayName}
-                          </span>
-                          {hasScore ? (
-                            <span className="text-muted-foreground font-mono text-xs">
-                              {m.homeScore}–{m.awayScore}
-                            </span>
-                          ) : null}
-                        </div>
-                        <div className="flex shrink-0 items-center gap-3">
-                          {m.scheduledAt && m.state === "scheduled" ? (
-                            <span className="text-muted-foreground hidden text-xs sm:inline">
-                              <LocalTime date={m.scheduledAt} preset="weekday-datetime" />
-                            </span>
-                          ) : null}
-                          <Badge variant={sb.variant}>{sb.label}</Badge>
-                        </div>
-                      </Link>
-                    );
-                  })}
+                  {roundMatches.map((m) => (
+                    <MatchLine key={m.id} match={m} slug={slug} teamName={teamName} />
+                  ))}
                 </div>
               </div>
             );

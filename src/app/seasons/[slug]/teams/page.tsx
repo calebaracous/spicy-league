@@ -60,7 +60,7 @@ export default async function TeamsPage({ params }: { params: Params }) {
   ]);
 
   const standings = ["group_stage", "playoffs", "complete"].includes(season.state)
-    ? await computeStandings(season.id)
+    ? (await computeStandings(season.id)).rows
     : [];
   const record = new Map(standings.map((s) => [s.teamId, s]));
   const viewerId = session?.user?.id ?? null;
@@ -114,7 +114,9 @@ export default async function TeamsPage({ params }: { params: Params }) {
                     {mine ? <Badge>Your team</Badge> : null}
                     {rec ? (
                       <span className="text-muted-foreground font-mono text-xs">
-                        {rec.wins}–{rec.losses}
+                        {season.groupBestOf === 2
+                          ? `${rec.wins}–${rec.draws}–${rec.losses}`
+                          : `${rec.wins}–${rec.losses}`}
                       </span>
                     ) : null}
                   </div>

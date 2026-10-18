@@ -5,16 +5,22 @@
  * A season match counts for whoever was in the lineup: the team roster minus
  * approved `replacedUserId`s plus approved `subUserId`s (same derivation as
  * `getMatchLineups` in `src/lib/substitutions.ts`). Sitting out is not a game
- * played, so it's excluded from the record.
+ * played, so it's excluded from the record. A Bo2 group draw (1–1, no
+ * winner) counts as a draw for both lineups.
  */
+import { resultFor, type MatchResult } from "@/lib/match-format";
 
 export type RecordTally = { wins: number; losses: number };
+/** Season matches can also be drawn (Bo2 group stage). */
+export type MatchTally = RecordTally & { draws: number };
 
 export type TallyMatch = {
   id: string;
   homeTeamId: string;
   awayTeamId: string;
   winnerTeamId: string | null;
+  homeScore?: number | null;
+  awayScore?: number | null;
 };
 
 export type TallyMembership = { userId: string; teamId: string };
@@ -27,6 +33,14 @@ export type TallySub = {
   replacedUserId: string | null;
 };
 
+function tallyResult(map: Map<string, MatchTally>, userId: string, result: MatchResult) {
+  const t = map.get(userId) ?? { wins: 0, draws: 0, losses: 0 };
+  if (result === "win") t.wins++;
+  else if (result === "draw") t.draws++;
+  else t.losses++;
+  map.set(userId, t);
+}
+
 function bump(map: Map<string, RecordTally>, userId: string, won: boolean) {
   const t = map.get(userId) ?? { wins: 0, losses: 0 };
   if (won) t.wins++;
@@ -34,12 +48,12 @@ function bump(map: Map<string, RecordTally>, userId: string, won: boolean) {
   map.set(userId, t);
 }
 
-/** Season W–L per user over confirmed matches. Matches without a winner are skipped. */
+/** Season W–D–L per user over confirmed matches. Matches with no result are skipped. */
 export function tallyMatchRecords(
   matches: TallyMatch[],
   memberships: TallyMembership[],
   subs: TallySub[],
-): Map<string, RecordTally> {
+): Map<string, MatchTally> {
   const roster = new Map<string, string[]>();
   for (const m of memberships) {
     const list = roster.get(m.teamId) ?? [];
@@ -53,9 +67,14 @@ export function tallyMatchRecords(
     subsByMatch.set(s.matchId, list);
   }
 
-  const records = new Map<string, RecordTally>();
+  const records = new Map<string, MatchTally>();
   for (const match of matches) {
-    if (!match.winnerTeamId) continue;
+    const scored = {
+      ...match,
+      homeScore: match.homeScore ?? null,
+      awayScore: match.awayScore ?? null,
+    };
+    if (!resultFor(scored, match.homeTeamId)) continue;
     const matchSubs = subsByMatch.get(match.id) ?? [];
     for (const teamId of [match.homeTeamId, match.awayTeamId]) {
       const teamSubs = matchSubs.filter((s) => s.teamId === teamId);
@@ -64,8 +83,8 @@ export function tallyMatchRecords(
         ...(roster.get(teamId) ?? []).filter((u) => !out.has(u)),
         ...teamSubs.map((s) => s.subUserId),
       ]);
-      const won = match.winnerTeamId === teamId;
-      for (const userId of lineup) bump(records, userId, won);
+      const result = resultFor(scored, teamId)!;
+      for (const userId of lineup) tallyResult(records, userId, result);
     }
   }
   return records;

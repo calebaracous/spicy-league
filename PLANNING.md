@@ -14,7 +14,7 @@ tournament series for League of Legends and Counter-Strike 2.
 > - **Email**: Resend with inline HTML — no React Email.
 > - **Phases 0–7** are built, with these gaps: no pick clock / auto-pick,
 >   no randomized captain seeding, no Discord webhooks, no `bottleneck`
->   limiter or response cache for Riot, no head-to-head tiebreaker, no
+>   limiter or response cache for Riot, no
 >   avatar uploads, no audit log. Riot users can link up to 3 accounts.
 > - **Phase 8** (polish & ops) is not started — no Sentry/PostHog, Discord
 >   bot, or notification emails.
@@ -38,8 +38,9 @@ Each **season** follows this lifecycle:
 5. **Playoffs**: top 4 by group-stage standings, single-elimination bracket.
 6. **Archive**: season frozen, stats preserved for cross-season history.
 
-Tiebreakers for standings: wins → head-to-head → game differential →
-admin decision.
+Tiebreakers for standings (as built): points (win 2, draw 1) → head-to-head
+→ series wins → game differential → Bo1 tiebreaker game if it decides the
+top 4.
 
 ---
 
@@ -277,8 +278,9 @@ match_games
 
 - Exact captain-selection criteria (admin pick vs. voting vs. MMR-ranked)?
 - Draft pick clock duration? (default proposal: 90s with 30s auto-pick fallback)
-- Tie-breaking at group-stage standings: is game-differential right for LoL
-  when matches are best-of-1? Reconsider for CS2 (maps won/lost).
+- ~~Tie-breaking at group-stage standings~~ — settled for Season 12: Bo2
+  group series ranked on maps won, then head-to-head, series wins, and a Bo1
+  tiebreaker game if it decides the top 4 (docs/MATCHES.md). Revisit for CS2.
 - Match scheduling: fully manual (captains coordinate) or time-slot signup?
 - Do captains get a "ban" round before the draft (protected picks)?
 - Roster locks: can captains swap players mid-season in emergencies?

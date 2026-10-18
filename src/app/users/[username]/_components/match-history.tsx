@@ -1,13 +1,10 @@
 import Link from "next/link";
 
 import { Badge } from "@/components/ui/badge";
+import { roundLabel } from "@/lib/match-format";
 import type { PlayerMatch } from "@/lib/substitutions";
 
-function stageLabel(m: PlayerMatch): string {
-  if (m.stage === "final") return "Final";
-  if (m.stage === "semis") return "Semifinal";
-  return `Round ${m.round}`;
-}
+const RESULT_LETTER = { win: "W", draw: "D", loss: "L" } as const;
 
 /** Confirmed matches the player was part of — including as a sub. */
 export function MatchHistory({ matches }: { matches: PlayerMatch[] }) {
@@ -36,7 +33,7 @@ export function MatchHistory({ matches }: { matches: PlayerMatch[] }) {
                     {m.opponentName}
                   </p>
                   <p className="text-muted-foreground text-xs">
-                    {m.seasonName} · {stageLabel(m)}
+                    {m.seasonName} · {roundLabel(m.stage, m.round)}
                   </p>
                 </div>
                 <div className="flex shrink-0 items-center gap-2">
@@ -51,7 +48,7 @@ export function MatchHistory({ matches }: { matches: PlayerMatch[] }) {
                     className="w-8 text-right text-xs font-semibold"
                     style={{ color: m.result === "win" ? "var(--accent-text)" : "var(--muted)" }}
                   >
-                    {m.result === "win" ? "W" : "L"}
+                    {RESULT_LETTER[m.result]}
                   </span>
                 </div>
               </Link>

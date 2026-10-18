@@ -27,7 +27,10 @@ function statParts(p: DirectoryPlayer): string[] {
   if (p.seasons) parts.push(plural(p.seasons, "season"));
   if (p.titles) parts.push(plural(p.titles, "title"));
   if (p.captaincies) parts.push(`Captain ×${p.captaincies}`);
-  if (p.record.wins + p.record.losses) parts.push(`${p.record.wins}–${p.record.losses}`);
+  const { wins, draws, losses } = p.record;
+  if (wins + draws + losses) {
+    parts.push(draws ? `${wins}–${draws}–${losses}` : `${wins}–${losses}`);
+  }
   if (p.tenMan.wins + p.tenMan.losses) parts.push(`10-man ${p.tenMan.wins}–${p.tenMan.losses}`);
   return parts;
 }

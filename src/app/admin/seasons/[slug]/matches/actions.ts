@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, inArray, ne } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
@@ -8,7 +8,7 @@ import { db } from "@/db/client";
 import { matches } from "@/db/schema/matches";
 import { seasons } from "@/db/schema/seasons";
 import { requireAdmin } from "@/lib/auth-helpers";
-import { generateSchedule, seedPlayoffs } from "@/lib/schedule";
+import { createTiebreakers, generateSchedule, seedPlayoffs } from "@/lib/schedule";
 
 export async function generateMatchSchedule(slug: string) {
   await requireAdmin();
@@ -44,6 +44,9 @@ export async function seedPlayoffsAction(slug: string) {
   if (pending) redirect(`/admin/seasons/${slug}/matches?error=group-unfinished`);
 
   const created = await seedPlayoffs(season.id);
+  if (created === "needs-tiebreaker") {
+    redirect(`/admin/seasons/${slug}/matches?error=needs-tiebreaker`);
+  }
   if (created === 0) {
     redirect(`/admin/seasons/${slug}/matches?error=playoffs-already-seeded`);
   }
@@ -63,4 +66,35 @@ export async function seedPlayoffsAction(slug: string) {
   revalidatePath(`/admin/seasons/${slug}/matches`);
   revalidatePath(`/seasons/${slug}/matches`);
   redirect(`/admin/seasons/${slug}/matches?saved=seeded`);
+}
+
+export async function createTiebreakersAction(slug: string) {
+  await requireAdmin();
+
+  const season = await db.query.seasons.findFirst({ where: eq(seasons.slug, slug) });
+  if (!season) redirect("/admin?error=not-found");
+
+  // Ties are only final once every group match is confirmed, and a new round
+  // only makes sense once the previous round of tiebreakers is settled.
+  const pending = await db.query.matches.findFirst({
+    where: and(
+      eq(matches.seasonId, season.id),
+      inArray(matches.stage, ["group", "tiebreaker"]),
+      ne(matches.state, "confirmed"),
+    ),
+  });
+  if (pending) {
+    redirect(
+      `/admin/seasons/${slug}/matches?error=${
+        pending.stage === "group" ? "group-unfinished" : "tiebreaker-pending"
+      }`,
+    );
+  }
+
+  const created = await createTiebreakers(season.id);
+  if (created === 0) redirect(`/admin/seasons/${slug}/matches?error=no-tiebreaker-needed`);
+
+  revalidatePath(`/admin/seasons/${slug}/matches`);
+  revalidatePath(`/seasons/${slug}/matches`);
+  redirect(`/admin/seasons/${slug}/matches?saved=tiebreakers-${created}`);
 }

@@ -5,10 +5,11 @@ import { and, desc, eq, inArray, or } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users } from "@/db/schema/auth";
 import { teamMembers, teams } from "@/db/schema/drafts";
-import { matches, matchSubstitutions, type Match } from "@/db/schema/matches";
+import { matches, matchSubstitutions, type Match, type MatchStage } from "@/db/schema/matches";
 import { seasons, seasonSignups } from "@/db/schema/seasons";
 import { riotStatSnapshots } from "@/db/schema/stats";
 import { getActiveBan } from "@/lib/bans";
+import { resultFor, roundLabel, type MatchResult } from "@/lib/match-format";
 import { evaluateSubRequest, type ActiveSub, type SubRuleResult } from "@/lib/substitution-rules";
 
 /**
@@ -382,11 +383,11 @@ export type PlayerMatch = {
   matchId: string;
   seasonName: string;
   seasonSlug: string;
-  stage: "group" | "semis" | "final";
+  stage: MatchStage;
   round: number;
   teamName: string;
   opponentName: string;
-  result: "win" | "loss";
+  result: MatchResult;
   teamScore: number | null;
   opponentScore: number | null;
   confirmedAt: Date | null;
@@ -475,7 +476,8 @@ export async function getPlayerMatchHistory(userId: string): Promise<PlayerMatch
       round: r.round,
       teamName: teamName.get(myTeam) ?? "?",
       opponentName: teamName.get(isHome ? r.awayTeamId : r.homeTeamId) ?? "?",
-      result: r.winnerTeamId === myTeam ? "win" : "loss",
+      // Confirmed matches always have a result; a Bo2 group 1–1 is a draw.
+      result: resultFor(r, myTeam) ?? "loss",
       teamScore: isHome ? r.homeScore : r.awayScore,
       opponentScore: isHome ? r.awayScore : r.homeScore,
       confirmedAt: r.confirmedAt,
@@ -523,9 +525,10 @@ export async function getPendingSubsForSeason(seasonId: string) {
     subName: person.get(r.subUserId) ?? "?",
     replacingName: r.replacedUserId ? (person.get(r.replacedUserId) ?? "?") : null,
     teamName: team.get(r.teamId) ?? "?",
-    matchLabel: `${team.get(r.homeTeamId) ?? "?"} vs ${team.get(r.awayTeamId) ?? "?"} · ${
-      r.stage === "final" ? "Final" : r.stage === "semis" ? "Semifinal" : `Round ${r.round}`
-    }`,
+    matchLabel: `${team.get(r.homeTeamId) ?? "?"} vs ${team.get(r.awayTeamId) ?? "?"} · ${roundLabel(
+      r.stage,
+      r.round,
+    )}`,
     reason: r.reason,
   }));
 }

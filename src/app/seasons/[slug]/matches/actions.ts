@@ -8,6 +8,7 @@ import { db } from "@/db/client";
 import { matches } from "@/db/schema/matches";
 import { seasons } from "@/db/schema/seasons";
 import { requireAdmin, requireOnboarded } from "@/lib/auth-helpers";
+import { BO2_RESULTS, hasResult, type Bo2Result } from "@/lib/match-format";
 import { getTeamForCaptain } from "@/lib/schedule";
 
 async function getSeasonOrFail(slug: string) {
@@ -28,6 +29,44 @@ async function clearChampionIfFinal(seasonId: string, matchId: string) {
     .update(seasons)
     .set({ championTeamId: null, updatedAt: new Date() })
     .where(eq(seasons.id, seasonId));
+}
+
+type ReportedResult = {
+  winnerTeamId: string | null;
+  homeScore: number | null;
+  awayScore: number | null;
+};
+type MatchSides = { homeTeamId: string; awayTeamId: string };
+
+/** Bo2 group match: one of 2–0 / 1–1 / 0–2. The winner follows from the score; 1–1 is a draw. */
+function readBo2Result(match: MatchSides, formData: FormData): ReportedResult | string {
+  const key = formData.get("result")?.toString() ?? "";
+  if (!Object.hasOwn(BO2_RESULTS, key)) return "invalid-result";
+  const { homeScore, awayScore } = BO2_RESULTS[key as Bo2Result];
+  const winnerTeamId =
+    homeScore > awayScore ? match.homeTeamId : awayScore > homeScore ? match.awayTeamId : null;
+  return { winnerTeamId, homeScore, awayScore };
+}
+
+/** Everything else (playoffs, tiebreakers, Bo1 groups): a winner, plus an optional score. */
+function readWinnerResult(match: MatchSides, formData: FormData): ReportedResult | string {
+  const winnerTeamId = formData.get("winnerTeamId")?.toString() ?? "";
+  if (winnerTeamId !== match.homeTeamId && winnerTeamId !== match.awayTeamId) {
+    return "invalid-winner";
+  }
+
+  // Scores are optional, but a 0 is a real score (the old `|| null` turned a
+  // 2-0 into 2-blank, which then rendered with no score at all).
+  const homeScore = parseScore(formData.get("homeScore"));
+  const awayScore = parseScore(formData.get("awayScore"));
+  if (homeScore === undefined || awayScore === undefined) return "invalid-score";
+  if ((homeScore === null) !== (awayScore === null)) return "partial-score";
+  if (homeScore !== null && awayScore !== null) {
+    const winnerScore = winnerTeamId === match.homeTeamId ? homeScore : awayScore;
+    const loserScore = winnerTeamId === match.homeTeamId ? awayScore : homeScore;
+    if (winnerScore <= loserScore) return "score-mismatch";
+  }
+  return { winnerTeamId, homeScore, awayScore };
 }
 
 /** Blank -> null (no score given); 0-10 -> number; anything else -> undefined (invalid). */
@@ -60,28 +99,12 @@ export async function reportMatch(slug: string, matchId: string, formData: FormD
     }
   }
 
-  const winnerTeamId = formData.get("winnerTeamId")?.toString() ?? "";
-  if (winnerTeamId !== match.homeTeamId && winnerTeamId !== match.awayTeamId) {
-    redirect(`/seasons/${slug}/matches/${matchId}?error=invalid-winner`);
-  }
-
-  // Scores are optional, but a 0 is a real score (the old `|| null` turned a
-  // 2-0 into 2-blank, which then rendered with no score at all).
-  const homeScore = parseScore(formData.get("homeScore"));
-  const awayScore = parseScore(formData.get("awayScore"));
-  if (homeScore === undefined || awayScore === undefined) {
-    redirect(`/seasons/${slug}/matches/${matchId}?error=invalid-score`);
-  }
-  if ((homeScore === null) !== (awayScore === null)) {
-    redirect(`/seasons/${slug}/matches/${matchId}?error=partial-score`);
-  }
-  if (homeScore !== null && awayScore !== null) {
-    const winnerScore = winnerTeamId === match.homeTeamId ? homeScore : awayScore;
-    const loserScore = winnerTeamId === match.homeTeamId ? awayScore : homeScore;
-    if (winnerScore <= loserScore) {
-      redirect(`/seasons/${slug}/matches/${matchId}?error=score-mismatch`);
-    }
-  }
+  const result =
+    match.stage === "group" && season.groupBestOf === 2
+      ? readBo2Result(match, formData)
+      : readWinnerResult(match, formData);
+  if (typeof result === "string") redirect(`/seasons/${slug}/matches/${matchId}?error=${result}`);
+  const { winnerTeamId, homeScore, awayScore } = result;
 
   await db
     .update(matches)
@@ -109,7 +132,8 @@ export async function confirmMatch(slug: string, matchId: string) {
     where: and(eq(matches.id, matchId), eq(matches.seasonId, season.id)),
   });
   if (!match) redirect(`/admin/seasons/${slug}/matches?error=not-found`);
-  if (!match.winnerTeamId) redirect(`/admin/seasons/${slug}/matches?error=no-winner`);
+  // A Bo2 group draw (1–1) is a result too; anything else needs a winner.
+  if (!hasResult(match)) redirect(`/admin/seasons/${slug}/matches?error=no-winner`);
 
   await db
     .update(matches)

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { LocalDateTimeInput } from "@/components/ui/local-time";
 import { Textarea } from "@/components/ui/textarea";
 import { GAME_LABELS } from "@/lib/seasons";
+import { GROUP_BEST_OF_OPTIONS } from "@/lib/match-format";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "New season · Admin" };
@@ -92,6 +93,25 @@ export default async function NewSeasonPage({ searchParams }: { searchParams: Se
                   </option>
                 ))}
               </select>
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="groupBestOf">Group-stage series</Label>
+              <select
+                id="groupBestOf"
+                name="groupBestOf"
+                required
+                defaultValue={"1"}
+                className="border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
+              >
+                {GROUP_BEST_OF_OPTIONS.map(({ value, label }) => (
+                  <option key={value} value={value}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+              <p className="text-muted-foreground text-xs">
+                Set before group results come in: it changes how matches are reported and ranked.
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="description">Description</Label>

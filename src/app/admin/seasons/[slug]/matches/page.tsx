@@ -2,9 +2,11 @@ import { asc, eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { generateMatchSchedule, seedPlayoffsAction } from "./actions";
+import { createTiebreakersAction, generateMatchSchedule, seedPlayoffsAction } from "./actions";
 import { confirmMatch, disputeMatch, resetMatch } from "@/app/seasons/[slug]/matches/actions";
 import { decideSub } from "@/app/seasons/[slug]/matches/sub-actions";
+import { isDraw } from "@/lib/match-format";
+import { computeStandings } from "@/lib/schedule";
 import { getPendingSubsForSeason } from "@/lib/substitutions";
 import { SUB_ERROR_MESSAGES } from "@/lib/substitution-rules";
 import { db } from "@/db/client";
@@ -31,7 +33,11 @@ const ERROR_MESSAGES: Record<string, string> = {
   "playoffs-already-seeded": "Playoff bracket has already been seeded.",
   "group-unfinished":
     "Every group match needs a confirmed result before the playoffs can be seeded.",
-  "no-winner": "That match has no reported winner yet, so it can't be confirmed.",
+  "no-winner": "That match has no reported result yet, so it can't be confirmed.",
+  "needs-tiebreaker":
+    "Teams are still level on every tiebreaker inside the top 4. Play the tiebreaker games first.",
+  "tiebreaker-pending": "Confirm the current tiebreaker games before creating more.",
+  "no-tiebreaker-needed": "No tie inside the top 4 needs a tiebreaker game.",
   "not-found": "Match not found.",
   ...SUB_ERROR_MESSAGES,
 };
@@ -57,6 +63,10 @@ function flashMessage(saved: string): string {
   if (saved === "sub-approved") return "Sub approved.";
   if (saved === "sub-rejected") return "Sub rejected.";
   if (saved === "sub-revoked") return "Sub revoked.";
+  const tiebreakers = saved.match(/^tiebreakers-(\d+)$/);
+  if (tiebreakers) {
+    return `Created ${tiebreakers[1]} tiebreaker game${tiebreakers[1] === "1" ? "" : "s"}.`;
+  }
   const generated = saved.match(/^generated-(\d+)$/);
   if (generated) return `Generated ${generated[1]} matches.`;
   return "Saved.";
@@ -97,6 +107,7 @@ export default async function AdminMatchesPage({
 
   const generateWithSlug = generateMatchSchedule.bind(null, slug);
   const seedPlayoffsWithSlug = seedPlayoffsAction.bind(null, slug);
+  const createTiebreakersWithSlug = createTiebreakersAction.bind(null, slug);
   const confirmWithSlug = confirmMatch.bind(null, slug);
   const disputeWithSlug = disputeMatch.bind(null, slug);
   const resetWithSlug = resetMatch.bind(null, slug);
@@ -104,7 +115,9 @@ export default async function AdminMatchesPage({
   const errorMessage = error ? ERROR_MESSAGES[error] : null;
   const reportedCount = allMatches.filter((m) => m.state === "reported").length;
   const groupMatches = allMatches.filter((m) => m.stage === "group");
-  const playoffMatches = allMatches.filter((m) => m.stage !== "group");
+  const tiebreakerMatches = allMatches.filter((m) => m.stage === "tiebreaker");
+  const playoffMatches = allMatches.filter((m) => m.stage === "semis" || m.stage === "final");
+  const knockoutMatches = [...tiebreakerMatches, ...playoffMatches];
   // Seeding is offered from the group stage once every group match is
   // confirmed (seeding then moves the season to Playoffs), or from Playoffs
   // if an admin transitioned first.
@@ -113,6 +126,12 @@ export default async function AdminMatchesPage({
     (season.state === "group_stage" || season.state === "playoffs") &&
     playoffMatches.length === 0 &&
     groupMatches.length > 0;
+  // Ties that decide the top 4 only matter once the group stage is done.
+  const tiebreakersNeeded =
+    canSeedPlayoffs && unconfirmedGroup === 0
+      ? (await computeStandings(season.id)).tiebreakersNeeded
+      : [];
+  const unconfirmedTiebreakers = tiebreakerMatches.filter((m) => m.state !== "confirmed").length;
   const pendingSubs = await getPendingSubsForSeason(season.id);
   const here = `/admin/seasons/${slug}/matches`;
 
@@ -207,8 +226,9 @@ export default async function AdminMatchesPage({
           <CardHeader>
             <CardTitle>Generate schedule</CardTitle>
             <CardDescription>
-              Creates a round-robin schedule for all teams. Each team plays every other team once.
-              This can only be done once.
+              Creates a round-robin schedule for all teams. Each team plays every other team once
+              {season.groupBestOf === 2 ? " in a best-of-2 series (2–0, 1–1 or 0–2)" : ""}. This can
+              only be done once.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -243,6 +263,33 @@ export default async function AdminMatchesPage({
                     {unconfirmedGroup} group match{unconfirmedGroup !== 1 ? "es" : ""} still need
                     {unconfirmedGroup === 1 ? "s" : ""} a confirmed result before seeding.
                   </p>
+                ) : tiebreakersNeeded.length > 0 ? (
+                  <div className="space-y-3 text-sm">
+                    <p>
+                      These teams are still level after head-to-head, series wins and map
+                      difference, and the tie decides the top 4. Each pair plays a Bo1 tiebreaker.
+                    </p>
+                    <ul className="list-disc space-y-1 pl-5">
+                      {tiebreakersNeeded.map((group) => (
+                        <li key={group.join()}>
+                          {group.map((id) => teamName.get(id) ?? "?").join(" vs ")}
+                        </li>
+                      ))}
+                    </ul>
+                    {unconfirmedTiebreakers > 0 ? (
+                      <p className="text-muted-foreground">
+                        {unconfirmedTiebreakers} tiebreaker game
+                        {unconfirmedTiebreakers !== 1 ? "s" : ""} still need
+                        {unconfirmedTiebreakers === 1 ? "s" : ""} a confirmed result.
+                      </p>
+                    ) : (
+                      <form action={createTiebreakersWithSlug}>
+                        <ConfirmSubmitButton confirmMessage="Create a Bo1 tiebreaker game between each pair of tied teams?">
+                          Create tiebreaker games
+                        </ConfirmSubmitButton>
+                      </form>
+                    )}
+                  </div>
                 ) : (
                   <form action={seedPlayoffsWithSlug}>
                     <ConfirmSubmitButton confirmMessage="Seed the playoffs from the final group standings and move the season to Playoffs? This can only be done once.">
@@ -254,16 +301,17 @@ export default async function AdminMatchesPage({
             </Card>
           ) : null}
 
-          {playoffMatches.length > 0 ? (
+          {knockoutMatches.length > 0 ? (
             <div className="space-y-4">
               <h2 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
-                Playoffs
+                {playoffMatches.length > 0 ? "Playoffs" : "Tiebreakers"}
               </h2>
               {[
+                { label: "Tiebreakers (Bo1)", stage: "tiebreaker" },
                 { label: "Semifinals", stage: "semis" },
                 { label: "Final", stage: "final" },
               ].map(({ label, stage }) => {
-                const stageMatches = playoffMatches.filter((m) => m.stage === stage);
+                const stageMatches = knockoutMatches.filter((m) => m.stage === stage);
                 if (stageMatches.length === 0) return null;
                 return (
                   <Card key={stage}>
@@ -360,7 +408,7 @@ export default async function AdminMatchesPage({
 
           {groupMatches.length > 0 ? (
             <div className="space-y-4">
-              {playoffMatches.length > 0 ? (
+              {knockoutMatches.length > 0 ? (
                 <h2 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
                   Group stage
                 </h2>
@@ -416,6 +464,8 @@ export default async function AdminMatchesPage({
                                       <p className="text-muted-foreground text-xs">
                                         Winner: {winnerName}
                                       </p>
+                                    ) : isDraw(m) ? (
+                                      <p className="text-muted-foreground text-xs">Draw</p>
                                     ) : null}
                                   </div>
                                   <div className="flex items-center gap-2">

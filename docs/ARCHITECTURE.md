@@ -212,7 +212,7 @@ Admin (requires `role === "admin"`):
 - `/admin/seasons/[slug]` — edit + state transition
 - `/admin/seasons/[slug]/signups` — promote/demote captains, reorder, remove a player (pre-draft only), CSV export (`/signups/export`)
 - `/admin/seasons/[slug]/draft` — start/pause/resume/undo controls
-- `/admin/seasons/[slug]/matches` — generate schedule, seed playoffs, confirm results
+- `/admin/seasons/[slug]/matches` — generate schedule, create tiebreaker games, seed playoffs, confirm results
 - 10-man admin controls (start, cancel, report result) are inline on the
   `/10-man` pages, not under `/admin`.
 
@@ -234,8 +234,9 @@ API:
 - …the draft pick order is surprising → `snakeOrder` / `teamForPick` in
   `src/lib/draft.ts` (snake algorithm; duo-captain teams make 3 picks). 10-man uses the fixed
   `PICK_ORDER_C1_C2` in `src/lib/ten-man.ts`.
-- …match standings look off → `computeStandings` in `src/lib/schedule.ts`
-  (tiebreakers: wins → game diff → team name).
+- …match standings look off → `rankStandings` in `src/lib/standings.ts`
+  (points 2/1/0 → head-to-head → series wins → game diff → tiebreaker games;
+  see [MATCHES.md](MATCHES.md)).
 - …an error message appears → grep for the kebab-case code; it'll be in a
   page's `ERROR_MESSAGES` map or an action's `redirect(...?error=...)`.
 - …styling looks off → [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md) for the two

@@ -44,6 +44,9 @@ export const seasons = pgTable(
     groupStageEndsAt: timestamp("group_stage_ends_at", { mode: "date" }),
     semisAt: timestamp("semis_at", { mode: "date" }),
     finalAt: timestamp("final_at", { mode: "date" }),
+    // Group-stage series length. 1 = report a winner (+ optional score);
+    // 2 = Bo2 series, reported as 2–0 / 1–1 / 0–2, and a 1–1 is a draw.
+    groupBestOf: integer("group_best_of").notNull().default(1),
     championTeamId: text("champion_team_id"),
     createdBy: text("created_by").references(() => users.id, { onDelete: "set null" }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),

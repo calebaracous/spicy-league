@@ -3,8 +3,9 @@
 //   node scripts/season-12-setup.mjs           dry run — prints what would go
 //   node scripts/season-12-setup.mjs --apply   does it, in one transaction
 //
-// Reads DATABASE_URL from .env.local or the environment. Needs migration
-// 0005_season_schedule applied first (the new season's schedule columns).
+// Reads DATABASE_URL from .env.local or the environment. Needs migrations
+// 0005_season_schedule and 0007_group_bo2 applied first (the new season's
+// schedule columns and group_best_of).
 //
 // "League data" = every season (cascades to signups, captains, drafts, picks,
 // teams, matches, substitutions) and every 10-man (cascades to its tables).
@@ -33,7 +34,8 @@ const SEASON = {
   state: "signups_open",
   description:
     "League of Legends, drafted 5v5 teams. The draft is Saturday, November 21 at 8pm ET. " +
-    "Group stage December 11–13, semifinals December 19, final December 20. " +
+    "Group stage December 11–13: a single round robin of best-of-2 series, where a 1–1 is a draw " +
+    "and standings rank on maps won. The top 4 advance to the semifinals December 19; final December 20. " +
     "Matches start at 7pm ET by default; teams can reschedule a match to any time both sides agree on.",
   signupClosesAt: "2026-11-21T23:00:00Z", // Nov 21, 6pm ET
   draftAt: "2026-11-22T01:00:00Z", // Nov 21, 8pm ET
@@ -41,6 +43,7 @@ const SEASON = {
   groupStageEndsAt: "2026-12-14T00:00:00Z", // Dec 13, 7pm ET
   semisAt: "2026-12-20T00:00:00Z", // Dec 19, 7pm ET
   finalAt: "2026-12-21T00:00:00Z", // Dec 20, 7pm ET
+  groupBestOf: 2, // Bo2 group series, draws allowed
 };
 
 const seasonRows = await sql`select slug, name, state from seasons order by created_at`;
@@ -76,11 +79,11 @@ const [, , deletedUsers, created] = await sql.transaction([
       returning username`,
   sql`insert into seasons (id, name, slug, game, state, description, signup_opens_at,
         signup_closes_at, draft_at, season_start_at, group_stage_ends_at, semis_at, final_at,
-        created_by)
+        group_best_of, created_by)
       values (${crypto.randomUUID()}, ${SEASON.name}, ${SEASON.slug}, ${SEASON.game},
         ${SEASON.state}, ${SEASON.description}, now() at time zone 'utc', ${SEASON.signupClosesAt},
         ${SEASON.draftAt}, ${SEASON.seasonStartAt}, ${SEASON.groupStageEndsAt},
-        ${SEASON.semisAt}, ${SEASON.finalAt}, ${admin?.id ?? null})
+        ${SEASON.semisAt}, ${SEASON.finalAt}, ${SEASON.groupBestOf}, ${admin?.id ?? null})
       returning slug`,
 ]);
 console.log(

@@ -16,6 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { LocalTime } from "@/components/ui/local-time";
 import { FlashToast } from "@/components/flash-toast";
+import { BO2_RESULTS, isDraw, roundLabel, type Bo2Result } from "@/lib/match-format";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { getCaptainedTeamId, getTeamForCaptain } from "@/lib/schedule";
 import { SUB_ERROR_MESSAGES } from "@/lib/substitution-rules";
@@ -33,6 +34,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   "not-on-team": "You aren't on a team in this season.",
   "not-your-match": "That match doesn't involve your team.",
   "invalid-winner": "Select a valid winner.",
+  "invalid-result": "Pick the series result: 2–0, 1–1 or 0–2.",
   "invalid-score": "Scores must be whole numbers from 0 to 10.",
   "partial-score": "Enter both scores, or leave both blank.",
   "score-mismatch": "The winner needs the higher score.",
@@ -108,6 +110,15 @@ export default async function MatchDetailPage({
   ]);
 
   const reportWithIds = reportMatch.bind(null, slug, matchId);
+  // Bo2 group series: report one of 2–0 / 1–1 / 0–2 (a 1–1 is a draw).
+  const bo2 = match.stage === "group" && season.groupBestOf === 2;
+  const draw = isDraw(match);
+  const bo2Current = (Object.keys(BO2_RESULTS) as Bo2Result[]).find(
+    (k) =>
+      match.state !== "scheduled" &&
+      BO2_RESULTS[k].homeScore === match.homeScore &&
+      BO2_RESULTS[k].awayScore === match.awayScore,
+  );
   const sb = STATE_BADGE[match.state] ?? STATE_BADGE.scheduled;
   const errorMessage = error ? ERROR_MESSAGES[error] : null;
 
@@ -135,12 +146,8 @@ export default async function MatchDetailPage({
           <Badge variant={sb.variant}>{sb.label}</Badge>
         </div>
         <p className="text-muted-foreground text-sm">
-          {season.name} ·{" "}
-          {match.stage === "final"
-            ? "Final"
-            : match.stage === "semis"
-              ? "Semifinal"
-              : `Round ${match.round}`}
+          {season.name} · {roundLabel(match.stage, match.round)}
+          {bo2 ? " · Best of 2" : match.stage === "tiebreaker" ? " · Best of 1" : ""}
           {match.scheduledAt ? (
             <>
               {" "}
@@ -169,18 +176,22 @@ export default async function MatchDetailPage({
       ) : null}
 
       {/* Result card */}
-      {match.state !== "scheduled" && match.winnerTeamId ? (
+      {match.state !== "scheduled" && (match.winnerTeamId || draw) ? (
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Result</CardTitle>
           </CardHeader>
           <CardContent className="space-y-1 text-sm">
-            <p>
-              Winner:{" "}
-              <span className="font-medium">
-                {match.winnerTeamId === match.homeTeamId ? homeTeam?.name : awayTeam?.name}
-              </span>
-            </p>
+            {draw ? (
+              <p className="font-medium">Draw</p>
+            ) : (
+              <p>
+                Winner:{" "}
+                <span className="font-medium">
+                  {match.winnerTeamId === match.homeTeamId ? homeTeam?.name : awayTeam?.name}
+                </span>
+              </p>
+            )}
             {match.homeScore !== null && match.awayScore !== null ? (
               <p className="text-muted-foreground">
                 Score: {homeTeam?.name} {match.homeScore} – {match.awayScore} {awayTeam?.name}
@@ -216,51 +227,84 @@ export default async function MatchDetailPage({
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <form action={reportWithIds} className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="winnerTeamId">Winner</Label>
-                <select
-                  id="winnerTeamId"
-                  name="winnerTeamId"
-                  required
-                  defaultValue={match.winnerTeamId ?? ""}
-                  className="border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
-                >
-                  <option value="">Select winner…</option>
-                  <option value={match.homeTeamId}>{homeTeam?.name} (Home)</option>
-                  <option value={match.awayTeamId}>{awayTeam?.name} (Away)</option>
-                </select>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
+            {bo2 ? (
+              <form action={reportWithIds} className="space-y-4">
+                <fieldset className="space-y-2">
+                  <legend className="mb-1.5 text-sm font-medium">Series result (maps won)</legend>
+                  {(
+                    [
+                      ["home-2-0", `${homeTeam?.name} 2–0`],
+                      ["draw-1-1", "1–1 draw"],
+                      ["away-0-2", `${awayTeam?.name} 2–0`],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <label
+                      key={value}
+                      className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 rounded-lg border px-3 py-2 text-sm"
+                    >
+                      <input
+                        type="radio"
+                        name="result"
+                        value={value}
+                        required
+                        defaultChecked={bo2Current === value}
+                      />
+                      {label}
+                    </label>
+                  ))}
+                </fieldset>
+                <p className="text-muted-foreground text-xs">
+                  Both maps are always played. A 1–1 is a draw: one map win each.
+                </p>
+                <Button type="submit">Submit result</Button>
+              </form>
+            ) : (
+              <form action={reportWithIds} className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="homeScore">{homeTeam?.name} score</Label>
-                  <input
-                    id="homeScore"
-                    name="homeScore"
-                    type="number"
-                    min="0"
-                    max="10"
-                    defaultValue={match.homeScore ?? ""}
-                    placeholder="0"
+                  <Label htmlFor="winnerTeamId">Winner</Label>
+                  <select
+                    id="winnerTeamId"
+                    name="winnerTeamId"
+                    required
+                    defaultValue={match.winnerTeamId ?? ""}
                     className="border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
-                  />
+                  >
+                    <option value="">Select winner…</option>
+                    <option value={match.homeTeamId}>{homeTeam?.name} (Home)</option>
+                    <option value={match.awayTeamId}>{awayTeam?.name} (Away)</option>
+                  </select>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="awayScore">{awayTeam?.name} score</Label>
-                  <input
-                    id="awayScore"
-                    name="awayScore"
-                    type="number"
-                    min="0"
-                    max="10"
-                    defaultValue={match.awayScore ?? ""}
-                    placeholder="0"
-                    className="border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
-                  />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="homeScore">{homeTeam?.name} score</Label>
+                    <input
+                      id="homeScore"
+                      name="homeScore"
+                      type="number"
+                      min="0"
+                      max="10"
+                      defaultValue={match.homeScore ?? ""}
+                      placeholder="0"
+                      className="border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="awayScore">{awayTeam?.name} score</Label>
+                    <input
+                      id="awayScore"
+                      name="awayScore"
+                      type="number"
+                      min="0"
+                      max="10"
+                      defaultValue={match.awayScore ?? ""}
+                      placeholder="0"
+                      className="border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
+                    />
+                  </div>
                 </div>
-              </div>
-              <Button type="submit">Submit result</Button>
-            </form>
+                <Button type="submit">Submit result</Button>
+              </form>
+            )}
           </CardContent>
         </Card>
       ) : null}

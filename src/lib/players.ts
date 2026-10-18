@@ -9,7 +9,12 @@ import { matches, matchSubstitutions } from "@/db/schema/matches";
 import { seasons } from "@/db/schema/seasons";
 import { riotStatSnapshots } from "@/db/schema/stats";
 import { tenManCaptains, tenManPicks, tenMans } from "@/db/schema/ten-mans";
-import { tallyMatchRecords, tallyTenManRecords, type RecordTally } from "@/lib/player-stats";
+import {
+  tallyMatchRecords,
+  tallyTenManRecords,
+  type MatchTally,
+  type RecordTally,
+} from "@/lib/player-stats";
 import { formatTier, rankScore } from "@/lib/rank";
 
 /** One row of the public player directory (`/users`). Client-serialisable. */
@@ -23,11 +28,12 @@ export type DirectoryPlayer = {
   titles: number;
   /** Drafted seasons as captain (solo or duo). */
   captaincies: number;
-  record: RecordTally;
+  record: MatchTally;
   tenMan: RecordTally;
 };
 
 const EMPTY: RecordTally = { wins: 0, losses: 0 };
+const EMPTY_MATCHES: MatchTally = { wins: 0, draws: 0, losses: 0 };
 
 /**
  * Every onboarded user (username set), A–Z, with career stats. A fixed
@@ -69,6 +75,8 @@ export async function getPlayerDirectory(): Promise<DirectoryPlayer[]> {
         homeTeamId: matches.homeTeamId,
         awayTeamId: matches.awayTeamId,
         winnerTeamId: matches.winnerTeamId,
+        homeScore: matches.homeScore,
+        awayScore: matches.awayScore,
       })
       .from(matches)
       .where(eq(matches.state, "confirmed")),
@@ -151,7 +159,7 @@ export async function getPlayerDirectory(): Promise<DirectoryPlayer[]> {
           seasons: seasonsByUser.get(u.id)?.size ?? 0,
           titles: titlesByUser.get(u.id) ?? 0,
           captaincies: captainCount.get(u.id) ?? 0,
-          record: records.get(u.id) ?? EMPTY,
+          record: records.get(u.id) ?? EMPTY_MATCHES,
           tenMan: tenManRecords.get(u.id) ?? EMPTY,
         },
       ];

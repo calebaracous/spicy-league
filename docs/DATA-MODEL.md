@@ -30,6 +30,8 @@ files are in git history before the squash commit):
 - `0004_sub_signups.sql` — `signup_kind` enum + `season_signups.kind`.
 - `0005_season_schedule.sql` — `seasons.draft_at`, `group_stage_ends_at`, `semis_at`, `final_at`.
 - `0006_signup_quandary.sql` — nullable `season_signups.quandary`.
+- `0007_group_bo2.sql` — `seasons.group_best_of` (int, default 1) and
+  `tiebreaker` added to the `match_stage` enum.
 
 **Why the baseline's `when` is old.** Drizzle's migrator applies a journal
 entry only if its `when` is greater than the newest `created_at` in
@@ -109,6 +111,11 @@ Auth, not queried directly by app code.
   set `matches.scheduledAt`. `seasonSchedule()` in `src/lib/seasons.ts` turns
   them into the ordered "key dates" list used by the season page and the
   upcoming home section; edited in the admin season form.
+- `groupBestOf` int, default 1 (migration `0007_group_bo2`) — group-stage
+  series length: 1 = report a winner (+ optional score), 2 = Bo2 series
+  reported as 2–0 / 1–1 / 0–2 where 1–1 is a draw. Edited in the admin
+  season form (`GROUP_BEST_OF_OPTIONS`). See [MATCHES.md](MATCHES.md) →
+  Group format.
 - `championTeamId` — set by `confirmMatch` when the **final** is
   confirmed (to the final's `winnerTeamId`), cleared again if that final
   is disputed or reset. Migration `0001_reconcile_live_schema` backfilled
@@ -183,15 +190,17 @@ Constraints:
 
 ## matches.ts — matches
 
-Single table for group stage, semis, final.
+Single table for group stage, tiebreakers, semis, final.
 
-- `stage` enum `match_stage`: `group | semis | final`
+- `stage` enum `match_stage`: `group | tiebreaker | semis | final`
 - `state` enum `match_state`: `scheduled | reported | confirmed | disputed`
 - `round` int — group stage uses 1..(n-1) from the circle-method round
-  index; semis use **101, 102**; final uses **201**. These magic numbers
+  index; tiebreakers use **51+**; semis use **101, 102**; final uses **201**. These magic numbers
   are how we sort and distinguish stages without a compound index.
 - `winnerTeamId`, `homeScore`, `awayScore`, `reportedBy`, `reportedAt`,
-  `confirmedAt` — populated as the match moves through its lifecycle
+  `confirmedAt` — populated as the match moves through its lifecycle.
+  Invariant (code, not DB): a reported/confirmed match has a winner **or**
+  is a draw (`winnerTeamId` null, equal non-null scores — Bo2 group only).
 - Indexes: on `seasonId`, `homeTeamId`, `awayTeamId`
 
 See [MATCHES.md](MATCHES.md) for the lifecycle and tiebreaker rules.

@@ -7,6 +7,7 @@ import { TintedSection } from "@/components/ui/tinted-section";
 import { backdropClip } from "@/lib/backdrop-clips";
 import type { Season } from "@/db/schema/seasons";
 import { GAME_LABELS, seasonSchedule } from "@/lib/seasons";
+import { formatStructure } from "@/lib/match-format";
 
 interface UpcomingSectionProps {
   season: Season;
@@ -48,7 +49,7 @@ export function UpcomingSection({ season }: UpcomingSectionProps) {
                 <div>
                   <span style={{ color: "var(--muted)" }}>Structure: </span>
                   <span style={{ color: "var(--text)" }}>
-                    Round-robin group stage, then single-elimination playoffs
+                    {formatStructure(season.groupBestOf)}
                   </span>
                 </div>
               </div>

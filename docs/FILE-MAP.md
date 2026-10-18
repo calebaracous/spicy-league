@@ -40,7 +40,7 @@ Trivial shadcn primitives get a single entry at the bottom.
 ## Scripts
 
 - `scripts/e2e-cleanup.mjs` — `npm run test:e2e:cleanup`: deletes e2e-tagged seasons/users; `--legacy` also removes the old seed-test-season data.
-- `scripts/season-12-setup.mjs` — one-off: deletes every season + 10-man and obvious test users (numbered bot usernames / test email domains, never admins), then creates Spicy League Season 12. Dry run unless `--apply`. Needs migration 0005.
+- `scripts/season-12-setup.mjs` — one-off: deletes every season + 10-man and obvious test users (numbered bot usernames / test email domains, never admins), then creates Spicy League Season 12 (Bo2 group stage). Dry run unless `--apply`. Needs migrations 0005 and 0007.
 - `scripts/seed-test-season.ts` — refuses to run without `ALLOW_TEST_SEED=1` (it writes to the live DB from `.env.local`). Seeds `test-s1` LoL season with 4 captain + 16 bot accounts (re-runnable; cleans first). Run with `ALLOW_TEST_SEED=1 npx tsx --env-file=.env.local scripts/seed-test-season.ts`. Credentials are in the file header.
 
 ## App root
@@ -77,7 +77,7 @@ Rendered by `src/app/page.tsx`:
 - `src/app/seasons/[slug]/matches/[matchId]/_components/lineups.tsx` — `MatchLineups`: rosters with subs, sub requests, request form.
 - `src/app/users/[username]/_components/match-history.tsx` — profile match history list (Sub / Sat out tags).
 - `src/app/seasons/[slug]/teams/page.tsx` — team rosters with roles, record, "Your team" highlight.
-- `src/app/seasons/[slug]/matches/page.tsx` — standings (playoff cut line), bracket (`BracketCard`), schedule with times.
+- `src/app/seasons/[slug]/matches/page.tsx` — standings (W/D/L + maps for Bo2, shared ranks, playoff cut line, tiebreak footnote), bracket (`BracketCard`), tiebreaker list, schedule with times (`MatchLine`).
 - `src/app/seasons/[slug]/matches/actions.ts` — `reportMatch`, `confirmMatch` (writes `championTeamId` on the final), `disputeMatch`, `resetMatch`. See [MATCHES.md](MATCHES.md).
 - `src/app/seasons/[slug]/matches/[matchId]/page.tsx` — match detail + report form.
 
@@ -157,7 +157,7 @@ Rendered by `src/app/page.tsx`:
 - `src/db/schema/stats.ts` — `accountLinks`, `riotStatSnapshots` (per account link), `leetifyStatSnapshots`.
 - `src/db/schema/ten-mans.ts` — `tenMans`, `tenManSignups`, `tenManVotes`, `tenManCaptains`, `tenManPicks`. `ten_man_state` enum.
 
-Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/0001_reconcile_live_schema.sql` (idempotent fix-up for DBs from the pre-squash history), `drizzle/0002_user_bans.sql` (ban columns), `drizzle/0003_match_substitutions.sql` (subs table), `drizzle/0004_sub_signups.sql` (signup kind), `drizzle/0005_season_schedule.sql` (schedule dates), plus `drizzle/meta/`. See [DATA-MODEL.md](DATA-MODEL.md) → Migrations.
+Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/0001_reconcile_live_schema.sql` (idempotent fix-up for DBs from the pre-squash history), `drizzle/0002_user_bans.sql` (ban columns), `drizzle/0003_match_substitutions.sql` (subs table), `drizzle/0004_sub_signups.sql` (signup kind), `drizzle/0005_season_schedule.sql` (schedule dates), `drizzle/0006_signup_quandary.sql` (signup answer), `drizzle/0007_group_bo2.sql` (group series length + tiebreaker stage), plus `drizzle/meta/`. See [DATA-MODEL.md](DATA-MODEL.md) → Migrations.
 
 ## Business logic (`src/lib`)
 
@@ -165,7 +165,9 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/env.ts` — t3-env + zod schema. See [ENV.md](ENV.md).
 - `src/lib/seasons.ts` — `SEASON_STATES`, `SUB_SIGNUP_STATES` + `openSignupKind` (player vs sub signups) + `resolveSignupKind` (sub-only choice), `TRANSITIONS` state machine, `nextStates`, `canTransition`, `SEASON_STATE_LABELS`, `GAME_LABELS`, `PUBLIC_STATES`, `isPublic`, `isValidSlug`, `slugify`, `seasonSchedule` (ordered key-dates list).
 - `src/lib/draft.ts` — `TEAM_SIZE`, `PICKS_PER_TEAM`, `picksForTeam`, `snakeOrder` (skips full teams), `groupCaptainTeams` / `loadCaptainTeams` (solo + duo captains), `teamForPick`, `totalPicks`, `getDraftSnapshot` (incl. solo-queue rank per pool player), `finalizeDraft`. See [DRAFT.md](DRAFT.md).
-- `src/lib/schedule.ts` — `buildRoundRobin` (circle method), `generateSchedule`, `computeStandings`, `seedPlayoffs`, `getTeamForCaptain` (captain *or* rostered member), `getCaptainedTeamId` (captains only, either of a duo). See [MATCHES.md](MATCHES.md).
+- `src/lib/standings.ts` — pure `rankStandings`: points (2/1/0), head-to-head mini-table, series wins, game diff, tiebreaker games; shared ranks + `tiebreakersNeeded`. `PLAYOFF_SPOTS`.
+- `src/lib/match-format.ts` — pure: `isDraw` / `hasResult` / `resultFor`, `BO2_RESULTS`, `GROUP_BEST_OF_OPTIONS`, `formatStructure`, `roundLabel`.
+- `src/lib/schedule.ts` — `buildRoundRobin` (circle method), `generateSchedule`, `computeStandings` (DB wrapper around `rankStandings`), `seedPlayoffs` (refuses with `needs-tiebreaker`), `createTiebreakers`, `getTeamForCaptain` (captain *or* rostered member), `getCaptainedTeamId` (captains only, either of a duo). See [MATCHES.md](MATCHES.md).
 - `src/lib/homepage.ts` — `getHomepageData()` (discriminated union of 6 home states), podium builder.
 - `src/lib/rank.ts` — pure LoL rank helpers: `formatRank` ("Gold II · 45 LP"), `formatTier` ("Gold II"), `rankScore` (lower = better), `capitalize`.
 - `src/lib/player-stats.ts` — pure tallies for the player directory: `tallyMatchRecords` (derived lineups, sat-out excluded), `tallyTenManRecords`.

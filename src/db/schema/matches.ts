@@ -11,7 +11,9 @@ export const matchStateEnum = pgEnum("match_state", [
   "disputed",
 ]);
 
-export const matchStageEnum = pgEnum("match_stage", ["group", "semis", "final"]);
+// "tiebreaker" = Bo1 between teams still level on every group-stage tiebreaker
+// where it decides the top 4 (see rankStandings in src/lib/standings.ts).
+export const matchStageEnum = pgEnum("match_stage", ["group", "tiebreaker", "semis", "final"]);
 
 export const matches = pgTable(
   "matches",

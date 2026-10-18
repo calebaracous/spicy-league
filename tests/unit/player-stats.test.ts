@@ -20,8 +20,8 @@ describe("tallyMatchRecords", () => {
       memberships,
       [],
     );
-    expect(r.get("a1")).toEqual({ wins: 2, losses: 0 });
-    expect(r.get("b2")).toEqual({ wins: 0, losses: 2 });
+    expect(r.get("a1")).toEqual({ wins: 2, draws: 0, losses: 0 });
+    expect(r.get("b2")).toEqual({ wins: 0, draws: 0, losses: 2 });
   });
 
   it("swaps a sat-out roster player for the approved sub", () => {
@@ -30,8 +30,8 @@ describe("tallyMatchRecords", () => {
       memberships,
       [{ matchId: "m1", teamId: "B", subUserId: "s1", replacedUserId: "b2" }],
     );
-    expect(r.get("s1")).toEqual({ wins: 1, losses: 0 });
-    expect(r.get("b1")).toEqual({ wins: 1, losses: 0 });
+    expect(r.get("s1")).toEqual({ wins: 1, draws: 0, losses: 0 });
+    expect(r.get("b1")).toEqual({ wins: 1, draws: 0, losses: 0 });
     expect(r.has("b2")).toBe(false);
   });
 
@@ -41,9 +41,9 @@ describe("tallyMatchRecords", () => {
       memberships,
       [{ matchId: "m1", teamId: "A", subUserId: "s1", replacedUserId: null }],
     );
-    expect(r.get("a1")).toEqual({ wins: 1, losses: 0 });
-    expect(r.get("a2")).toEqual({ wins: 1, losses: 0 });
-    expect(r.get("s1")).toEqual({ wins: 1, losses: 0 });
+    expect(r.get("a1")).toEqual({ wins: 1, draws: 0, losses: 0 });
+    expect(r.get("a2")).toEqual({ wins: 1, draws: 0, losses: 0 });
+    expect(r.get("s1")).toEqual({ wins: 1, draws: 0, losses: 0 });
   });
 
   it("a sub only affects the match it was approved for", () => {
@@ -55,11 +55,30 @@ describe("tallyMatchRecords", () => {
       memberships,
       [{ matchId: "m1", teamId: "A", subUserId: "s1", replacedUserId: "a1" }],
     );
-    expect(r.get("a1")).toEqual({ wins: 1, losses: 0 });
-    expect(r.get("s1")).toEqual({ wins: 1, losses: 0 });
+    expect(r.get("a1")).toEqual({ wins: 1, draws: 0, losses: 0 });
+    expect(r.get("s1")).toEqual({ wins: 1, draws: 0, losses: 0 });
   });
 
-  it("skips matches without a winner", () => {
+  it("counts a 1-1 Bo2 draw for both lineups", () => {
+    const r = tallyMatchRecords(
+      [
+        {
+          id: "m1",
+          homeTeamId: "A",
+          awayTeamId: "B",
+          winnerTeamId: null,
+          homeScore: 1,
+          awayScore: 1,
+        },
+      ],
+      memberships,
+      [],
+    );
+    expect(r.get("a1")).toEqual({ wins: 0, draws: 1, losses: 0 });
+    expect(r.get("b2")).toEqual({ wins: 0, draws: 1, losses: 0 });
+  });
+
+  it("skips matches without a result", () => {
     const r = tallyMatchRecords(
       [{ id: "m1", homeTeamId: "A", awayTeamId: "B", winnerTeamId: null }],
       memberships,

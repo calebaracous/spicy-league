@@ -16,6 +16,7 @@ import { SeasonNav } from "@/components/season-nav";
 import { FlashToast } from "@/components/flash-toast";
 import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { leaveSubList } from "./signup/actions";
+import { formatStructure, roundLabel } from "@/lib/match-format";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { getTeamForCaptain } from "@/lib/schedule";
 import { GAME_LABELS, openSignupKind, SEASON_STATE_LABELS, seasonSchedule } from "@/lib/seasons";
@@ -44,11 +45,13 @@ function StatusPanel({
   slug,
   signupKind,
   championName,
+  groupBestOf,
 }: {
   state: SeasonState;
   slug: string;
   signupKind: "player" | "sub" | null;
   championName?: string | null;
+  groupBestOf: number;
 }) {
   switch (state) {
     case "signups_open":
@@ -138,7 +141,10 @@ function StatusPanel({
           </CardHeader>
           <CardContent className="flex flex-wrap items-center justify-between gap-3">
             <p className="text-muted-foreground text-sm">
-              Teams are playing round-robin matches. Standings update when results are confirmed.
+              {groupBestOf === 2
+                ? "Teams are playing round-robin best-of-2 series; a 1–1 is a draw and standings rank on maps won. "
+                : "Teams are playing round-robin matches. "}
+              Standings update when results are confirmed.
             </p>
             <Link
               href={`/seasons/${slug}/matches`}
@@ -286,6 +292,10 @@ export default async function SeasonDetailPage({
         {season.description ? (
           <p className="text-muted-foreground text-lg">{season.description}</p>
         ) : null}
+        <p className="text-sm">
+          <span className="text-muted-foreground">Format: </span>
+          {formatStructure(season.groupBestOf)}.
+        </p>
       </header>
 
       <SeasonNav slug={season.slug} state={season.state} current="overview" />
@@ -313,6 +323,7 @@ export default async function SeasonDetailPage({
         slug={season.slug}
         signupKind={mySignup?.kind ?? null}
         championName={championName}
+        groupBestOf={season.groupBestOf}
       />
 
       {mySignup?.kind === "sub" && season.state !== "complete" ? (
@@ -380,11 +391,7 @@ export default async function SeasonDetailPage({
             {myNextMatch ? (
               <p className="text-muted-foreground text-sm">
                 Next: vs <span className="text-foreground">{myOpponent?.name ?? "TBD"}</span> ·{" "}
-                {myNextMatch.stage === "final"
-                  ? "Final"
-                  : myNextMatch.stage === "semis"
-                    ? "Semifinal"
-                    : `Round ${myNextMatch.round}`}
+                {roundLabel(myNextMatch.stage, myNextMatch.round)}
                 {myNextMatch.scheduledAt ? (
                   <>
                     {" "}

@@ -1,11 +1,15 @@
 import "server-only";
 
-import { and, eq, inArray, isNull, ne, or } from "drizzle-orm";
+import { and, eq, inArray, isNull, or } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { teams, teamMembers } from "@/db/schema/drafts";
 import { matches } from "@/db/schema/matches";
 import { users } from "@/db/schema/auth";
+import { PLAYOFF_SPOTS, rankStandings, type RankedRow } from "@/lib/standings";
+
+/** Tiebreaker games use rounds 51+; group rounds are 1..n-1, semis 101+. */
+const TIEBREAKER_ROUND_BASE = 50;
 
 /**
  * Round-robin schedule using the circle method.
@@ -66,17 +70,11 @@ export async function generateSchedule(seasonId: string): Promise<number> {
   return rows.length;
 }
 
-export type StandingRow = {
-  teamId: string;
-  teamName: string;
-  captainDisplayName: string;
-  wins: number;
-  losses: number;
-  gameDiff: number;
-  matchesPlayed: number;
-};
+export type StandingRow = RankedRow & { captainDisplayName: string };
+export type Standings = { rows: StandingRow[]; tiebreakersNeeded: string[][] };
 
-export async function computeStandings(seasonId: string): Promise<StandingRow[]> {
+/** Ranked group table; rules and tiebreakers in `rankStandings` (src/lib/standings.ts). */
+export async function computeStandings(seasonId: string): Promise<Standings> {
   const seasonTeams = await db
     .select({
       id: teams.id,
@@ -117,8 +115,8 @@ export async function computeStandings(seasonId: string): Promise<StandingRow[]>
     }
   }
 
-  // Group stage only: once playoffs are played, counting semis/final here
-  // inflated the finalists' records and could reorder the table.
+  // Group stage + tiebreaker games only: once playoffs are played, counting
+  // semis/final here inflated the finalists' records and could reorder the table.
   const confirmedMatches = await db
     .select()
     .from(matches)
@@ -126,76 +124,34 @@ export async function computeStandings(seasonId: string): Promise<StandingRow[]>
       and(
         eq(matches.seasonId, seasonId),
         eq(matches.state, "confirmed"),
-        eq(matches.stage, "group"),
+        inArray(matches.stage, ["group", "tiebreaker"]),
       ),
     );
 
-  const stats = new Map<
-    string,
-    { wins: number; losses: number; gamesWon: number; gamesLost: number }
-  >();
-  for (const t of seasonTeams) {
-    stats.set(t.id, { wins: 0, losses: 0, gamesWon: 0, gamesLost: 0 });
-  }
-
-  for (const m of confirmedMatches) {
-    if (!m.winnerTeamId) continue;
-    const loserId = m.winnerTeamId === m.homeTeamId ? m.awayTeamId : m.homeTeamId;
-
-    const winner = stats.get(m.winnerTeamId);
-    const loser = stats.get(loserId);
-    if (winner) winner.wins++;
-    if (loser) loser.losses++;
-
-    // Game differential
-    const hs = m.homeScore ?? 0;
-    const as = m.awayScore ?? 0;
-    const homeStats = stats.get(m.homeTeamId);
-    const awayStats = stats.get(m.awayTeamId);
-    if (homeStats) {
-      homeStats.gamesWon += hs;
-      homeStats.gamesLost += as;
-    }
-    if (awayStats) {
-      awayStats.gamesWon += as;
-      awayStats.gamesLost += hs;
-    }
-  }
-
-  const rows: StandingRow[] = seasonTeams.map((t) => {
-    const s = stats.get(t.id) ?? { wins: 0, losses: 0, gamesWon: 0, gamesLost: 0 };
-    return {
-      teamId: t.id,
-      teamName: t.name,
-      captainDisplayName: captainNames.get(t.id) ?? "?",
-      wins: s.wins,
-      losses: s.losses,
-      gameDiff: s.gamesWon - s.gamesLost,
-      matchesPlayed: s.wins + s.losses,
-    };
-  });
-
-  // Sort: wins desc → game diff desc → team name asc
-  rows.sort((a, b) => {
-    if (b.wins !== a.wins) return b.wins - a.wins;
-    if (b.gameDiff !== a.gameDiff) return b.gameDiff - a.gameDiff;
-    return a.teamName.localeCompare(b.teamName);
-  });
-
-  return rows;
+  const { rows, tiebreakersNeeded } = rankStandings(seasonTeams, confirmedMatches);
+  return {
+    rows: rows.map((r) => ({ ...r, captainDisplayName: captainNames.get(r.teamId) ?? "?" })),
+    tiebreakersNeeded,
+  };
 }
 
-export async function seedPlayoffs(seasonId: string): Promise<number> {
+/**
+ * Seeds the top 4 into semis. Returns the number of matches created: 0 if the
+ * bracket already exists or there are fewer than 4 teams. Refuses while a tie
+ * touching the top 4 still needs a tiebreaker game.
+ */
+export async function seedPlayoffs(seasonId: string): Promise<number | "needs-tiebreaker"> {
   // Guard: bail if playoff matches already exist
   const existing = await db.query.matches.findFirst({
-    where: and(eq(matches.seasonId, seasonId), ne(matches.stage, "group")),
+    where: and(eq(matches.seasonId, seasonId), inArray(matches.stage, ["semis", "final"])),
   });
   if (existing) return 0;
 
-  const standings = await computeStandings(seasonId);
-  if (standings.length < 4) return 0;
+  const { rows: standings, tiebreakersNeeded } = await computeStandings(seasonId);
+  if (standings.length < PLAYOFF_SPOTS) return 0;
+  if (tiebreakersNeeded.length > 0) return "needs-tiebreaker";
 
-  const top4 = standings.slice(0, 4);
+  const top4 = standings.slice(0, PLAYOFF_SPOTS);
   // Semi 1: #1 vs #4, Semi 2: #2 vs #3 (higher seed is home)
   const rows = [
     {
@@ -214,6 +170,38 @@ export async function seedPlayoffs(seasonId: string): Promise<number> {
     },
   ];
 
+  await db.insert(matches).values(rows);
+  return rows.length;
+}
+
+/**
+ * Creates Bo1 tiebreaker games for every tie that still decides the top 4:
+ * one game per pair of tied teams, all in one new round (51, 52, … so they
+ * sort between the group stage and the semis). Returns the number created;
+ * 0 when nothing needs one. Callers check the group stage is finished and
+ * no earlier tiebreaker is still unconfirmed.
+ */
+export async function createTiebreakers(seasonId: string): Promise<number> {
+  const { tiebreakersNeeded } = await computeStandings(seasonId);
+  if (tiebreakersNeeded.length === 0) return 0;
+
+  const earlier = await db
+    .select({ round: matches.round })
+    .from(matches)
+    .where(and(eq(matches.seasonId, seasonId), eq(matches.stage, "tiebreaker")));
+  const round = Math.max(TIEBREAKER_ROUND_BASE, ...earlier.map((m) => m.round)) + 1;
+
+  const rows = tiebreakersNeeded.flatMap((group) =>
+    group.flatMap((home, i) =>
+      group.slice(i + 1).map((away) => ({
+        seasonId,
+        round,
+        stage: "tiebreaker" as const,
+        homeTeamId: home,
+        awayTeamId: away,
+      })),
+    ),
+  );
   await db.insert(matches).values(rows);
   return rows.length;
 }

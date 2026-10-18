@@ -25,6 +25,8 @@ const seasonInputSchema = z.object({
     .toLowerCase()
     .refine(isValidSlug, "Slug must be 3–48 chars, lowercase alphanumeric with hyphens"),
   game: gameSchema,
+  // See seasons.groupBestOf. Only 1 and 2 have a reporting flow.
+  groupBestOf: z.enum(["1", "2"]).transform(Number),
   description: z
     .string()
     .max(5000)
@@ -49,6 +51,7 @@ function parseSeasonInput(formData: FormData) {
     name: formData.get("name"),
     slug: formData.get("slug"),
     game: formData.get("game"),
+    groupBestOf: formData.get("groupBestOf"),
     description: formData.get("description"),
     rules: formData.get("rules"),
     signupOpensAt: formData.get("signupOpensAt"),
