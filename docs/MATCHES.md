@@ -250,6 +250,14 @@ rationale: [design/SUBSTITUTIONS.md](design/SUBSTITUTIONS.md).
   (`tallyMatchRecords` in `src/lib/player-stats.ts`) are W–D–L; draws show
   as `D` in match history.
 
+## Discord
+
+Match threads, result notes in them (reported / confirmed / disputed /
+reset), team schedules, sub-decision notes, the captains' "Ping the Sub
+list" button and daily reminders all hang off these actions in the
+background — see [DISCORD.md](DISCORD.md). A confirmed or reset final also
+moves the Discord Champion role.
+
 ## Where to look when…
 
 - …schedule is too short / missing matches → team count. With N teams

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { captainRoleChanges, pickExactMember, staleTeamRoles } from "@/lib/discord-plan";
+import { roleHolderChanges, pickExactMember, staleTeamRoles } from "@/lib/discord-plan";
 
 const member = (id: string, username: string) => ({ user: { id, username } });
 
@@ -13,9 +13,9 @@ describe("pickExactMember", () => {
   });
 });
 
-describe("captainRoleChanges", () => {
-  it("adds current captains and removes only past-only captains", () => {
-    expect(captainRoleChanges(["a", "b", "a"], ["b", "c", "c", "d"])).toEqual({
+describe("roleHolderChanges", () => {
+  it("adds holders and removes only former holders who aren't holders", () => {
+    expect(roleHolderChanges(["a", "b", "a"], ["b", "c", "c", "d"])).toEqual({
       add: ["a", "b"],
       remove: ["c", "d"],
     });

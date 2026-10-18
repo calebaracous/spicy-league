@@ -40,6 +40,8 @@ export const matches = pgTable(
     reportedBy: text("reported_by").references(() => users.id, { onDelete: "set null" }),
     reportedAt: timestamp("reported_at", { mode: "date" }),
     confirmedAt: timestamp("confirmed_at", { mode: "date" }),
+    // The match's coordination thread in DISCORD_MATCHES_CHANNEL_ID (discord-notify.ts).
+    discordThreadId: text("discord_thread_id"),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   },
   (t) => [

@@ -48,6 +48,12 @@ export const rateLimits = {
     tokens: 1,
     window: "1 h",
   },
+  // Captains pinging the Discord Sub list for a match (per match + team).
+  subPing: {
+    name: "rl:sub-ping",
+    tokens: 1,
+    window: "30 m",
+  },
 } as const satisfies Record<string, RateLimitSpec>;
 
 const limiters = new Map<string, Ratelimit>();

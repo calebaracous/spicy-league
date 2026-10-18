@@ -126,10 +126,11 @@ limits.
 
 ## Discord (bot v1: roles)
 
-REST-only bot driven by the app — no separate process. Captain role on
-`captains_selected`, team roles + private team channels when the draft
-finalizes, renames when a captain renames their team, admin re-sync
-button. Needs `DISCORD_BOT_TOKEN` + `DISCORD_GUILD_ID` (no-op without them).
+REST-only bot driven by the app — no separate process. Roles (Captain,
+teams, Signed up, Sub list, Champion, 10-man), private team channels, a
+thread per match with result/sub notes, daily reminders (second Vercel cron,
+`/api/cron/discord-reminders`), slash commands over the HTTP interactions
+endpoint, and admin tools. Needs `DISCORD_BOT_TOKEN` + `DISCORD_GUILD_ID` (no-op without them).
 Details and setup: [DISCORD.md](DISCORD.md).
 
 ## Vercel
@@ -137,7 +138,8 @@ Details and setup: [DISCORD.md](DISCORD.md).
 - **Deployment**: main → production deploy on every push (trunk-based,
   see [CLAUDE.md](../CLAUDE.md)).
 - **Cron jobs**: `vercel.json` → `/api/cron/refresh-stats` daily at 06:00
-  UTC.
+  UTC, `/api/cron/discord-reminders` daily at 15:00 UTC. Both check
+  `CRON_SECRET`.
 - **Runtime**: Node.js (not edge) — Better Auth's Drizzle adapter and
   Resend need Node APIs.
 - **Images / Blob**: `next/image` is not used — `/history` renders plain
@@ -154,7 +156,8 @@ Details and setup: [DISCORD.md](DISCORD.md).
   calls Leetify or Steam Web API. Users paste a Steam64 ID (validated
   `^7656\d{13}$`) and optionally a leetify.com URL; we store them and
   link out from the public profile.
-- **Discord webhooks / slash commands** — planned in PLANNING.md, not
-  started. The bot's v1 (role sync) is live: see [DISCORD.md](DISCORD.md).
+- **Discord announcements** (pick-by-pick, standings posts) — planned in
+  PLANNING.md, deliberately skipped. Everything else the bot does is in
+  [DISCORD.md](DISCORD.md).
 - **Sentry / PostHog** — planned, not wired.
 - **Avatar uploads** — `users.image` column exists, no upload flow.

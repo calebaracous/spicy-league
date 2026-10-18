@@ -36,6 +36,11 @@ builds that don't need runtime secrets.
 | `DISCORD_BOT_TOKEN` | Discord role sync | Bot token from the Discord developer portal. Missing (or no guild ID) → role sync no-ops and the admin card says the bot isn't set up. See [DISCORD.md](DISCORD.md). |
 | `DISCORD_GUILD_ID` | Discord role sync | Numeric server ID (Developer Mode → Copy Server ID). |
 | `DISCORD_CAPTAIN_ROLE_ID` | Discord role sync (optional) | Existing Captain role. Unset → the bot uses a role named "Captain", creating it if needed. |
+| `DISCORD_MATCHES_CHANNEL_ID` | Discord match threads | Text channel the bot opens a thread per match in. Unset → no threads (and no sub-list pings). |
+| `DISCORD_TEN_MAN_CHANNEL_ID` | Discord 10-man pings | Channel for "@10-man a 10-man is open". Unset → no pings. |
+| `DISCORD_APPLICATION_ID` | Discord slash commands | Used by `scripts/discord-register-commands.mjs`. |
+| `DISCORD_PUBLIC_KEY` | Discord slash commands | 64-hex key; `/api/discord/interactions` 404s without it and rejects unsigned requests. |
+| `DISCORD_INVITE_URL` | Discord nudge emails (optional) | Server invite link included in "add your Discord" emails. |
 
 ## Client-side vars
 

@@ -18,6 +18,14 @@ export const env = createEnv({
     DISCORD_BOT_TOKEN: z.string().min(1).optional(),
     DISCORD_GUILD_ID: z.string().regex(/^\d+$/).optional(),
     DISCORD_CAPTAIN_ROLE_ID: z.string().regex(/^\d+$/).optional(),
+    DISCORD_MATCHES_CHANNEL_ID: z.string().regex(/^\d+$/).optional(),
+    DISCORD_TEN_MAN_CHANNEL_ID: z.string().regex(/^\d+$/).optional(),
+    DISCORD_APPLICATION_ID: z.string().regex(/^\d+$/).optional(),
+    DISCORD_PUBLIC_KEY: z
+      .string()
+      .regex(/^[0-9a-f]{64}$/i)
+      .optional(),
+    DISCORD_INVITE_URL: z.url().optional(),
   },
   client: {
     NEXT_PUBLIC_APP_URL: z.url().optional(),
@@ -38,6 +46,11 @@ export const env = createEnv({
     DISCORD_BOT_TOKEN: process.env.DISCORD_BOT_TOKEN,
     DISCORD_GUILD_ID: process.env.DISCORD_GUILD_ID,
     DISCORD_CAPTAIN_ROLE_ID: process.env.DISCORD_CAPTAIN_ROLE_ID,
+    DISCORD_MATCHES_CHANNEL_ID: process.env.DISCORD_MATCHES_CHANNEL_ID,
+    DISCORD_TEN_MAN_CHANNEL_ID: process.env.DISCORD_TEN_MAN_CHANNEL_ID,
+    DISCORD_APPLICATION_ID: process.env.DISCORD_APPLICATION_ID,
+    DISCORD_PUBLIC_KEY: process.env.DISCORD_PUBLIC_KEY,
+    DISCORD_INVITE_URL: process.env.DISCORD_INVITE_URL,
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL,
   },
   skipValidation: process.env.SKIP_ENV_VALIDATION === "1",

@@ -9,6 +9,8 @@ import { drafts } from "@/db/schema/drafts";
 import { seasons } from "@/db/schema/seasons";
 import { seasonSignups, seasonCaptains } from "@/db/schema/seasons";
 import { requireAdmin } from "@/lib/auth-helpers";
+import { updateSignupRolesForUser } from "@/lib/discord-ping-roles";
+import { syncInBackground } from "@/lib/discord-roles";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -124,6 +126,9 @@ export async function removeSignup(slug: string, signupId: string) {
     await tx.delete(seasonSignups).where(eq(seasonSignups.id, signup.id));
     await renumberCaptains(tx, season.id);
   });
+  syncInBackground(`${slug} signup roles`, () =>
+    updateSignupRolesForUser(season.id, signup.userId),
+  );
 
   revalidatePath(`/admin/seasons/${slug}/signups`);
   revalidatePath(`/seasons/${slug}`);

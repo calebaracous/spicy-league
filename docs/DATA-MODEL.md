@@ -36,6 +36,8 @@ files are in git history before the squash commit):
 - `0009_discord_roles.sql` — `users.discord_user_id`, `teams.discord_role_id`.
 - `0010_discord_team_channels.sql` — `teams.discord_text_channel_id`,
   `teams.discord_voice_channel_id`, `seasons.discord_category_id`.
+- `0011_discord_threads_pings.sql` — `matches.discord_thread_id`,
+  `users.ten_man_pings` (boolean, default false).
 
 **Why the baseline's `when` is old.** Drizzle's migrator applies a journal
 entry only if its `when` is greater than the newest `created_at` in
@@ -88,6 +90,8 @@ wiring in `src/lib/auth.ts`).
     numeric ID, resolved from `discordUsername` by the first role sync and
     cleared when the username changes or Discord reports them gone. See
     [DISCORD.md](DISCORD.md).
+  - `tenManPings` boolean, default false (migration `0011`) — opted in on
+    `/profile` to the Discord "10-man" ping role.
   - `bannedAt`, `banReason`, `banExpiresAt`, `bannedBy` — league ban
     (migration `0002_user_bans`). Active while `bannedAt` is set and
     `banExpiresAt` is null or in the future (`isBanActive` in
@@ -217,6 +221,8 @@ Single table for group stage, tiebreakers, semis, final.
 - `round` int — group stage uses 1..(n-1) from the circle-method round
   index; tiebreakers use **51+**; semis use **101, 102**; final uses **201**. These magic numbers
   are how we sort and distinguish stages without a compound index.
+- `discordThreadId` (migration `0011`) — the match's thread in
+  `DISCORD_MATCHES_CHANNEL_ID`, created by `ensureMatchThreads`.
 - `winnerTeamId`, `homeScore`, `awayScore`, `reportedBy`, `reportedAt`,
   `confirmedAt` — populated as the match moves through its lifecycle.
   Invariant (code, not DB): a reported/confirmed match has a winner **or**

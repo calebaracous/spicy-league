@@ -93,4 +93,8 @@ export const SUB_ERROR_MESSAGES: Record<SubRuleError | string, string> = {
   "sub-not-found": "That sub request no longer exists.",
   "not-pending": "That request has already been decided.",
   "no-candidate": "Pick a player to sub in.",
+  "ping-unavailable":
+    "This match has no Discord thread yet, so the Sub list can't be pinged. Ask an admin to run Sync Discord.",
+  "ping-failed": "Couldn't reach Discord. Try again in a minute.",
+  "ping-too-soon": "You pinged the Sub list for this match recently. Try again in a bit.",
 };

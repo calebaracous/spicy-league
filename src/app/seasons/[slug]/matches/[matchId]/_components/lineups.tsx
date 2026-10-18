@@ -1,6 +1,6 @@
 import Link from "next/link";
 
-import { decideSub, requestSub, withdrawSub } from "../../sub-actions";
+import { decideSub, pingSubListAction, requestSub, withdrawSub } from "../../sub-actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -293,6 +293,31 @@ export function MatchLineups({
                   />
                 </div>
                 <Button type="submit">Request sub</Button>
+              </form>
+            ) : null}
+
+            {open && managedTeamIds.length > 0 ? (
+              <form
+                action={pingSubListAction.bind(null, slug, matchId)}
+                className="flex flex-wrap items-center gap-2 border-t pt-3"
+              >
+                {managedTeamIds.length > 1 ? (
+                  <select name="teamId" required className={selectClass} defaultValue="">
+                    <option value="" disabled>
+                      For team…
+                    </option>
+                    <option value={home.id}>{home.name}</option>
+                    <option value={away.id}>{away.name}</option>
+                  </select>
+                ) : (
+                  <input type="hidden" name="teamId" value={managedTeamIds[0]} />
+                )}
+                <Button type="submit" variant="outline" size="sm">
+                  Ping the Sub list on Discord
+                </Button>
+                <span className="text-muted-foreground text-xs">
+                  Asks available subs in this match&apos;s Discord thread.
+                </span>
               </form>
             ) : null}
           </CardContent>

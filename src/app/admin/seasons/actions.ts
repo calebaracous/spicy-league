@@ -9,7 +9,10 @@ import { db } from "@/db/client";
 import { seasons, type SeasonState } from "@/db/schema/seasons";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { discordConfig } from "@/lib/discord-api";
-import { syncCaptainRole, syncInBackground, syncSeasonDiscordRoles } from "@/lib/discord-roles";
+import { syncSignupRoles } from "@/lib/discord-ping-roles";
+import { syncCaptainRole, syncInBackground } from "@/lib/discord-roles";
+import { syncSeasonDiscord } from "@/lib/discord-sync";
+import { deleteOldTeamChannels, emailUnmatchedPlayers, syncNicknames } from "@/lib/discord-admin";
 import { canTransition, isValidSlug, SEASON_STATES } from "@/lib/seasons";
 
 const gameSchema = z.enum(["lol", "cs2"]);
@@ -144,6 +147,10 @@ export async function transitionSeasonState(slug: string, formData: FormData) {
   if (nextState === "captains_selected") {
     syncInBackground(`${slug} captain role`, () => syncCaptainRole(existing.id));
   }
+  // A new signup window: Signed up / Sub list move to this season's people.
+  if (nextState === "signups_open") {
+    syncInBackground(`${slug} signup roles`, () => syncSignupRoles(existing.id));
+  }
 
   revalidatePath("/admin");
   revalidatePath("/seasons");
@@ -152,7 +159,7 @@ export async function transitionSeasonState(slug: string, formData: FormData) {
 }
 
 /**
- * Re-runs both Discord role syncs (captain + team roles) and reports back via
+ * Re-runs every Discord sync (syncSeasonDiscord) and reports back via
  * the query string: `discord=<assigned>.<unmatched>.<errors>` plus the first
  * error's text. Unmatched people are listed on the page from the DB.
  */
@@ -162,7 +169,7 @@ export async function syncDiscordRoles(slug: string) {
   if (!season) redirect("/admin?error=not-found");
   if (!discordConfig()) redirect(`/admin/seasons/${slug}?error=discord-not-configured`);
 
-  const report = await syncSeasonDiscordRoles(season.id);
+  const report = await syncSeasonDiscord(season.id);
   if (report.errors.length) console.error("[discord] manual sync", JSON.stringify(report));
 
   const params = new URLSearchParams({
@@ -171,4 +178,41 @@ export async function syncDiscordRoles(slug: string) {
   if (report.errors[0]) params.set("discordError", report.errors[0].slice(0, 300));
   revalidatePath(`/admin/seasons/${slug}`);
   redirect(`/admin/seasons/${slug}?${params}`);
+}
+
+/** Shared shell for the admin Discord tools: auth, season, a one-line result. */
+async function discordTool(slug: string, run: (seasonId: string) => Promise<string>) {
+  await requireAdmin();
+  const season = await db.query.seasons.findFirst({ where: eq(seasons.slug, slug) });
+  if (!season) redirect("/admin?error=not-found");
+  if (!discordConfig()) redirect(`/admin/seasons/${slug}?error=discord-not-configured`);
+  const note = await run(season.id);
+  revalidatePath(`/admin/seasons/${slug}`);
+  redirect(`/admin/seasons/${slug}?${new URLSearchParams({ discordNote: note.slice(0, 300) })}`);
+}
+
+/** Sets everyone's server nickname to their site display name. */
+export async function setDiscordNicknames(slug: string) {
+  await discordTool(slug, async (seasonId) => {
+    const r = await syncNicknames(seasonId);
+    if (r.errors.length) console.error("[discord] nicknames", JSON.stringify(r));
+    return `Nicknames set for ${r.renamed} player${r.renamed === 1 ? "" : "s"}${r.unmatched.length ? `, ${r.unmatched.length} not matched` : ""}${r.errors.length ? `. ${r.errors.length} failed, e.g. ${r.errors[0]}` : "."}`;
+  });
+}
+
+/** Deletes older seasons' team channels and categories (irreversible). */
+export async function deleteOldDiscordChannels(slug: string) {
+  await discordTool(slug, async (seasonId) => {
+    const r = await deleteOldTeamChannels(seasonId);
+    if (r.errors.length) console.error("[discord] cleanup", JSON.stringify(r));
+    return `Deleted ${r.rolesDeleted} old channel${r.rolesDeleted === 1 ? "" : "s"}${r.errors.length ? `. ${r.errors.length} failed, e.g. ${r.errors[0]}` : "."}`;
+  });
+}
+
+/** Emails players with no Discord username, or one that isn't in the server. */
+export async function emailDiscordUnmatched(slug: string) {
+  await discordTool(slug, async (seasonId) => {
+    const { sent, failed } = await emailUnmatchedPlayers(seasonId);
+    return `Emailed ${sent} player${sent === 1 ? "" : "s"}${failed ? ` (${failed} failed)` : ""}.`;
+  });
 }

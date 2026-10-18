@@ -8,6 +8,9 @@ import { db } from "@/db/client";
 import { matches, matchSubstitutions } from "@/db/schema/matches";
 import { seasons } from "@/db/schema/seasons";
 import { requireAdmin, requireOnboarded } from "@/lib/auth-helpers";
+import { notifySubDecision, pingSubList } from "@/lib/discord-notify";
+import { syncInBackground } from "@/lib/discord-roles";
+import { checkRateLimit, rateLimits } from "@/lib/rate-limit";
 import { getCaptainedTeamId } from "@/lib/schedule";
 import { checkSubEligibility } from "@/lib/substitutions";
 
@@ -175,6 +178,9 @@ export async function decideSub(slug: string, matchId: string, subId: string, fo
         decidedAt: new Date(),
       })
       .where(eq(matchSubstitutions.id, subId));
+    syncInBackground(`${slug} sub ${decision}`, () =>
+      notifySubDecision(subId, decision === "approve" ? "approved" : "rejected"),
+    );
     revalidateMatch(slug, matchId);
     redirect(backTo(back, slug, fallback, `saved=sub-${decision}d`));
   }
@@ -186,9 +192,38 @@ export async function decideSub(slug: string, matchId: string, subId: string, fo
       .update(matchSubstitutions)
       .set({ status: "withdrawn", decidedBy: session.user.id, decidedAt: new Date() })
       .where(eq(matchSubstitutions.id, subId));
+    syncInBackground(`${slug} sub revoked`, () => notifySubDecision(subId, "revoked"));
     revalidateMatch(slug, matchId);
     redirect(backTo(back, slug, fallback, "saved=sub-revoked"));
   }
 
   redirect(backTo(back, slug, fallback, "error=sub-not-found"));
+}
+
+/**
+ * A captain (or admin) @-mentions the Discord Sub list in the match thread.
+ * Once per 30 minutes per match + team (when rate limiting is configured).
+ */
+export async function pingSubListAction(slug: string, matchId: string, formData: FormData) {
+  const session = await requireOnboarded();
+  const { season, match } = await load(slug, matchId);
+  const here = `/seasons/${slug}/matches/${matchId}`;
+  if (match.state !== "scheduled") redirect(`${here}?error=locked`);
+
+  const teamId = await managedTeamId(
+    session.user.id,
+    session.user.role === "admin",
+    season.id,
+    match,
+    formData.get("teamId")?.toString() || null,
+  );
+  if (!teamId) redirect(`${here}?error=not-captain`);
+
+  const limit = await checkRateLimit(rateLimits.subPing, `${matchId}:${teamId}`);
+  if (!limit.success) redirect(`${here}?error=ping-too-soon`);
+
+  const failed = await pingSubList(matchId, teamId);
+  if (failed)
+    redirect(`${here}?error=${failed === "no-discord" ? "ping-unavailable" : "ping-failed"}`);
+  redirect(`${here}?saved=sub-pinged`);
 }

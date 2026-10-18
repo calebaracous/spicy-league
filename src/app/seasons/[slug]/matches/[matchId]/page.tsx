@@ -47,6 +47,7 @@ const SAVED_MESSAGES: Record<string, string> = {
   "sub-approved": "Sub approved.",
   "sub-rejected": "Sub rejected.",
   "sub-revoked": "Sub revoked.",
+  "sub-pinged": "Pinged the Sub list in the match's Discord thread.",
 };
 
 const STATE_BADGE: Record<

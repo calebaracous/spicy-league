@@ -17,8 +17,9 @@ tournament series for League of Legends and Counter-Strike 2.
 >   limiter or response cache for Riot, no
 >   avatar uploads, no audit log. Riot users can link up to 3 accounts.
 > - **Phase 8** (polish & ops) is not started — no Sentry/PostHog or
->   notification emails. The Discord bot's v1 (Captain + team roles) is
->   built; webhooks and slash commands aren't (docs/DISCORD.md).
+>   notification emails. The Discord bot is built (roles, team channels,
+>   match threads + reminders, slash commands, admin tools); channel
+>   announcements were skipped (docs/DISCORD.md).
 > - **Unplanned addition**: 10-man pickup matches
 >   ([docs/TEN-MAN.md](docs/TEN-MAN.md)), Terms/Privacy pages.
 

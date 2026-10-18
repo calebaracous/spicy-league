@@ -158,7 +158,7 @@ Rendered by `src/app/page.tsx`:
 - `src/db/schema/stats.ts` — `accountLinks`, `riotStatSnapshots` (per account link), `leetifyStatSnapshots`.
 - `src/db/schema/ten-mans.ts` — `tenMans`, `tenManSignups`, `tenManVotes`, `tenManCaptains`, `tenManPicks`. `ten_man_state` enum.
 
-Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/0001_reconcile_live_schema.sql` (idempotent fix-up for DBs from the pre-squash history), `drizzle/0002_user_bans.sql` (ban columns), `drizzle/0003_match_substitutions.sql` (subs table), `drizzle/0004_sub_signups.sql` (signup kind), `drizzle/0005_season_schedule.sql` (schedule dates), `drizzle/0006_signup_quandary.sql` (signup answer), `drizzle/0007_group_bo2.sql` (group series length + tiebreaker stage), `drizzle/0008_discord_username.sql` (Discord username), `drizzle/0009_discord_roles.sql` (Discord user ID + team role ID), `drizzle/0010_discord_team_channels.sql` (team channel + season category IDs), plus `drizzle/meta/`. See [DATA-MODEL.md](DATA-MODEL.md) → Migrations.
+Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/0001_reconcile_live_schema.sql` (idempotent fix-up for DBs from the pre-squash history), `drizzle/0002_user_bans.sql` (ban columns), `drizzle/0003_match_substitutions.sql` (subs table), `drizzle/0004_sub_signups.sql` (signup kind), `drizzle/0005_season_schedule.sql` (schedule dates), `drizzle/0006_signup_quandary.sql` (signup answer), `drizzle/0007_group_bo2.sql` (group series length + tiebreaker stage), `drizzle/0008_discord_username.sql` (Discord username), `drizzle/0009_discord_roles.sql` (Discord user ID + team role ID), `drizzle/0010_discord_team_channels.sql` (team channel + season category IDs), `drizzle/0011_discord_threads_pings.sql` (match thread ID + 10-man ping opt-in), plus `drizzle/meta/`. See [DATA-MODEL.md](DATA-MODEL.md) → Migrations.
 
 ## Business logic (`src/lib`)
 
@@ -181,7 +181,16 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/discord.ts` — pure `normalizeDiscordUsername` + `DISCORD_USERNAME_HELP`; shared by account signup and the profile form.
 - `src/lib/discord-api.ts` — Discord REST client for the bot (`discordConfig`, member search, roles); retries 429s. See [DISCORD.md](DISCORD.md).
 - `src/lib/discord-plan.ts` — pure role-sync decisions: `pickExactMember`, `captainRoleChanges`, `staleTeamRoles`.
-- `src/lib/discord-roles.ts` — `syncCaptainRole`, `syncTeamRoles` (team roles + private text/voice channels), `renameTeamInDiscord`, `syncSeasonDiscordRoles`, `syncInBackground` (`after()`), `getDiscordRoster`.
+- `src/lib/discord-roles.ts` — shared bot plumbing (`grant`, `revoke`, `leagueRoleId`, `syncExclusiveRole`, `syncInBackground` via `after()`, `mergeReports`), `syncCaptainRole`, `syncTeamRoles` (team roles + private text/voice channels), `renameTeamInDiscord`.
+- `src/lib/discord-ping-roles.ts` — Signed up / Sub list (`syncSignupRoles`, `updateSignupRolesForUser`), Champion (`syncChampionRole`), 10-man (`setTenManRole`, `syncTenManRole`).
+- `src/lib/discord-notify.ts` — match threads (`ensureMatchThreads`), team schedules, result / sub-decision notes, sub-list and 10-man pings, `sendDailyReminders`.
+- `src/lib/discord-sync.ts` — `syncSeasonDiscord`: every sync, for the admin button.
+- `src/lib/discord-admin.ts` — admin card roster (`getDiscordRoster`), `syncNicknames`, `deleteOldTeamChannels`, `emailUnmatchedPlayers`.
+- `src/lib/discord-format.ts` — pure message formatting (`discordTime`, mentions, `resultLine`, `standingsTable`).
+- `src/lib/discord-commands.ts` — slash command handlers (`handleCommand`); `src/lib/discord-verify.ts` — Ed25519 request check.
+- `src/app/api/discord/interactions/route.ts` — Discord interactions endpoint (slash commands).
+- `src/app/api/cron/discord-reminders/route.ts` — daily Discord reminders (Vercel cron, `CRON_SECRET`).
+- `scripts/discord-register-commands.mjs` — registers the slash commands in the league server (dry run unless `--apply`).
 - `src/lib/team-name.ts` — pure `normalizeTeamName` (3–32 chars, no `@`/`#`), `teamTextChannelName`, `TEAM_NAME_HELP`.
 - `src/lib/opgg.ts` — pure `opggUrlForRiotId(handle)`: NA OP.GG URL from a stored `gameName#tagLine`.
 - `src/lib/riot-api.ts` — Riot API client. `getAccountByRiotId`, `getRankEntries`, `getTopChampions`, `getChampionName` (Data Dragon).

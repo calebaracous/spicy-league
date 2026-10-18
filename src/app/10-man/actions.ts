@@ -4,6 +4,8 @@ import { and, count, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db/client";
+import { pingTenMan } from "@/lib/discord-notify";
+import { syncInBackground } from "@/lib/discord-roles";
 import {
   tenManCaptains,
   tenManPicks,
@@ -74,6 +76,7 @@ export async function start10Man(): Promise<TenManActionResult & { id?: string }
       .returning({ id: tenMans.id });
 
     revalidatePath("/10-man");
+    syncInBackground("10-man ping", pingTenMan);
     return { id: row.id };
   } catch (err) {
     if (isUniqueViolation(err)) {

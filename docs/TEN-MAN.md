@@ -8,6 +8,12 @@ The original design handoff (screens, copy, prototype, engineering plan) is
 in `docs/design/10-man/`. Treat it as the *spec that was built from*, not as
 the current state — this file is the source of truth for what shipped.
 
+## Discord ping
+
+`start10Man` posts "@10-man a 10-man is open" in
+`DISCORD_TEN_MAN_CHANNEL_ID` (background, `pingTenMan`). The 10-man role is
+opt-in from `/profile`. See [DISCORD.md](DISCORD.md).
+
 ## Lifecycle
 
 ```

@@ -95,10 +95,14 @@ export default function PrivacyPage() {
         within Discord is also subject to Discord&rsquo;s own privacy policy.
       </p>
       <p>
-        The bot also manages league roles in the server: captains get a Captain role and drafted
-        players get their team&rsquo;s role. To do that we look up the Discord username on your
-        profile in the Spicy League server and store the matching Discord user ID with your account.
-        Changing your Discord username on your profile clears it.
+        The bot also manages league roles and team channels in the server (for example Captain, your
+        team&rsquo;s role and private channel, Signed up, Sub list and Champion), can set your
+        server nickname to your display name, opens a thread per match and posts match reminders and
+        results there, and answers slash commands such as <code>/standings</code> and{" "}
+        <code>/rank</code>. To do that we look up the Discord username on your profile in the Spicy
+        League server and store the matching Discord user ID with your account. Changing your
+        Discord username on your profile clears it. If we can&rsquo;t match your username, an admin
+        may email you to ask you to fix it.
       </p>
 
       <h2>2. What we do not collect</h2>

@@ -27,7 +27,7 @@ import {
   type DiscordChannel,
   type DiscordConfig,
 } from "@/lib/discord-api";
-import { captainRoleChanges, pickExactMember, staleTeamRoles } from "@/lib/discord-plan";
+import { pickExactMember, roleHolderChanges, staleTeamRoles } from "@/lib/discord-plan";
 import { teamTextChannelName } from "@/lib/team-name";
 
 /**
@@ -57,9 +57,9 @@ export type DiscordSyncReport = {
  * End-to-end test seasons (E2E_SLUG_PREFIX in tests/e2e/support/env.ts) never
  * touch Discord: a team sync for one would delete the real season's roles.
  */
-const isTestSeason = (slug: string) => slug.startsWith("e2e-");
+export const isTestSeason = (slug: string) => slug.startsWith("e2e-");
 
-const emptyReport = (): DiscordSyncReport => ({
+export const emptyReport = (): DiscordSyncReport => ({
   assigned: 0,
   removed: 0,
   rolesCreated: 0,
@@ -70,14 +70,14 @@ const emptyReport = (): DiscordSyncReport => ({
   errors: [],
 });
 
-type Person = {
+export type Person = {
   id: string;
   label: string;
   discordUsername: string | null;
   discordUserId: string | null;
 };
 
-async function loadPeople(userIds: string[]): Promise<Person[]> {
+export async function loadPeople(userIds: string[]): Promise<Person[]> {
   if (userIds.length === 0) return [];
   const rows = await db
     .select({
@@ -97,9 +97,9 @@ async function loadPeople(userIds: string[]): Promise<Person[]> {
   }));
 }
 
-function describe(err: unknown): string {
+export function describe(err: unknown): string {
   if (err instanceof DiscordApiError && err.code === DISCORD_ERRORS.missingPermissions) {
-    return "The bot is missing a permission. It needs Manage Roles and Manage Channels, and its role must sit above Captain and the team roles (Server Settings → Roles).";
+    return "The bot is missing a permission. Check it has the permissions in docs/DISCORD.md and that its role sits above the league and team roles (Server Settings → Roles).";
   }
   if (err instanceof DiscordApiError && err.status === 429) {
     return `Discord rate limit (${err.message}). Channels can only be renamed twice per 10 minutes; run Sync again later.`;
@@ -108,7 +108,7 @@ function describe(err: unknown): string {
 }
 
 /** Discord user ID for `p`, searching the server by username the first time. */
-async function resolveDiscordId(
+export async function resolveDiscordId(
   cfg: DiscordConfig,
   p: Person,
   report: DiscordSyncReport,
@@ -128,7 +128,7 @@ async function resolveDiscordId(
   return member.user.id;
 }
 
-async function grant(
+export async function grant(
   cfg: DiscordConfig,
   p: Person,
   roleId: string,
@@ -151,13 +151,70 @@ async function grant(
   }
 }
 
-async function captainRoleId(cfg: DiscordConfig, report: DiscordSyncReport): Promise<string> {
-  if (cfg.captainRoleId) return cfg.captainRoleId;
-  const existing = (await listRoles(cfg)).find((r) => r.name.toLowerCase() === "captain");
+/** League-wide roles the bot keeps on exactly the right people (looked up by name). */
+export const LEAGUE_ROLES = {
+  captain: "Captain",
+  signedUp: "Signed up",
+  subList: "Sub list",
+  tenMan: "10-man",
+  champion: "Champion",
+} as const;
+
+/** A league role's ID: the env override, else the role with that name, else a new one. */
+export async function leagueRoleId(
+  cfg: DiscordConfig,
+  name: string,
+  report: DiscordSyncReport,
+  override: string | null = null,
+): Promise<string> {
+  if (override) return override;
+  const existing = (await listRoles(cfg)).find((r) => r.name.toLowerCase() === name.toLowerCase());
   if (existing) return existing.id;
-  const role = await createRole(cfg, "Captain", "Spicy League: captain role");
+  const role = await createRole(cfg, name, `Spicy League: ${name} role`);
   report.rolesCreated++;
   return role.id;
+}
+
+/** Takes a role off someone we've matched before. Not in the server any more → nothing to do. */
+export async function revoke(
+  cfg: DiscordConfig,
+  p: Person,
+  roleId: string,
+  reason: string,
+  report: DiscordSyncReport,
+) {
+  if (!p.discordUserId) return;
+  try {
+    await removeMemberRole(cfg, p.discordUserId, roleId, reason);
+    report.removed++;
+  } catch (err) {
+    if (err instanceof DiscordApiError && err.code === DISCORD_ERRORS.unknownMember) return;
+    report.errors.push(`${p.label}: ${describe(err)}`);
+  }
+}
+
+/**
+ * Makes `holderIds` the role's holders: grants it to them and removes it from
+ * `formerIds` who aren't holders (e.g. the same role's holders from other
+ * seasons). Users the app never matched to Discord are skipped on removal.
+ */
+export async function syncExclusiveRole(
+  cfg: DiscordConfig,
+  roleName: string,
+  holderIds: string[],
+  formerIds: string[],
+  reason: string,
+  report: DiscordSyncReport,
+  override: string | null = null,
+) {
+  const { add, remove } = roleHolderChanges(holderIds, formerIds);
+  try {
+    const roleId = await leagueRoleId(cfg, roleName, report, override);
+    for (const p of await loadPeople(remove)) await revoke(cfg, p, roleId, reason, report);
+    for (const p of await loadPeople(add)) await grant(cfg, p, roleId, reason, report);
+  } catch (err) {
+    report.errors.push(`${roleName}: ${describe(err)}`);
+  }
 }
 
 /** Captain role = this season's captains (both of a duo); past captains lose it. */
@@ -178,28 +235,15 @@ export async function syncCaptainRole(seasonId: string): Promise<DiscordSyncRepo
       .from(seasonCaptains)
       .where(ne(seasonCaptains.seasonId, seasonId)),
   ]);
-  const { add, remove } = captainRoleChanges(
+  await syncExclusiveRole(
+    cfg,
+    LEAGUE_ROLES.captain,
     current.map((c) => c.userId),
     others.map((c) => c.userId),
+    `Spicy League: ${season.name} captains`,
+    report,
+    cfg.captainRoleId,
   );
-
-  try {
-    const roleId = await captainRoleId(cfg, report);
-    const reason = `Spicy League: ${season.name} captains`;
-    for (const p of await loadPeople(remove)) {
-      if (!p.discordUserId) continue;
-      try {
-        await removeMemberRole(cfg, p.discordUserId, roleId, reason);
-        report.removed++;
-      } catch (err) {
-        if (err instanceof DiscordApiError && err.code === DISCORD_ERRORS.unknownMember) continue;
-        report.errors.push(`${p.label}: ${describe(err)}`);
-      }
-    }
-    for (const p of await loadPeople(add)) await grant(cfg, p, roleId, reason, report);
-  } catch (err) {
-    report.errors.push(describe(err));
-  }
   return report;
 }
 
@@ -419,20 +463,20 @@ export async function renameTeamInDiscord(teamId: string): Promise<DiscordSyncRe
   return report;
 }
 
-/** Both syncs, for the admin "Sync Discord roles" button. */
-export async function syncSeasonDiscordRoles(seasonId: string): Promise<DiscordSyncReport> {
-  const a = await syncCaptainRole(seasonId);
-  const b = await syncTeamRoles(seasonId);
-  return {
-    assigned: a.assigned + b.assigned,
-    removed: a.removed + b.removed,
-    rolesCreated: a.rolesCreated + b.rolesCreated,
-    rolesDeleted: a.rolesDeleted + b.rolesDeleted,
-    channelsCreated: a.channelsCreated + b.channelsCreated,
-    renamed: a.renamed + b.renamed,
-    unmatched: [...new Set([...a.unmatched, ...b.unmatched])],
-    errors: [...a.errors, ...b.errors],
-  };
+/** Adds reports together (for syncs that run several steps). */
+export function mergeReports(...reports: DiscordSyncReport[]): DiscordSyncReport {
+  const total = emptyReport();
+  for (const r of reports) {
+    total.assigned += r.assigned;
+    total.removed += r.removed;
+    total.rolesCreated += r.rolesCreated;
+    total.rolesDeleted += r.rolesDeleted;
+    total.channelsCreated += r.channelsCreated;
+    total.renamed += r.renamed;
+    total.unmatched.push(...r.unmatched.filter((u) => !total.unmatched.includes(u)));
+    total.errors.push(...r.errors);
+  }
+  return total;
 }
 
 /**
@@ -451,34 +495,4 @@ export function syncInBackground(label: string, sync: () => Promise<DiscordSyncR
       console.error(`[discord] ${label} failed`, err);
     }
   });
-}
-
-/** Who the season's Discord roles cover, for the admin Discord card. DB only — no API calls. */
-export async function getDiscordRoster(seasonId: string) {
-  const [captainRows, memberRows] = await Promise.all([
-    db
-      .select({ userId: seasonCaptains.userId })
-      .from(seasonCaptains)
-      .where(eq(seasonCaptains.seasonId, seasonId)),
-    db
-      .select({ userId: teamMembers.userId, teamName: teams.name })
-      .from(teamMembers)
-      .innerJoin(teams, eq(teamMembers.teamId, teams.id))
-      .where(eq(teams.seasonId, seasonId)),
-  ]);
-  const captains = new Set(captainRows.map((c) => c.userId));
-  const teamOf = new Map(memberRows.map((m) => [m.userId, m.teamName]));
-  const people = await loadPeople([...new Set([...captains, ...teamOf.keys()])]);
-  return people
-    .map((p) => ({
-      ...p,
-      captain: captains.has(p.id),
-      teamName: teamOf.get(p.id) ?? null,
-    }))
-    .sort(
-      (a, b) =>
-        (a.teamName ?? "").localeCompare(b.teamName ?? "") ||
-        Number(b.captain) - Number(a.captain) ||
-        a.label.localeCompare(b.label),
-    );
 }

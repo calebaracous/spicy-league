@@ -2,7 +2,14 @@ import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { syncDiscordRoles, transitionSeasonState, updateSeason } from "@/app/admin/seasons/actions";
+import {
+  deleteOldDiscordChannels,
+  emailDiscordUnmatched,
+  setDiscordNicknames,
+  syncDiscordRoles,
+  transitionSeasonState,
+  updateSeason,
+} from "@/app/admin/seasons/actions";
 import { db } from "@/db/client";
 import { seasons } from "@/db/schema/seasons";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -19,7 +26,7 @@ import { seasonPageMetadata } from "@/lib/season-meta";
 import { GAME_LABELS, SEASON_STATE_LABELS, nextStates } from "@/lib/seasons";
 import { GROUP_BEST_OF_OPTIONS } from "@/lib/match-format";
 import { discordConfig } from "@/lib/discord-api";
-import { getDiscordRoster } from "@/lib/discord-roles";
+import { getDiscordRoster } from "@/lib/discord-admin";
 import { cn } from "@/lib/utils";
 
 export const generateMetadata = seasonPageMetadata("Admin");
@@ -29,6 +36,7 @@ type SearchParams = Promise<{
   error?: string;
   discord?: string;
   discordError?: string;
+  discordNote?: string;
 }>;
 type Params = Promise<{ slug: string }>;
 
@@ -59,7 +67,7 @@ export default async function EditSeasonPage({
   searchParams: SearchParams;
 }) {
   const { slug } = await params;
-  const { saved, error, discord, discordError } = await searchParams;
+  const { saved, error, discord, discordError, discordNote } = await searchParams;
 
   const season = await db.query.seasons.findFirst({
     where: eq(seasons.slug, slug),
@@ -95,6 +103,7 @@ export default async function EditSeasonPage({
 
       {saved ? <FlashToast message="Saved." /> : null}
       {discord ? <FlashToast param="discord" message={discordFlash(discord)} /> : null}
+      {discordNote ? <FlashToast param="discordNote" message={discordNote} /> : null}
       {discordError ? (
         <Alert variant="destructive">
           <AlertDescription>Discord: {discordError}</AlertDescription>
@@ -165,13 +174,12 @@ export default async function EditSeasonPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Discord roles</CardTitle>
+          <CardTitle>Discord</CardTitle>
           <CardDescription>
-            Captains get the Captain role when the season moves to Captains selected. When the draft
-            finishes each team gets a role plus private text and voice channels (last season&apos;s
-            team roles are deleted then), renamed whenever the team is. Sync re-runs everything,
-            e.g. after someone joins the server or fixes their username, or after a channel rename
-            hit Discord&apos;s limit.
+            The bot keeps Captain, team roles and channels, Signed up, Sub list, Champion and 10-man
+            roles in step with the site, and opens a thread per match. Sync re-runs all of it, e.g.
+            after someone joins the server or fixes their username, or after a channel rename hit
+            Discord&apos;s limit. Details: <code>docs/DISCORD.md</code>.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
@@ -183,7 +191,7 @@ export default async function EditSeasonPage({
           ) : null}
           {discordRoster.length === 0 ? (
             <p className="text-muted-foreground text-sm">
-              No captains or teams yet, so there&apos;s no one to give roles to.
+              Nobody has signed up yet, so there&apos;s no one to give roles to.
             </p>
           ) : (
             <div className="overflow-x-auto">
@@ -201,7 +209,12 @@ export default async function EditSeasonPage({
                     <tr key={p.id}>
                       <td className="py-1.5 pr-4">{p.label}</td>
                       <td className="text-muted-foreground py-1.5 pr-4">
-                        {[p.captain ? "Captain" : null, p.teamName].filter(Boolean).join(" · ")}
+                        {[
+                          p.captain ? "Captain" : null,
+                          p.teamName ?? (p.sub ? "Sub list" : "Signed up"),
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
                       </td>
                       <td className="py-1.5 pr-4 font-mono text-xs">{p.discordUsername ?? "—"}</td>
                       <td className="py-1.5 text-xs">
@@ -219,11 +232,41 @@ export default async function EditSeasonPage({
               </table>
             </div>
           )}
-          <form action={syncDiscordWithSlug}>
-            <Button type="submit" variant="outline" disabled={!discordReady}>
-              Sync Discord roles
-            </Button>
-          </form>
+          <div className="flex flex-wrap gap-2">
+            <form action={syncDiscordWithSlug}>
+              <Button type="submit" variant="outline" disabled={!discordReady}>
+                Sync Discord
+              </Button>
+            </form>
+            <form action={emailDiscordUnmatched.bind(null, slug)}>
+              <ConfirmSubmitButton
+                variant="outline"
+                disabled={!discordReady}
+                confirmMessage="Email everyone listed as 'No username' or 'Not matched yet' asking them to fix their Discord? Run Sync first so the list is current."
+              >
+                Email unmatched players
+              </ConfirmSubmitButton>
+            </form>
+            <form action={setDiscordNicknames.bind(null, slug)}>
+              <ConfirmSubmitButton
+                variant="outline"
+                disabled={!discordReady}
+                confirmMessage="Set every matched player's server nickname to their site display name?"
+              >
+                Set nicknames
+              </ConfirmSubmitButton>
+            </form>
+            <form action={deleteOldDiscordChannels.bind(null, slug)}>
+              <ConfirmSubmitButton
+                variant="outline"
+                disabled={!discordReady}
+                className="text-destructive hover:text-destructive"
+                confirmMessage="Delete every older season's team text and voice channels and categories? Their message history is lost. This can't be undone."
+              >
+                Delete old team channels
+              </ConfirmSubmitButton>
+            </form>
+          </div>
         </CardContent>
       </Card>
 

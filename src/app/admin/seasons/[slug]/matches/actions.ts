@@ -8,6 +8,8 @@ import { db } from "@/db/client";
 import { matches } from "@/db/schema/matches";
 import { seasons } from "@/db/schema/seasons";
 import { requireAdmin } from "@/lib/auth-helpers";
+import { ensureMatchThreads, postTeamSchedules } from "@/lib/discord-notify";
+import { mergeReports, syncInBackground } from "@/lib/discord-roles";
 import { createTiebreakers, generateSchedule, seedPlayoffs } from "@/lib/schedule";
 
 export async function generateMatchSchedule(slug: string) {
@@ -20,6 +22,11 @@ export async function generateMatchSchedule(slug: string) {
   if (created === 0) {
     redirect(`/admin/seasons/${slug}/matches?error=already-generated`);
   }
+
+  // Discord: a thread per match, then each team's fixtures (linking the threads).
+  syncInBackground(`${slug} schedule`, async () =>
+    mergeReports(await ensureMatchThreads(season.id), await postTeamSchedules(season.id)),
+  );
 
   revalidatePath(`/admin/seasons/${slug}/matches`);
   revalidatePath(`/seasons/${slug}`);
@@ -63,6 +70,8 @@ export async function seedPlayoffsAction(slug: string) {
     revalidatePath("/");
   }
 
+  syncInBackground(`${slug} semifinal threads`, () => ensureMatchThreads(season.id));
+
   revalidatePath(`/admin/seasons/${slug}/matches`);
   revalidatePath(`/seasons/${slug}/matches`);
   redirect(`/admin/seasons/${slug}/matches?saved=seeded`);
@@ -93,6 +102,8 @@ export async function createTiebreakersAction(slug: string) {
 
   const created = await createTiebreakers(season.id);
   if (created === 0) redirect(`/admin/seasons/${slug}/matches?error=no-tiebreaker-needed`);
+
+  syncInBackground(`${slug} tiebreaker threads`, () => ensureMatchThreads(season.id));
 
   revalidatePath(`/admin/seasons/${slug}/matches`);
   revalidatePath(`/seasons/${slug}/matches`);

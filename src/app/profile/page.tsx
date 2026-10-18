@@ -12,6 +12,8 @@ import { signOut } from "@/auth";
 import { cookies } from "next/headers";
 import { requireOnboarded } from "@/lib/auth-helpers";
 import { DISCORD_USERNAME_HELP, normalizeDiscordUsername } from "@/lib/discord";
+import { setTenManRole } from "@/lib/discord-ping-roles";
+import { syncInBackground } from "@/lib/discord-roles";
 import { opggUrlForRiotId } from "@/lib/opgg";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -144,6 +146,19 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
     redirect("/profile?saved=1");
   }
 
+  // Opt in/out of the Discord "10-man" ping role.
+  async function saveTenManPings(formData: FormData) {
+    "use server";
+    const session = await requireOnboarded();
+    const on = formData.get("tenManPings") === "on";
+    await db
+      .update(users)
+      .set({ tenManPings: on, updatedAt: new Date() })
+      .where(eq(users.id, session.user.id));
+    syncInBackground("10-man role", () => setTenManRole(session.user.id, on));
+    redirect("/profile?saved=1");
+  }
+
   async function doSignOut() {
     "use server";
     await signOut();
@@ -206,6 +221,18 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
             <div className="flex justify-end">
               <Button type="submit">Save</Button>
             </div>
+          </form>
+          <form
+            action={saveTenManPings}
+            className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4"
+          >
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="tenManPings" defaultChecked={user.tenManPings} />
+              Ping me in Discord when a 10-man opens
+            </label>
+            <Button type="submit" variant="outline" size="sm">
+              Save
+            </Button>
           </form>
         </CardContent>
       </Card>

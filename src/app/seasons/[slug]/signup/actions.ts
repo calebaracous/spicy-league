@@ -11,6 +11,8 @@ import { seasons } from "@/db/schema/seasons";
 import { seasonSignups } from "@/db/schema/seasons";
 import { requireOnboarded } from "@/lib/auth-helpers";
 import { getActiveBan } from "@/lib/bans";
+import { updateSignupRolesForUser } from "@/lib/discord-ping-roles";
+import { syncInBackground } from "@/lib/discord-roles";
 import { missingSignupRequirements } from "@/lib/signup-gate";
 import { openSignupKind, resolveSignupKind } from "@/lib/seasons";
 
@@ -90,6 +92,10 @@ export async function submitSignup(slug: string, formData: FormData) {
     kind,
   });
 
+  syncInBackground(`${slug} signup roles`, () =>
+    updateSignupRolesForUser(season.id, session.user.id),
+  );
+
   revalidatePath(`/seasons/${slug}`);
   revalidatePath(`/seasons/${slug}/teams`);
   revalidatePath(`/admin/seasons/${slug}/signups`);
@@ -146,6 +152,9 @@ export async function leaveSubList(slug: string) {
       );
     await tx.delete(seasonSignups).where(eq(seasonSignups.id, signup.id));
   });
+  syncInBackground(`${slug} signup roles`, () =>
+    updateSignupRolesForUser(season.id, session.user.id),
+  );
 
   revalidatePath(`/seasons/${slug}`);
   revalidatePath(`/seasons/${slug}/teams`);

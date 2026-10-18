@@ -8,7 +8,8 @@ import { db } from "@/db/client";
 import { draftPicks, drafts } from "@/db/schema/drafts";
 import { seasonSignups, seasons } from "@/db/schema/seasons";
 import { requireAdmin, requireOnboarded } from "@/lib/auth-helpers";
-import { syncInBackground, syncTeamRoles } from "@/lib/discord-roles";
+import { syncSignupRoles } from "@/lib/discord-ping-roles";
+import { mergeReports, syncInBackground, syncTeamRoles } from "@/lib/discord-roles";
 import { finalizeDraft, loadCaptainTeams, teamForPick, totalPicks } from "@/lib/draft";
 
 async function getSeasonOrFail(slug: string) {
@@ -211,7 +212,9 @@ export async function submitPick(slug: string, pickedUserId: string, expectedPic
   if (nextPickNumber === total) {
     await finalizeDraft(draft.id);
     // Teams exist now: give every player their team's Discord role.
-    syncInBackground(`${slug} team roles`, () => syncTeamRoles(draft.seasonId));
+    syncInBackground(`${slug} team roles`, async () =>
+      mergeReports(await syncTeamRoles(draft.seasonId), await syncSignupRoles(draft.seasonId)),
+    );
   }
 
   revalidatePath(`/seasons/${slug}/draft`);

@@ -9,6 +9,9 @@ import { matches } from "@/db/schema/matches";
 import { seasons } from "@/db/schema/seasons";
 import { requireAdmin, requireOnboarded } from "@/lib/auth-helpers";
 import { BO2_RESULTS, hasResult, type Bo2Result } from "@/lib/match-format";
+import { ensureMatchThreads, notifyMatchEvent } from "@/lib/discord-notify";
+import { syncChampionRole } from "@/lib/discord-ping-roles";
+import { mergeReports, syncInBackground } from "@/lib/discord-roles";
 import { getTeamForCaptain } from "@/lib/schedule";
 
 async function getSeasonOrFail(slug: string) {
@@ -17,8 +20,9 @@ async function getSeasonOrFail(slug: string) {
   return season;
 }
 
-// Un-confirming the final un-crowns the champion. Season state is left alone;
-// the admin moves it back with the generic transition if needed.
+// Un-confirming the final un-crowns the champion (and takes the Discord
+// Champion role back). Season state is left alone; the admin moves it back
+// with the generic transition if needed.
 async function clearChampionIfFinal(seasonId: string, matchId: string) {
   const match = await db.query.matches.findFirst({
     where: and(eq(matches.id, matchId), eq(matches.seasonId, seasonId)),
@@ -29,6 +33,7 @@ async function clearChampionIfFinal(seasonId: string, matchId: string) {
     .update(seasons)
     .set({ championTeamId: null, updatedAt: new Date() })
     .where(eq(seasons.id, seasonId));
+  syncInBackground("champion role", () => syncChampionRole(seasonId));
 }
 
 type ReportedResult = {
@@ -91,12 +96,15 @@ export async function reportMatch(slug: string, matchId: string, formData: FormD
   }
 
   const isAdmin = session.user.role === "admin";
+  // Which side reported (null for an admin), so Discord pings the other one.
+  let reportingTeamId: string | null = null;
   if (!isAdmin) {
     const team = await getTeamForCaptain(season.id, session.user.id);
     if (!team) redirect(`/seasons/${slug}/matches/${matchId}?error=not-on-team`);
     if (team.id !== match.homeTeamId && team.id !== match.awayTeamId) {
       redirect(`/seasons/${slug}/matches/${matchId}?error=not-your-match`);
     }
+    reportingTeamId = team.id;
   }
 
   const result =
@@ -117,6 +125,9 @@ export async function reportMatch(slug: string, matchId: string, formData: FormD
       reportedAt: new Date(),
     })
     .where(eq(matches.id, matchId));
+  syncInBackground(`${slug} result reported`, () =>
+    notifyMatchEvent(matchId, "reported", reportingTeamId),
+  );
 
   revalidatePath(`/seasons/${slug}/matches/${matchId}`);
   revalidatePath(`/seasons/${slug}`);
@@ -174,6 +185,15 @@ export async function confirmMatch(slug: string, matchId: string) {
     revalidatePath(`/seasons/${slug}`);
   }
 
+  // Discord: note it in the thread; a just-created final gets its thread; a
+  // confirmed final hands out the Champion role.
+  syncInBackground(`${slug} result confirmed`, async () => {
+    const reports = [await notifyMatchEvent(matchId, "confirmed")];
+    if (match.stage === "semis") reports.push(await ensureMatchThreads(season.id));
+    if (match.stage === "final") reports.push(await syncChampionRole(season.id));
+    return mergeReports(...reports);
+  });
+
   revalidatePath(`/seasons/${slug}/matches/${matchId}`);
   revalidatePath(`/seasons/${slug}`);
   revalidatePath(`/admin/seasons/${slug}/matches`);
@@ -189,6 +209,7 @@ export async function disputeMatch(slug: string, matchId: string) {
     .set({ state: "disputed", winnerTeamId: null, homeScore: null, awayScore: null })
     .where(and(eq(matches.id, matchId), eq(matches.seasonId, season.id)));
   await clearChampionIfFinal(season.id, matchId);
+  syncInBackground(`${slug} result disputed`, () => notifyMatchEvent(matchId, "disputed"));
 
   revalidatePath(`/seasons/${slug}/matches/${matchId}`);
   revalidatePath(`/admin/seasons/${slug}/matches`);
@@ -212,6 +233,7 @@ export async function resetMatch(slug: string, matchId: string) {
     })
     .where(and(eq(matches.id, matchId), eq(matches.seasonId, season.id)));
   await clearChampionIfFinal(season.id, matchId);
+  syncInBackground(`${slug} result reset`, () => notifyMatchEvent(matchId, "reset"));
 
   revalidatePath(`/seasons/${slug}/matches/${matchId}`);
   revalidatePath(`/admin/seasons/${slug}/matches`);

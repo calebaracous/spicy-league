@@ -19,7 +19,15 @@ const MAX_RETRIES = 3;
  */
 const MAX_WAIT_MS = 5_000;
 
-export type DiscordConfig = { token: string; guildId: string; captainRoleId: string | null };
+export type DiscordConfig = {
+  token: string;
+  guildId: string;
+  captainRoleId: string | null;
+  /** Text channel for per-match threads; null → no match threads. */
+  matchesChannelId: string | null;
+  /** Channel for 10-man pings; null → no 10-man pings. */
+  tenManChannelId: string | null;
+};
 
 export function discordConfig(): DiscordConfig | null {
   if (!env.DISCORD_BOT_TOKEN || !env.DISCORD_GUILD_ID) return null;
@@ -27,6 +35,8 @@ export function discordConfig(): DiscordConfig | null {
     token: env.DISCORD_BOT_TOKEN,
     guildId: env.DISCORD_GUILD_ID,
     captainRoleId: env.DISCORD_CAPTAIN_ROLE_ID ?? null,
+    matchesChannelId: env.DISCORD_MATCHES_CHANNEL_ID ?? null,
+    tenManChannelId: env.DISCORD_TEN_MAN_CHANNEL_ID ?? null,
   };
 }
 
@@ -212,6 +222,56 @@ export async function renameChannel(
 ): Promise<void> {
   await call(cfg, "PATCH", `/channels/${channelId}`, {
     body: { name: name.slice(0, 100) },
+    reason,
+  });
+}
+
+/**
+ * Posts a message. Only the roles in `mentionRoleIds` are actually pinged
+ * (allowed_mentions), whatever else the text contains; link previews are off.
+ */
+export async function postMessage(
+  cfg: DiscordConfig,
+  channelId: string,
+  content: string,
+  mentionRoleIds: string[] = [],
+): Promise<void> {
+  await call(cfg, "POST", `/channels/${channelId}/messages`, {
+    body: {
+      content: content.slice(0, 2000),
+      allowed_mentions: { parse: [], roles: mentionRoleIds },
+      flags: 4, // SUPPRESS_EMBEDS
+    },
+  });
+}
+
+/** A public thread (not attached to a message) that stays open for a week of quiet. */
+export async function startThread(
+  cfg: DiscordConfig,
+  channelId: string,
+  name: string,
+  reason: string,
+): Promise<DiscordChannel> {
+  const thread = await call<DiscordChannel>(cfg, "POST", `/channels/${channelId}/threads`, {
+    body: { name: name.slice(0, 100), type: 11, auto_archive_duration: 10080 },
+    reason,
+  });
+  return thread!;
+}
+
+export async function deleteChannel(cfg: DiscordConfig, channelId: string, reason: string) {
+  await call(cfg, "DELETE", `/channels/${channelId}`, { reason });
+}
+
+/** Server nickname (max 32 chars). Fails for the server owner and members ranked above the bot. */
+export async function setNickname(
+  cfg: DiscordConfig,
+  userId: string,
+  nick: string,
+  reason: string,
+): Promise<void> {
+  await call(cfg, "PATCH", `/guilds/${cfg.guildId}/members/${userId}`, {
+    body: { nick: nick.slice(0, 32) },
     reason,
   });
 }
