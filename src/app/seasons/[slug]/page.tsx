@@ -18,7 +18,7 @@ import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { leaveSubList } from "./signup/actions";
 import { formatStructure, roundLabel } from "@/lib/match-format";
 import { seasonPageMetadata } from "@/lib/season-meta";
-import { getTeamForCaptain } from "@/lib/schedule";
+import { getCaptainedTeamId, getTeamForCaptain } from "@/lib/schedule";
 import { GAME_LABELS, openSignupKind, SEASON_STATE_LABELS, seasonSchedule } from "@/lib/seasons";
 import { signInHref } from "@/lib/safe-redirect";
 import { cn } from "@/lib/utils";
@@ -257,6 +257,11 @@ export default async function SeasonDetailPage({
     session?.user?.id && ["group_stage", "playoffs", "complete"].includes(season.state)
       ? await getTeamForCaptain(season.id, session.user.id)
       : null;
+  // Captains can rename their team (Teams page) until the season ends.
+  const canRenameMyTeam =
+    !!myTeam &&
+    season.state !== "complete" &&
+    (await getCaptainedTeamId(season.id, session!.user!.id)) === myTeam.id;
   const myNextMatch = myTeam
     ? await db.query.matches.findFirst({
         where: and(
@@ -387,7 +392,17 @@ export default async function SeasonDetailPage({
             <p className="text-label" style={{ color: "var(--accent-text)" }}>
               Your team
             </p>
-            <p className="text-lg font-medium">{myTeam.name}</p>
+            <p className="text-lg font-medium">
+              {myTeam.name}
+              {canRenameMyTeam ? (
+                <Link
+                  href={`/seasons/${slug}/teams`}
+                  className="text-accent-text ml-2 text-xs font-normal hover:underline"
+                >
+                  Rename
+                </Link>
+              ) : null}
+            </p>
             {myNextMatch ? (
               <p className="text-muted-foreground text-sm">
                 Next: vs <span className="text-foreground">{myOpponent?.name ?? "TBD"}</span> ·{" "}

@@ -34,6 +34,8 @@ files are in git history before the squash commit):
   `tiebreaker` added to the `match_stage` enum.
 - `0008_discord_username.sql` — nullable, unique `users.discord_username`.
 - `0009_discord_roles.sql` — `users.discord_user_id`, `teams.discord_role_id`.
+- `0010_discord_team_channels.sql` — `teams.discord_text_channel_id`,
+  `teams.discord_voice_channel_id`, `seasons.discord_category_id`.
 
 **Why the baseline's `when` is old.** Drizzle's migrator applies a journal
 entry only if its `when` is greater than the newest `created_at` in
@@ -127,6 +129,8 @@ Auth, not queried directly by app code.
   reported as 2–0 / 1–1 / 0–2 where 1–1 is a draw. Edited in the admin
   season form (`GROUP_BEST_OF_OPTIONS`). See [MATCHES.md](MATCHES.md) →
   Group format.
+- `discordCategoryId` (migration `0010`) — Discord category holding the
+  season's team channels, created by `syncTeamRoles`.
 - `championTeamId` — set by `confirmMatch` when the **final** is
   confirmed (to the final's `winnerTeamId`), cleared again if that final
   is disputed or reset. Migration `0001_reconcile_live_schema` backfilled
@@ -194,7 +198,10 @@ captains + 3 picks.
 Created in one batch by `finalizeDraft()` in `src/lib/draft.ts` once all
 picks are in. `teams.discordRoleId` (migration `0009_discord_roles`) is the
 team's Discord role, set by `syncTeamRoles` and cleared when a later season's
-sync deletes it. `teamMembers.pickNumber` is `null` for the captain's own row,
+sync deletes it; `discordTextChannelId` / `discordVoiceChannelId` (migration
+`0010`) are its private channels. `teams.name` starts as "Team <captain>"
+and captains can rename it (`renameTeam`, rules in `src/lib/team-name.ts`;
+unique per season, case-insensitive, enforced in code). `teamMembers.pickNumber` is `null` for the captain's own row,
 otherwise it mirrors `draftPicks.pickNumber`.
 
 Constraints:

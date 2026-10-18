@@ -12,6 +12,12 @@ import { env } from "@/lib/env";
 const API = "https://discord.com/api/v10";
 const USER_AGENT = "DiscordBot (https://www.spicyleague.dev, 1)";
 const MAX_RETRIES = 3;
+/**
+ * Longest rate-limit wait we sit through. Some limits are long (a channel can
+ * be renamed only twice per 10 minutes); those fail fast instead, and the
+ * admin re-runs the sync later.
+ */
+const MAX_WAIT_MS = 5_000;
 
 export type DiscordConfig = { token: string; guildId: string; captainRoleId: string | null };
 
@@ -26,6 +32,7 @@ export function discordConfig(): DiscordConfig | null {
 
 /** Discord JSON error codes we react to. */
 export const DISCORD_ERRORS = {
+  unknownChannel: 10003,
   unknownMember: 10007,
   unknownRole: 10011,
   missingPermissions: 50013,
@@ -43,10 +50,32 @@ export class DiscordApiError extends Error {
 
 export type DiscordMember = { user: { id: string; username: string } };
 export type DiscordRole = { id: string; name: string };
+export type DiscordChannel = { id: string; name: string; type: number; parent_id: string | null };
+
+/** Channel types we create. */
+export const CHANNEL_TYPE = { text: 0, voice: 2, category: 4 } as const;
+
+/** Permission bits used in team-channel overwrites (all below 2^31, so plain numbers). */
+export const PERMISSIONS = {
+  manageChannels: 1 << 4,
+  viewChannel: 1 << 10,
+  sendMessages: 1 << 11,
+  readMessageHistory: 1 << 16,
+  connect: 1 << 20,
+  speak: 1 << 21,
+} as const;
+
+export type PermissionOverwrite = {
+  id: string;
+  /** 0 = role, 1 = member */
+  type: 0 | 1;
+  allow?: string;
+  deny?: string;
+};
 
 async function call<T>(
   cfg: DiscordConfig,
-  method: "GET" | "POST" | "PUT" | "DELETE",
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
   path: string,
   { body, reason }: { body?: unknown; reason?: string } = {},
 ): Promise<T | null> {
@@ -64,9 +93,12 @@ async function call<T>(
     });
 
     // Rate limited: wait as long as Discord asks, a few times at most.
-    if (res.status === 429 && attempt < MAX_RETRIES) {
+    if (res.status === 429) {
       const data = (await res.json().catch(() => null)) as { retry_after?: number } | null;
       const waitMs = Math.ceil((data?.retry_after ?? 1) * 1000);
+      if (attempt >= MAX_RETRIES || waitMs > MAX_WAIT_MS) {
+        throw new DiscordApiError(429, null, `rate limited, retry in ${Math.ceil(waitMs / 1000)}s`);
+      }
       await new Promise((r) => setTimeout(r, waitMs));
       continue;
     }
@@ -126,6 +158,60 @@ export async function removeMemberRole(
   reason: string,
 ) {
   await call(cfg, "DELETE", `/guilds/${cfg.guildId}/members/${userId}/roles/${roleId}`, {
+    reason,
+  });
+}
+
+export async function modifyRole(
+  cfg: DiscordConfig,
+  roleId: string,
+  name: string,
+  reason: string,
+): Promise<void> {
+  await call(cfg, "PATCH", `/guilds/${cfg.guildId}/roles/${roleId}`, {
+    body: { name: name.slice(0, 100) },
+    reason,
+  });
+}
+
+let botUserId: string | null = null;
+
+/** The bot's own user ID (for channel overwrites), cached per instance. */
+export async function getBotUserId(cfg: DiscordConfig): Promise<string> {
+  botUserId ??= (await call<{ id: string }>(cfg, "GET", "/users/@me"))!.id;
+  return botUserId;
+}
+
+export async function listChannels(cfg: DiscordConfig): Promise<DiscordChannel[]> {
+  return (await call<DiscordChannel[]>(cfg, "GET", `/guilds/${cfg.guildId}/channels`)) ?? [];
+}
+
+export async function createChannel(
+  cfg: DiscordConfig,
+  channel: {
+    name: string;
+    type: number;
+    parent_id?: string | null;
+    permission_overwrites?: PermissionOverwrite[];
+  },
+  reason: string,
+): Promise<DiscordChannel> {
+  const created = await call<DiscordChannel>(cfg, "POST", `/guilds/${cfg.guildId}/channels`, {
+    body: { ...channel, name: channel.name.slice(0, 100) },
+    reason,
+  });
+  return created!;
+}
+
+/** Rename a channel. Discord allows only 2 renames per channel per 10 minutes. */
+export async function renameChannel(
+  cfg: DiscordConfig,
+  channelId: string,
+  name: string,
+  reason: string,
+): Promise<void> {
+  await call(cfg, "PATCH", `/channels/${channelId}`, {
+    body: { name: name.slice(0, 100) },
     reason,
   });
 }

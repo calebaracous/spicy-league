@@ -167,10 +167,11 @@ export default async function EditSeasonPage({
         <CardHeader>
           <CardTitle>Discord roles</CardTitle>
           <CardDescription>
-            Captains get the Captain role when the season moves to Captains selected; everyone gets
-            their team&apos;s role when the draft finishes (last season&apos;s team roles are
-            deleted then). Sync re-runs both, e.g. after someone joins the server or fixes their
-            username.
+            Captains get the Captain role when the season moves to Captains selected. When the draft
+            finishes each team gets a role plus private text and voice channels (last season&apos;s
+            team roles are deleted then), renamed whenever the team is. Sync re-runs everything,
+            e.g. after someone joins the server or fixes their username, or after a channel rename
+            hit Discord&apos;s limit.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">

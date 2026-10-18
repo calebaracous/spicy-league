@@ -190,7 +190,8 @@ Plain sequential writes — **not** wrapped in a transaction.
    guard — safe to call twice).
 4. For each captain team:
    - Insert a `teams` row with `name = "Team ${displayName}"` ("Team RAZE &
-     JAMILEO" for a duo) and `captainUserId` = the primary.
+     JAMILEO" for a duo) and `captainUserId` = the primary. Captains can
+     rename it afterwards on the Teams page (`renameTeam`).
    - Insert a `teamMembers` row for **every** captain (`pickNumber: null`) —
      that's what marks a captain from here on (`getCaptainedTeamId`).
    - Insert `teamMembers` rows for each of the team's picks (preserving

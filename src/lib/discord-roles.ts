@@ -9,23 +9,34 @@ import { teamMembers, teams } from "@/db/schema/drafts";
 import { seasonCaptains, seasons } from "@/db/schema/seasons";
 import {
   addMemberRole,
+  CHANNEL_TYPE,
+  createChannel,
   createRole,
   deleteRole,
   DISCORD_ERRORS,
   DiscordApiError,
   discordConfig,
+  getBotUserId,
+  listChannels,
   listRoles,
+  modifyRole,
+  PERMISSIONS,
   removeMemberRole,
+  renameChannel,
   searchMembers,
+  type DiscordChannel,
   type DiscordConfig,
 } from "@/lib/discord-api";
 import { captainRoleChanges, pickExactMember, staleTeamRoles } from "@/lib/discord-plan";
+import { teamTextChannelName } from "@/lib/team-name";
 
 /**
- * Discord role sync (bot v1). Captains get the Captain role when a season
- * reaches `captains_selected`; once the draft finalizes every rostered player
- * gets their team's role, and the previous seasons' team roles are deleted.
- * Both syncs are idempotent; admins re-run them from the admin season page.
+ * Discord role + channel sync. Captains get the Captain role when a season
+ * reaches `captains_selected`; once the draft finalizes each team gets a role
+ * and private text/voice channels named after it, the role goes to its
+ * roster, and the previous seasons' team roles are deleted. A team rename
+ * renames its role and channels. All idempotent; admins re-run from the
+ * admin season page.
  * See docs/DISCORD.md.
  */
 
@@ -34,6 +45,9 @@ export type DiscordSyncReport = {
   removed: number;
   rolesCreated: number;
   rolesDeleted: number;
+  channelsCreated: number;
+  /** Roles and channels renamed to match a team name. */
+  renamed: number;
   /** People we couldn't give a role to, with why. */
   unmatched: string[];
   errors: string[];
@@ -50,6 +64,8 @@ const emptyReport = (): DiscordSyncReport => ({
   removed: 0,
   rolesCreated: 0,
   rolesDeleted: 0,
+  channelsCreated: 0,
+  renamed: 0,
   unmatched: [],
   errors: [],
 });
@@ -83,7 +99,10 @@ async function loadPeople(userIds: string[]): Promise<Person[]> {
 
 function describe(err: unknown): string {
   if (err instanceof DiscordApiError && err.code === DISCORD_ERRORS.missingPermissions) {
-    return "The bot can't manage that role. In Server Settings → Roles, drag the bot's role above Captain and the team roles.";
+    return "The bot is missing a permission. It needs Manage Roles and Manage Channels, and its role must sit above Captain and the team roles (Server Settings → Roles).";
+  }
+  if (err instanceof DiscordApiError && err.status === 429) {
+    return `Discord rate limit (${err.message}). Channels can only be renamed twice per 10 minutes; run Sync again later.`;
   }
   return err instanceof Error ? err.message : String(err);
 }
@@ -184,10 +203,145 @@ export async function syncCaptainRole(seasonId: string): Promise<DiscordSyncRepo
   return report;
 }
 
+type Season = typeof seasons.$inferSelect;
+type Team = typeof teams.$inferSelect;
+
+/** Live Discord state a team sync works against, fetched once per sync. */
+type GuildState = {
+  roles: Map<string, string>;
+  channels: Map<string, DiscordChannel>;
+  categoryId: string;
+  botUserId: string;
+};
+
+async function loadGuildState(
+  cfg: DiscordConfig,
+  season: Season,
+  report: DiscordSyncReport,
+): Promise<GuildState> {
+  const [roles, channels, botUserId] = await Promise.all([
+    listRoles(cfg),
+    listChannels(cfg),
+    getBotUserId(cfg),
+  ]);
+  const channelMap = new Map(channels.map((c) => [c.id, c]));
+  // One category per season holds its team channels.
+  let categoryId = season.discordCategoryId;
+  if (!categoryId || !channelMap.has(categoryId)) {
+    const category = await createChannel(
+      cfg,
+      { name: season.name, type: CHANNEL_TYPE.category },
+      `Spicy League: ${season.name} team channels`,
+    );
+    categoryId = category.id;
+    report.channelsCreated++;
+    await db
+      .update(seasons)
+      .set({ discordCategoryId: categoryId })
+      .where(eq(seasons.id, season.id));
+  }
+  return {
+    roles: new Map(roles.map((r) => [r.id, r.name])),
+    channels: channelMap,
+    categoryId,
+    botUserId,
+  };
+}
+
+/** Team channels are private: hidden from @everyone, open to the team role and the bot. */
+function teamOverwrites(cfg: DiscordConfig, roleId: string, botUserId: string) {
+  const P = PERMISSIONS;
+  return [
+    // @everyone's role ID is the guild ID.
+    { id: cfg.guildId, type: 0 as const, deny: String(P.viewChannel) },
+    {
+      id: roleId,
+      type: 0 as const,
+      allow: String(P.viewChannel | P.sendMessages | P.readMessageHistory | P.connect | P.speak),
+    },
+    // So the bot can still see (and rename) the channel.
+    {
+      id: botUserId,
+      type: 1 as const,
+      allow: String(P.viewChannel | P.manageChannels | P.sendMessages | P.connect),
+    },
+  ];
+}
+
 /**
- * One role per team (named after it), given to its whole roster. Deletes the
- * bot's team roles from earlier seasons first. Safe to re-run: existing roles
- * are reused, and recreated if someone deleted them in Discord.
+ * Makes the team's role, text channel and voice channel exist and carry the
+ * team's current name: creates what's missing (or was deleted in Discord),
+ * renames what's out of date. Returns the role ID. Rename failures (Discord
+ * allows 2 channel renames per 10 minutes) are reported, not thrown.
+ */
+async function ensureTeamDiscord(
+  cfg: DiscordConfig,
+  team: Team,
+  guild: GuildState,
+  reason: string,
+  report: DiscordSyncReport,
+): Promise<string> {
+  let roleId = team.discordRoleId;
+  if (!roleId || !guild.roles.has(roleId)) {
+    roleId = (await createRole(cfg, team.name, reason)).id;
+    guild.roles.set(roleId, team.name);
+    report.rolesCreated++;
+    await db.update(teams).set({ discordRoleId: roleId }).where(eq(teams.id, team.id));
+  } else if (guild.roles.get(roleId) !== team.name) {
+    try {
+      await modifyRole(cfg, roleId, team.name, reason);
+      guild.roles.set(roleId, team.name);
+      report.renamed++;
+    } catch (err) {
+      report.errors.push(`${team.name} role: ${describe(err)}`);
+    }
+  }
+
+  for (const kind of ["text", "voice"] as const) {
+    const column = kind === "text" ? "discordTextChannelId" : "discordVoiceChannelId";
+    const name = kind === "text" ? teamTextChannelName(team.name) : team.name;
+    const currentId = team[column];
+    const existing = currentId ? guild.channels.get(currentId) : undefined;
+    if (!existing) {
+      const created = await createChannel(
+        cfg,
+        {
+          name,
+          type: CHANNEL_TYPE[kind],
+          parent_id: guild.categoryId,
+          permission_overwrites: teamOverwrites(cfg, roleId, guild.botUserId),
+        },
+        reason,
+      );
+      guild.channels.set(created.id, created);
+      report.channelsCreated++;
+      await db
+        .update(teams)
+        .set(
+          kind === "text"
+            ? { discordTextChannelId: created.id }
+            : { discordVoiceChannelId: created.id },
+        )
+        .where(eq(teams.id, team.id));
+    } else if (existing.name !== name) {
+      try {
+        await renameChannel(cfg, existing.id, name, reason);
+        existing.name = name;
+        report.renamed++;
+      } catch (err) {
+        report.errors.push(`${team.name} ${kind} channel: ${describe(err)}`);
+      }
+    }
+  }
+  return roleId;
+}
+
+/**
+ * Per team: a role, a private text channel and a private voice channel (in a
+ * category for the season), all named after the team, with the role given to
+ * the whole roster. Deletes the bot's team roles from earlier seasons first;
+ * their channels stay, now visible only to admins. Safe to re-run: existing
+ * roles/channels are reused and renamed, missing ones recreated.
  */
 export async function syncTeamRoles(seasonId: string): Promise<DiscordSyncReport> {
   const report = emptyReport();
@@ -223,15 +377,10 @@ export async function syncTeamRoles(seasonId: string): Promise<DiscordSyncReport
       await db.update(teams).set({ discordRoleId: null }).where(eq(teams.id, t.id));
     }
 
-    const existingRoles = new Set((await listRoles(cfg)).map((r) => r.id));
+    const guild = await loadGuildState(cfg, season, report);
     const reason = `Spicy League: ${season.name} teams`;
     for (const team of seasonTeams) {
-      let roleId = team.discordRoleId;
-      if (!roleId || !existingRoles.has(roleId)) {
-        roleId = (await createRole(cfg, team.name, reason)).id;
-        report.rolesCreated++;
-        await db.update(teams).set({ discordRoleId: roleId }).where(eq(teams.id, team.id));
-      }
+      const roleId = await ensureTeamDiscord(cfg, team, guild, reason, report);
       const roster = await db
         .select({ userId: teamMembers.userId })
         .from(teamMembers)
@@ -240,6 +389,30 @@ export async function syncTeamRoles(seasonId: string): Promise<DiscordSyncReport
         await grant(cfg, p, roleId, reason, report);
       }
     }
+  } catch (err) {
+    report.errors.push(describe(err));
+  }
+  return report;
+}
+
+/**
+ * After a captain renames their team: rename its Discord role and channels.
+ * Does nothing until the team's Discord setup exists (the draft-finish or
+ * admin sync creates it, already using the current name).
+ */
+export async function renameTeamInDiscord(teamId: string): Promise<DiscordSyncReport> {
+  const report = emptyReport();
+  const cfg = discordConfig();
+  if (!cfg) return report;
+
+  const team = await db.query.teams.findFirst({ where: eq(teams.id, teamId) });
+  if (!team?.discordRoleId) return report;
+  const season = await db.query.seasons.findFirst({ where: eq(seasons.id, team.seasonId) });
+  if (!season || isTestSeason(season.slug)) return report;
+
+  try {
+    const guild = await loadGuildState(cfg, season, report);
+    await ensureTeamDiscord(cfg, team, guild, `Spicy League: team renamed to ${team.name}`, report);
   } catch (err) {
     report.errors.push(describe(err));
   }
@@ -255,6 +428,8 @@ export async function syncSeasonDiscordRoles(seasonId: string): Promise<DiscordS
     removed: a.removed + b.removed,
     rolesCreated: a.rolesCreated + b.rolesCreated,
     rolesDeleted: a.rolesDeleted + b.rolesDeleted,
+    channelsCreated: a.channelsCreated + b.channelsCreated,
+    renamed: a.renamed + b.renamed,
     unmatched: [...new Set([...a.unmatched, ...b.unmatched])],
     errors: [...a.errors, ...b.errors],
   };

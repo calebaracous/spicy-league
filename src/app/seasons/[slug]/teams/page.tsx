@@ -7,16 +7,31 @@ import { db } from "@/db/client";
 import { users } from "@/db/schema/auth";
 import { teamMembers, teams } from "@/db/schema/drafts";
 import { seasons, seasonSignups } from "@/db/schema/seasons";
+import { renameTeam } from "./actions";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { FlashToast } from "@/components/flash-toast";
 import { SeasonNav } from "@/components/season-nav";
-import { computeStandings } from "@/lib/schedule";
+import { computeStandings, getCaptainedTeamId } from "@/lib/schedule";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { GAME_LABELS, openSignupKind } from "@/lib/seasons";
 import { getAvailableSubs } from "@/lib/substitutions";
+import { TEAM_NAME_HELP, TEAM_NAME_MAX } from "@/lib/team-name";
 
 export const generateMetadata = seasonPageMetadata("Teams");
 
 type Params = Promise<{ slug: string }>;
+type SearchParams = Promise<{ saved?: string; error?: string }>;
+
+const ERROR_MESSAGES: Record<string, string> = {
+  "not-found": "Team not found.",
+  "not-captain": "Only the team's captains can rename it.",
+  "season-complete": "The season is over, so team names are locked.",
+  "invalid-name": `That name doesn't work. ${TEAM_NAME_HELP}.`,
+  "name-taken": "Another team this season already has that name.",
+};
 
 export const dynamic = "force-dynamic";
 
@@ -29,8 +44,15 @@ const ROLE_LABELS: Record<string, string> = {
   fill: "Fill",
 };
 
-export default async function TeamsPage({ params }: { params: Params }) {
+export default async function TeamsPage({
+  params,
+  searchParams,
+}: {
+  params: Params;
+  searchParams: SearchParams;
+}) {
   const { slug } = await params;
+  const { saved, error } = await searchParams;
 
   const season = await db.query.seasons.findFirst({
     where: and(eq(seasons.slug, slug), ne(seasons.state, "draft")),
@@ -64,6 +86,13 @@ export default async function TeamsPage({ params }: { params: Params }) {
     : [];
   const record = new Map(standings.map((s) => [s.teamId, s]));
   const viewerId = session?.user?.id ?? null;
+  const isAdmin = session?.user?.role === "admin";
+  // Captains (either of a duo) rename their own team until the season ends; admins any team.
+  const captainedTeamId =
+    viewerId && seasonTeams.length > 0 ? await getCaptainedTeamId(season.id, viewerId) : null;
+  const canRename = (teamId: string) =>
+    isAdmin || (season.state !== "complete" && captainedTeamId === teamId);
+  const errorMessage = error ? (ERROR_MESSAGES[error] ?? null) : null;
   // Once teams exist, everyone signed up but not on a team can be subbed in.
   const availableSubs = seasonTeams.length > 0 ? await getAvailableSubs(season.id) : [];
   // Offer the sub list only to people not already in the season.
@@ -89,6 +118,13 @@ export default async function TeamsPage({ params }: { params: Params }) {
       </header>
 
       <SeasonNav slug={slug} state={season.state} current="teams" />
+
+      {saved === "renamed" ? <FlashToast message="Team name saved." /> : null}
+      {errorMessage ? (
+        <Alert variant="destructive">
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
+      ) : null}
 
       {seasonTeams.length === 0 ? (
         <p className="text-muted-foreground text-sm">Teams are formed when the draft finishes.</p>
@@ -144,6 +180,33 @@ export default async function TeamsPage({ params }: { params: Params }) {
                     );
                   })}
                 </ul>
+                {canRename(team.id) ? (
+                  <details className="mt-4 border-t pt-3">
+                    <summary className="text-muted-foreground cursor-pointer text-xs hover:underline">
+                      Rename team
+                    </summary>
+                    <form
+                      action={renameTeam.bind(null, slug, team.id)}
+                      className="mt-2 flex flex-wrap items-start gap-2"
+                    >
+                      <Input
+                        name="name"
+                        defaultValue={team.name}
+                        aria-label={`New name for ${team.name}`}
+                        minLength={3}
+                        maxLength={TEAM_NAME_MAX}
+                        required
+                        className="min-w-0 flex-1"
+                      />
+                      <Button type="submit" size="sm">
+                        Save
+                      </Button>
+                      <p className="text-muted-foreground w-full text-xs">
+                        {TEAM_NAME_HELP}. Your Discord role and channels are renamed too.
+                      </p>
+                    </form>
+                  </details>
+                ) : null}
               </section>
             );
           })}

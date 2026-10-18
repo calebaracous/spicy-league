@@ -127,7 +127,8 @@ limits.
 ## Discord (bot v1: roles)
 
 REST-only bot driven by the app — no separate process. Captain role on
-`captains_selected`, team roles when the draft finalizes, admin re-sync
+`captains_selected`, team roles + private team channels when the draft
+finalizes, renames when a captain renames their team, admin re-sync
 button. Needs `DISCORD_BOT_TOKEN` + `DISCORD_GUILD_ID` (no-op without them).
 Details and setup: [DISCORD.md](DISCORD.md).
 
