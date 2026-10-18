@@ -8,6 +8,8 @@ import { z } from "zod";
 import { db } from "@/db/client";
 import { seasons, type SeasonState } from "@/db/schema/seasons";
 import { requireAdmin } from "@/lib/auth-helpers";
+import { discordConfig } from "@/lib/discord-api";
+import { syncCaptainRole, syncInBackground, syncSeasonDiscordRoles } from "@/lib/discord-roles";
 import { canTransition, isValidSlug, SEASON_STATES } from "@/lib/seasons";
 
 const gameSchema = z.enum(["lol", "cs2"]);
@@ -138,8 +140,35 @@ export async function transitionSeasonState(slug: string, formData: FormData) {
     .set({ state: nextState, updatedAt: new Date() })
     .where(eq(seasons.id, existing.id));
 
+  // Captains are final: give them the Discord Captain role (after the response).
+  if (nextState === "captains_selected") {
+    syncInBackground(`${slug} captain role`, () => syncCaptainRole(existing.id));
+  }
+
   revalidatePath("/admin");
   revalidatePath("/seasons");
   revalidatePath(`/seasons/${slug}`);
   redirect(`/admin/seasons/${slug}?saved=1`);
+}
+
+/**
+ * Re-runs both Discord role syncs (captain + team roles) and reports back via
+ * the query string: `discord=<assigned>.<unmatched>.<errors>` plus the first
+ * error's text. Unmatched people are listed on the page from the DB.
+ */
+export async function syncDiscordRoles(slug: string) {
+  await requireAdmin();
+  const season = await db.query.seasons.findFirst({ where: eq(seasons.slug, slug) });
+  if (!season) redirect("/admin?error=not-found");
+  if (!discordConfig()) redirect(`/admin/seasons/${slug}?error=discord-not-configured`);
+
+  const report = await syncSeasonDiscordRoles(season.id);
+  if (report.errors.length) console.error("[discord] manual sync", JSON.stringify(report));
+
+  const params = new URLSearchParams({
+    discord: `${report.assigned}.${report.unmatched.length}.${report.errors.length}`,
+  });
+  if (report.errors[0]) params.set("discordError", report.errors[0].slice(0, 300));
+  revalidatePath(`/admin/seasons/${slug}`);
+  redirect(`/admin/seasons/${slug}?${params}`);
 }

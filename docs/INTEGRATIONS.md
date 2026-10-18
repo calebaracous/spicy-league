@@ -124,6 +124,13 @@ username + password (Better Auth credential provider), not magic links.
 Identifier pattern: user ID for per-user limits, email for pre-login
 limits.
 
+## Discord (bot v1: roles)
+
+REST-only bot driven by the app — no separate process. Captain role on
+`captains_selected`, team roles when the draft finalizes, admin re-sync
+button. Needs `DISCORD_BOT_TOKEN` + `DISCORD_GUILD_ID` (no-op without them).
+Details and setup: [DISCORD.md](DISCORD.md).
+
 ## Vercel
 
 - **Deployment**: main → production deploy on every push (trunk-based,
@@ -146,6 +153,7 @@ limits.
   calls Leetify or Steam Web API. Users paste a Steam64 ID (validated
   `^7656\d{13}$`) and optionally a leetify.com URL; we store them and
   link out from the public profile.
-- **Discord webhooks / bot** — planned in PLANNING.md, not started.
+- **Discord webhooks / slash commands** — planned in PLANNING.md, not
+  started. The bot's v1 (role sync) is live: see [DISCORD.md](DISCORD.md).
 - **Sentry / PostHog** — planned, not wired.
 - **Avatar uploads** — `users.image` column exists, no upload flow.

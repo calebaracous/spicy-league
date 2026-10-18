@@ -33,6 +33,7 @@ files are in git history before the squash commit):
 - `0007_group_bo2.sql` — `seasons.group_best_of` (int, default 1) and
   `tiebreaker` added to the `match_stage` enum.
 - `0008_discord_username.sql` — nullable, unique `users.discord_username`.
+- `0009_discord_roles.sql` — `users.discord_user_id`, `teams.discord_role_id`.
 
 **Why the baseline's `when` is old.** Drizzle's migrator applies a journal
 entry only if its `when` is greater than the newest `created_at` in
@@ -81,6 +82,10 @@ wiring in `src/lib/auth.ts`).
     `normalizeDiscordUsername` in `src/lib/discord.ts`, so the plain unique
     constraint is effectively case-insensitive. Required at account signup
     and for season signups; null on accounts made before it existed.
+  - `discordUserId` text, nullable (migration `0009_discord_roles`) — Discord's
+    numeric ID, resolved from `discordUsername` by the first role sync and
+    cleared when the username changes or Discord reports them gone. See
+    [DISCORD.md](DISCORD.md).
   - `bannedAt`, `banReason`, `banExpiresAt`, `bannedBy` — league ban
     (migration `0002_user_bans`). Active while `bannedAt` is set and
     `banExpiresAt` is null or in the future (`isBanActive` in
@@ -187,7 +192,9 @@ captains + 3 picks.
 
 ### `teams`, `teamMembers`
 Created in one batch by `finalizeDraft()` in `src/lib/draft.ts` once all
-picks are in. `teamMembers.pickNumber` is `null` for the captain's own row,
+picks are in. `teams.discordRoleId` (migration `0009_discord_roles`) is the
+team's Discord role, set by `syncTeamRoles` and cleared when a later season's
+sync deletes it. `teamMembers.pickNumber` is `null` for the captain's own row,
 otherwise it mirrors `draftPicks.pickNumber`.
 
 Constraints:

@@ -94,6 +94,12 @@ export default function PrivacyPage() {
         Discord message content in our database, and we do not read direct messages. Your activity
         within Discord is also subject to Discord&rsquo;s own privacy policy.
       </p>
+      <p>
+        The bot also manages league roles in the server: captains get a Captain role and drafted
+        players get their team&rsquo;s role. To do that we look up the Discord username on your
+        profile in the Spicy League server and store the matching Discord user ID with your account.
+        Changing your Discord username on your profile clears it.
+      </p>
 
       <h2>2. What we do not collect</h2>
       <ul>

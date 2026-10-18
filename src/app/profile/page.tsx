@@ -126,9 +126,19 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
     });
     if (taken) redirect("/profile?error=discord-taken");
 
+    // A different username may be a different Discord account: forget the
+    // resolved ID so the next role sync searches again.
+    const current = await db.query.users.findFirst({
+      where: eq(users.id, session.user.id),
+      columns: { discordUsername: true },
+    });
     await db
       .update(users)
-      .set({ discordUsername, updatedAt: new Date() })
+      .set({
+        discordUsername,
+        ...(current?.discordUsername !== discordUsername ? { discordUserId: null } : {}),
+        updatedAt: new Date(),
+      })
       .where(eq(users.id, session.user.id));
 
     redirect("/profile?saved=1");

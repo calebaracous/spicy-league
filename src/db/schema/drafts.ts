@@ -62,6 +62,8 @@ export const teams = pgTable(
     captainUserId: text("captain_user_id")
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
+    // The team's role in the league Discord, created by syncTeamRoles.
+    discordRoleId: text("discord_role_id"),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   },
   (t) => [

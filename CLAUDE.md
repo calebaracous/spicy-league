@@ -33,6 +33,8 @@ source of truth for what's shipped.**
 - `docs/TEN-MAN.md` — 10-man pickup flow: lifecycle, transactional
   actions, captain vote/election, fixed snake order, SSE.
 - `docs/INTEGRATIONS.md` — Neon, Resend, Riot API, Upstash, Vercel Cron.
+- `docs/DISCORD.md` — the Discord bot (v1: Captain + team roles), how
+  players are matched to Discord accounts, one-time bot setup.
 - `docs/DESIGN-SYSTEM.md` — two coexisting token systems (freelance hex +
   shadcn OKLCH), typography, animations, primitives.
 - `docs/ENV.md` — env vars and what breaks without them.

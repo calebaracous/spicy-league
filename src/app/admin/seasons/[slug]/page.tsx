@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { transitionSeasonState, updateSeason } from "@/app/admin/seasons/actions";
+import { syncDiscordRoles, transitionSeasonState, updateSeason } from "@/app/admin/seasons/actions";
 import { db } from "@/db/client";
 import { seasons } from "@/db/schema/seasons";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -18,11 +18,18 @@ import { FlashToast } from "@/components/flash-toast";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { GAME_LABELS, SEASON_STATE_LABELS, nextStates } from "@/lib/seasons";
 import { GROUP_BEST_OF_OPTIONS } from "@/lib/match-format";
+import { discordConfig } from "@/lib/discord-api";
+import { getDiscordRoster } from "@/lib/discord-roles";
 import { cn } from "@/lib/utils";
 
 export const generateMetadata = seasonPageMetadata("Admin");
 
-type SearchParams = Promise<{ saved?: string; error?: string }>;
+type SearchParams = Promise<{
+  saved?: string;
+  error?: string;
+  discord?: string;
+  discordError?: string;
+}>;
 type Params = Promise<{ slug: string }>;
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -31,7 +38,18 @@ const ERROR_MESSAGES: Record<string, string> = {
   "invalid-state": "That state isn't recognized.",
   "bad-transition": "That transition isn't allowed from the current state.",
   "not-found": "Season not found.",
+  "discord-not-configured":
+    "The Discord bot isn't set up: add DISCORD_BOT_TOKEN and DISCORD_GUILD_ID (docs/DISCORD.md).",
 };
+
+/** `?discord=<assigned>.<unmatched>.<errors>` from syncDiscordRoles → toast text. */
+function discordFlash(code: string): string {
+  const [assigned, unmatched, errors] = code.split(".").map(Number);
+  const parts = [`${assigned} role${assigned === 1 ? "" : "s"} given`];
+  if (unmatched) parts.push(`${unmatched} not matched`);
+  if (errors) parts.push(`${errors} error${errors === 1 ? "" : "s"}`);
+  return `Discord sync: ${parts.join(", ")}.`;
+}
 
 export default async function EditSeasonPage({
   params,
@@ -41,7 +59,7 @@ export default async function EditSeasonPage({
   searchParams: SearchParams;
 }) {
   const { slug } = await params;
-  const { saved, error } = await searchParams;
+  const { saved, error, discord, discordError } = await searchParams;
 
   const season = await db.query.seasons.findFirst({
     where: eq(seasons.slug, slug),
@@ -52,6 +70,9 @@ export default async function EditSeasonPage({
   const transitionWithSlug = transitionSeasonState.bind(null, slug);
   const errorMessage = error ? ERROR_MESSAGES[error] : null;
   const available = nextStates(season.state);
+  const discordReady = discordConfig() !== null;
+  const discordRoster = await getDiscordRoster(season.id);
+  const syncDiscordWithSlug = syncDiscordRoles.bind(null, slug);
 
   return (
     <div className="page flex-1 space-y-6 [--page-max:48rem]">
@@ -73,6 +94,12 @@ export default async function EditSeasonPage({
       </header>
 
       {saved ? <FlashToast message="Saved." /> : null}
+      {discord ? <FlashToast param="discord" message={discordFlash(discord)} /> : null}
+      {discordError ? (
+        <Alert variant="destructive">
+          <AlertDescription>Discord: {discordError}</AlertDescription>
+        </Alert>
+      ) : null}
       {errorMessage ? (
         <Alert variant="destructive">
           <AlertDescription>{errorMessage}</AlertDescription>
@@ -133,6 +160,69 @@ export default async function EditSeasonPage({
               </Link>
             </p>
           ) : null}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Discord roles</CardTitle>
+          <CardDescription>
+            Captains get the Captain role when the season moves to Captains selected; everyone gets
+            their team&apos;s role when the draft finishes (last season&apos;s team roles are
+            deleted then). Sync re-runs both, e.g. after someone joins the server or fixes their
+            username.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {!discordReady ? (
+            <p className="text-muted-foreground text-sm">
+              The bot isn&apos;t set up yet. Add <code>DISCORD_BOT_TOKEN</code> and{" "}
+              <code>DISCORD_GUILD_ID</code> in Vercel (see <code>docs/DISCORD.md</code>).
+            </p>
+          ) : null}
+          {discordRoster.length === 0 ? (
+            <p className="text-muted-foreground text-sm">
+              No captains or teams yet, so there&apos;s no one to give roles to.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="text-muted-foreground border-b text-left text-xs">
+                    <th className="pr-4 pb-2 font-medium">Player</th>
+                    <th className="pr-4 pb-2 font-medium">Role</th>
+                    <th className="pr-4 pb-2 font-medium">Discord</th>
+                    <th className="pb-2 font-medium">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {discordRoster.map((p) => (
+                    <tr key={p.id}>
+                      <td className="py-1.5 pr-4">{p.label}</td>
+                      <td className="text-muted-foreground py-1.5 pr-4">
+                        {[p.captain ? "Captain" : null, p.teamName].filter(Boolean).join(" · ")}
+                      </td>
+                      <td className="py-1.5 pr-4 font-mono text-xs">{p.discordUsername ?? "—"}</td>
+                      <td className="py-1.5 text-xs">
+                        {!p.discordUsername ? (
+                          <span style={{ color: "var(--accent-text)" }}>No username</span>
+                        ) : p.discordUserId ? (
+                          "Matched"
+                        ) : (
+                          <span className="text-muted-foreground">Not matched yet</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <form action={syncDiscordWithSlug}>
+            <Button type="submit" variant="outline" disabled={!discordReady}>
+              Sync Discord roles
+            </Button>
+          </form>
         </CardContent>
       </Card>
 

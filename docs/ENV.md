@@ -7,8 +7,8 @@ only bites on *malformed* values (e.g. a non-URL `DATABASE_URL`, a
 `BETTER_AUTH_SECRET` under 32 chars).
 
 Note: validation runs when `src/lib/env.ts` is first imported, not at
-boot — and only `riot-api.ts`, `rate-limit.ts` and the cron route import
-it. `src/db/client.ts` and `src/lib/auth.ts` read `process.env` directly,
+boot — and only `riot-api.ts`, `rate-limit.ts`, `discord-api.ts` (so the
+admin season page and the Discord syncs) and the cron route import it. `src/db/client.ts` and `src/lib/auth.ts` read `process.env` directly,
 so a malformed auth/DB var won't be caught until one of those three
 modules loads.
 
@@ -33,6 +33,9 @@ builds that don't need runtime secrets.
 | `BLOB_READ_WRITE_TOKEN` | planned uploads | Declared, unused — Vercel Blob isn't wired yet. |
 | `UPSTASH_REDIS_REST_URL` | rate limiting | Missing → `checkRateLimit` fails open (allows all). |
 | `UPSTASH_REDIS_REST_TOKEN` | rate limiting | Paired with the URL. |
+| `DISCORD_BOT_TOKEN` | Discord role sync | Bot token from the Discord developer portal. Missing (or no guild ID) → role sync no-ops and the admin card says the bot isn't set up. See [DISCORD.md](DISCORD.md). |
+| `DISCORD_GUILD_ID` | Discord role sync | Numeric server ID (Developer Mode → Copy Server ID). |
+| `DISCORD_CAPTAIN_ROLE_ID` | Discord role sync (optional) | Existing Captain role. Unset → the bot uses a role named "Captain", creating it if needed. |
 
 ## Client-side vars
 
@@ -57,6 +60,8 @@ CRON_SECRET=…
 RIOT_PERSONAL_API_KEY=RGAPI-…
 UPSTASH_REDIS_REST_URL=…
 UPSTASH_REDIS_REST_TOKEN=…
+DISCORD_BOT_TOKEN=…
+DISCORD_GUILD_ID=…
 ```
 
 ## Where to look when…

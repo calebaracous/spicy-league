@@ -64,6 +64,13 @@
       "when": 1792288809081,
       "tag": "0008_discord_username",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792292271988,
+      "tag": "0009_discord_roles",
+      "breakpoints": true
     }
   ]
 }

@@ -18,6 +18,9 @@ export const users = pgTable("users", {
   // src/lib/discord.ts). Required at account signup and for season signups;
   // null on older accounts until they add it on /profile.
   discordUsername: text("discord_username").unique(),
+  // Discord's numeric user ID, resolved from discordUsername by searching the
+  // league server (src/lib/discord-roles.ts). Cleared when the username changes.
+  discordUserId: text("discord_user_id"),
   // League ban (see src/lib/bans.ts). Active while bannedAt is set and
   // banExpiresAt is null (permanent) or in the future.
   bannedAt: timestamp("banned_at", { mode: "date" }),

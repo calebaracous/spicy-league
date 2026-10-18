@@ -16,8 +16,9 @@ tournament series for League of Legends and Counter-Strike 2.
 >   no randomized captain seeding, no Discord webhooks, no `bottleneck`
 >   limiter or response cache for Riot, no
 >   avatar uploads, no audit log. Riot users can link up to 3 accounts.
-> - **Phase 8** (polish & ops) is not started — no Sentry/PostHog, Discord
->   bot, or notification emails.
+> - **Phase 8** (polish & ops) is not started — no Sentry/PostHog or
+>   notification emails. The Discord bot's v1 (Captain + team roles) is
+>   built; webhooks and slash commands aren't (docs/DISCORD.md).
 > - **Unplanned addition**: 10-man pickup matches
 >   ([docs/TEN-MAN.md](docs/TEN-MAN.md)), Terms/Privacy pages.
 

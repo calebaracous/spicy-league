@@ -98,8 +98,8 @@ Rendered by `src/app/page.tsx`:
 - `src/app/admin/page.tsx` — admin overview (stats, needs-attention list, active seasons, newest accounts, latest signups) + all seasons.
 - `src/app/admin/users/page.tsx` — player search/filters, ban + unban forms. `actions.ts` — `banUserAction`, `unbanUserAction`.
 - `src/app/admin/seasons/new/page.tsx` — create season form.
-- `src/app/admin/seasons/actions.ts` — `createSeason`, `updateSeason`, `transitionSeasonState`. zod-validated.
-- `src/app/admin/seasons/[slug]/page.tsx` — edit metadata + state transition buttons.
+- `src/app/admin/seasons/actions.ts` — `createSeason`, `updateSeason`, `transitionSeasonState` (→ `captains_selected` schedules the Discord Captain role sync), `syncDiscordRoles`. zod-validated.
+- `src/app/admin/seasons/[slug]/page.tsx` — edit metadata + state transition buttons + "Discord roles" card (match status per player, Sync button).
 - `src/app/admin/seasons/[slug]/signups/page.tsx` — signup roster, captain promotion UI, captains grouped by team with Pair with… / Split for duo captains.
 - `src/app/admin/seasons/[slug]/signups/actions.ts` — `promoteCaptain`, `demoteCaptain`, `moveCaptain` (whole team; swap via a `-1` placeholder), `pairCaptain` / `splitCaptain` (duo captains), `removeSignup` (pre-draft only; drops captain spot + renumbers), `getSignupStats`. Captain changes lock once the draft starts; `renumberCaptains` keeps duos on one order.
 - `src/app/admin/seasons/[slug]/signups/export/route.ts` — CSV download of signup roster.
@@ -157,7 +157,7 @@ Rendered by `src/app/page.tsx`:
 - `src/db/schema/stats.ts` — `accountLinks`, `riotStatSnapshots` (per account link), `leetifyStatSnapshots`.
 - `src/db/schema/ten-mans.ts` — `tenMans`, `tenManSignups`, `tenManVotes`, `tenManCaptains`, `tenManPicks`. `ten_man_state` enum.
 
-Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/0001_reconcile_live_schema.sql` (idempotent fix-up for DBs from the pre-squash history), `drizzle/0002_user_bans.sql` (ban columns), `drizzle/0003_match_substitutions.sql` (subs table), `drizzle/0004_sub_signups.sql` (signup kind), `drizzle/0005_season_schedule.sql` (schedule dates), `drizzle/0006_signup_quandary.sql` (signup answer), `drizzle/0007_group_bo2.sql` (group series length + tiebreaker stage), `drizzle/0008_discord_username.sql` (Discord username), plus `drizzle/meta/`. See [DATA-MODEL.md](DATA-MODEL.md) → Migrations.
+Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/0001_reconcile_live_schema.sql` (idempotent fix-up for DBs from the pre-squash history), `drizzle/0002_user_bans.sql` (ban columns), `drizzle/0003_match_substitutions.sql` (subs table), `drizzle/0004_sub_signups.sql` (signup kind), `drizzle/0005_season_schedule.sql` (schedule dates), `drizzle/0006_signup_quandary.sql` (signup answer), `drizzle/0007_group_bo2.sql` (group series length + tiebreaker stage), `drizzle/0008_discord_username.sql` (Discord username), `drizzle/0009_discord_roles.sql` (Discord user ID + team role ID), plus `drizzle/meta/`. See [DATA-MODEL.md](DATA-MODEL.md) → Migrations.
 
 ## Business logic (`src/lib`)
 
@@ -178,6 +178,9 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/riot-links.ts` — `hasRiotLink(userId)`: whether a user has a linked Riot account.
 - `src/lib/signup-gate.ts` — `missingSignupRequirements(userId, game)`: the season signup gate (Discord username always, Riot link for LoL).
 - `src/lib/discord.ts` — pure `normalizeDiscordUsername` + `DISCORD_USERNAME_HELP`; shared by account signup and the profile form.
+- `src/lib/discord-api.ts` — Discord REST client for the bot (`discordConfig`, member search, roles); retries 429s. See [DISCORD.md](DISCORD.md).
+- `src/lib/discord-plan.ts` — pure role-sync decisions: `pickExactMember`, `captainRoleChanges`, `staleTeamRoles`.
+- `src/lib/discord-roles.ts` — `syncCaptainRole`, `syncTeamRoles`, `syncSeasonDiscordRoles`, `syncInBackground` (`after()`), `getDiscordRoster`.
 - `src/lib/opgg.ts` — pure `opggUrlForRiotId(handle)`: NA OP.GG URL from a stored `gameName#tagLine`.
 - `src/lib/riot-api.ts` — Riot API client. `getAccountByRiotId`, `getRankEntries`, `getTopChampions`, `getChampionName` (Data Dragon).
 - `src/lib/stat-refresh.ts` — `refreshRiotStats(userId)` (all of a user's Riot links), `refreshAllRiotStats` (every Riot link); per-link delete-then-insert, 1200ms sleep between links.
