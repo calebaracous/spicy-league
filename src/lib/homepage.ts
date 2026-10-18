@@ -14,7 +14,7 @@ import {
   users,
 } from "@/db/schema";
 import type { Season } from "@/db/schema/seasons";
-import { formatRank, rankScore } from "@/lib/rank";
+import { bestRankPerUser, formatRank, rankScore } from "@/lib/rank";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -145,20 +145,15 @@ async function getTopRankedPlayers(
       tier: riotStatSnapshots.tier,
       rankDivision: riotStatSnapshots.rankDivision,
       lp: riotStatSnapshots.lp,
-      capturedAt: riotStatSnapshots.capturedAt,
     })
     .from(riotStatSnapshots)
     .innerJoin(users, eq(users.id, riotStatSnapshots.userId))
-    .where(and(inArray(riotStatSnapshots.userId, eligibleIds), eq(riotStatSnapshots.queue, "solo")))
-    .orderBy(desc(riotStatSnapshots.capturedAt));
+    .where(
+      and(inArray(riotStatSnapshots.userId, eligibleIds), eq(riotStatSnapshots.queue, "solo")),
+    );
 
-  // Keep only the most recent snapshot per user
-  const seen = new Set<string>();
-  const deduped = snapshots.filter((s) => {
-    if (seen.has(s.userId)) return false;
-    seen.add(s.userId);
-    return true;
-  });
+  // One row per user: their best rank across linked accounts (not the latest one).
+  const deduped = [...bestRankPerUser(snapshots).values()];
 
   deduped.sort(
     (a, b) => rankScore(a.tier, a.rankDivision, a.lp) - rankScore(b.tier, b.rankDivision, b.lp),

@@ -263,11 +263,11 @@ If the Riot API returns no ranked entries, we insert a single placeholder
 row with queue `"solo"` and all rank fields null — that's how we
 distinguish "unranked" from "never refreshed".
 
-Consumers that want "a user's rank" (draft pool, home page) filter
-`queue = 'solo'` by `userId`; with multiple linked accounts they get
-whichever row comes first, not the best one. The player directory
-(`src/lib/players.ts`) instead picks the best across links via `rankScore`
-(`src/lib/rank.ts`).
+Consumers that want "a user's rank" (draft pool, home page signups, player
+directory, available subs / sub picker) filter `queue = 'solo'` by `userId`
+and reduce with `bestRankPerUser` (`src/lib/rank.ts`), so a player with
+several linked accounts shows their **highest** rank, not the latest or an
+arbitrary one.
 
 - `topChamps` jsonb — `[{ championId, championPoints, championLevel }]`
 

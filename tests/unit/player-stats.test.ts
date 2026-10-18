@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import { tallyMatchRecords, tallyTenManRecords } from "@/lib/player-stats";
-import { formatTier, rankScore } from "@/lib/rank";
+import { bestRankPerUser, formatTier, rankScore } from "@/lib/rank";
 
 const memberships = [
   { userId: "a1", teamId: "A" },
@@ -118,6 +118,24 @@ describe("rank helpers", () => {
     expect(rankScore("PLATINUM", "IV", 0)).toBeLessThan(rankScore("GOLD", "I", 99));
     expect(rankScore("MASTER", null, 200)).toBeLessThan(rankScore("MASTER", null, 50));
     expect(rankScore(null, null, null)).toBeGreaterThan(rankScore("IRON", "IV", 0));
+  });
+
+  it("bestRankPerUser keeps each user's highest account, not the latest", () => {
+    const row = (userId: string, tier: string | null, rankDivision: string | null, lp: number) => ({
+      userId,
+      tier,
+      rankDivision,
+      lp,
+    });
+    const best = bestRankPerUser([
+      row("u1", "GOLD", "II", 50), // main
+      row("u1", "PLATINUM", "IV", 0), // smurf, higher
+      row("u1", null, null, 0), // unranked alt, linked last
+      row("u2", "SILVER", "I", 10),
+      row("u2", "SILVER", "I", 80),
+    ]);
+    expect(best.get("u1")?.tier).toBe("PLATINUM");
+    expect(best.get("u2")?.lp).toBe(80);
   });
 
   it("formatTier", () => {

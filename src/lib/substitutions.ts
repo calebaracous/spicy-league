@@ -9,6 +9,7 @@ import { matches, matchSubstitutions, type Match, type MatchStage } from "@/db/s
 import { seasons, seasonSignups } from "@/db/schema/seasons";
 import { riotStatSnapshots } from "@/db/schema/stats";
 import { getActiveBan } from "@/lib/bans";
+import { bestRankPerUser, formatTier } from "@/lib/rank";
 import { resultFor, roundLabel, type MatchResult } from "@/lib/match-format";
 import { evaluateSubRequest, type ActiveSub, type SubRuleResult } from "@/lib/substitution-rules";
 
@@ -252,6 +253,7 @@ export async function getSubCandidates(match: Match): Promise<SubCandidate[]> {
             userId: riotStatSnapshots.userId,
             tier: riotStatSnapshots.tier,
             rankDivision: riotStatSnapshots.rankDivision,
+            lp: riotStatSnapshots.lp,
           })
           .from(riotStatSnapshots)
           .where(
@@ -267,11 +269,9 @@ export async function getSubCandidates(match: Match): Promise<SubCandidate[]> {
   ]);
   const inMatch = new Set(rosters.map((r) => r.userId));
   const teamOf = new Map(drafted.map((d) => [d.userId, d.teamName]));
+  // Best rank across the player's linked accounts.
   const rankOf = new Map(
-    ranks.map((r) => [
-      r.userId,
-      r.tier ? `${r.tier[0]}${r.tier.slice(1).toLowerCase()} ${r.rankDivision ?? ""}`.trim() : null,
-    ]),
+    [...bestRankPerUser(ranks).values()].map((r) => [r.userId, formatTier(r.tier, r.rankDivision)]),
   );
 
   return (
@@ -346,6 +346,7 @@ export async function getAvailableSubs(seasonId: string): Promise<AvailableSub[]
       userId: riotStatSnapshots.userId,
       tier: riotStatSnapshots.tier,
       rankDivision: riotStatSnapshots.rankDivision,
+      lp: riotStatSnapshots.lp,
     })
     .from(riotStatSnapshots)
     .where(
@@ -357,11 +358,9 @@ export async function getAvailableSubs(seasonId: string): Promise<AvailableSub[]
         ),
       ),
     );
+  // Best rank across the player's linked accounts.
   const rankOf = new Map(
-    ranks.map((r) => [
-      r.userId,
-      r.tier ? `${r.tier[0]}${r.tier.slice(1).toLowerCase()} ${r.rankDivision ?? ""}`.trim() : null,
-    ]),
+    [...bestRankPerUser(ranks).values()].map((r) => [r.userId, formatTier(r.tier, r.rankDivision)]),
   );
 
   return free

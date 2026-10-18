@@ -15,7 +15,7 @@ import {
   type MatchTally,
   type RecordTally,
 } from "@/lib/player-stats";
-import { formatTier, rankScore } from "@/lib/rank";
+import { bestRankPerUser, formatTier } from "@/lib/rank";
 
 /** One row of the public player directory (`/users`). Client-serialisable. */
 export type DirectoryPlayer = {
@@ -111,7 +111,7 @@ export async function getPlayerDirectory(): Promise<DirectoryPlayer[]> {
       .select({
         userId: riotStatSnapshots.userId,
         tier: riotStatSnapshots.tier,
-        division: riotStatSnapshots.rankDivision,
+        rankDivision: riotStatSnapshots.rankDivision,
         lp: riotStatSnapshots.lp,
       })
       .from(riotStatSnapshots)
@@ -136,13 +136,7 @@ export async function getPlayerDirectory(): Promise<DirectoryPlayer[]> {
   }
 
   // Best solo rank per user across all their linked Riot accounts.
-  const bestRank = new Map<string, (typeof rankRows)[number]>();
-  for (const r of rankRows) {
-    const cur = bestRank.get(r.userId);
-    if (!cur || rankScore(r.tier, r.division, r.lp) < rankScore(cur.tier, cur.division, cur.lp)) {
-      bestRank.set(r.userId, r);
-    }
-  }
+  const bestRank = bestRankPerUser(rankRows);
 
   const records = tallyMatchRecords(matchRows, memberships, subRows);
   const tenManRecords = tallyTenManRecords(tenManRows, tenManCaptainRows, tenManPickRows);
@@ -155,7 +149,7 @@ export async function getPlayerDirectory(): Promise<DirectoryPlayer[]> {
         {
           username: u.username,
           name: u.name && u.name !== u.username ? u.name : null,
-          rank: rank ? formatTier(rank.tier, rank.division) : null,
+          rank: rank ? formatTier(rank.tier, rank.rankDivision) : null,
           seasons: seasonsByUser.get(u.id)?.size ?? 0,
           titles: titlesByUser.get(u.id) ?? 0,
           captaincies: captainCount.get(u.id) ?? 0,

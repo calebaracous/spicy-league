@@ -170,7 +170,7 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/match-format.ts` — pure: `isDraw` / `hasResult` / `resultFor`, `BO2_RESULTS`, `GROUP_BEST_OF_OPTIONS`, `formatStructure`, `roundLabel`.
 - `src/lib/schedule.ts` — `buildRoundRobin` (circle method), `generateSchedule`, `computeStandings` (DB wrapper around `rankStandings`), `seedPlayoffs` (refuses with `needs-tiebreaker`), `createTiebreakers`, `getTeamForCaptain` (captain *or* rostered member), `getCaptainedTeamId` (captains only, either of a duo). See [MATCHES.md](MATCHES.md).
 - `src/lib/homepage.ts` — `getHomepageData()` (discriminated union of 6 home states), podium builder.
-- `src/lib/rank.ts` — pure LoL rank helpers: `formatRank` ("Gold II · 45 LP"), `formatTier` ("Gold II"), `rankScore` (lower = better), `capitalize`.
+- `src/lib/rank.ts` — pure LoL rank helpers: `formatRank` ("Gold II · 45 LP"), `formatTier` ("Gold II"), `rankScore` (lower = better), `bestRankPerUser` (best solo rank across a user's linked accounts — use it anywhere one rank per player is shown), `capitalize`.
 - `src/lib/player-stats.ts` — pure tallies for the player directory: `tallyMatchRecords` (derived lineups, sat-out excluded), `tallyTenManRecords`.
 - `src/lib/players.ts` — `getPlayerDirectory()`: onboarded users A–Z with career stats, from whole-table queries tallied in memory.
 - `src/lib/backdrop-clips.ts` — home-row backdrop clip registry (`backdropClip(game, index)`, `otherGame`). Clips have `sources: []` until real footage lands.

@@ -49,3 +49,23 @@ export function rankScore(tier: string | null, division: string | null, lp: numb
   const d = (DIVISION_WEIGHT[division ?? ""] ?? 0) * 1_000;
   return w + d - (lp ?? 0);
 }
+
+/**
+ * Each user's best solo rank across all their linked Riot accounts (there is
+ * one snapshot per account). Ranked beats unranked; ties keep the first row.
+ */
+export function bestRankPerUser<
+  T extends { userId: string; tier: string | null; rankDivision: string | null; lp: number | null },
+>(rows: T[]): Map<string, T> {
+  const best = new Map<string, T>();
+  for (const r of rows) {
+    const cur = best.get(r.userId);
+    if (
+      !cur ||
+      rankScore(r.tier, r.rankDivision, r.lp) < rankScore(cur.tier, cur.rankDivision, cur.lp)
+    ) {
+      best.set(r.userId, r);
+    }
+  }
+  return best;
+}

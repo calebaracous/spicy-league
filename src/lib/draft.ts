@@ -14,6 +14,7 @@ import {
 } from "@/db/schema/drafts";
 import { seasonCaptains, seasonSignups, seasons } from "@/db/schema/seasons";
 import { riotStatSnapshots } from "@/db/schema/stats";
+import { bestRankPerUser } from "@/lib/rank";
 
 export const TEAM_SIZE = 5;
 /** Picks a solo-captain team makes; a duo-captain team makes one fewer. */
@@ -196,7 +197,8 @@ export async function getDraftSnapshot(seasonSlug: string): Promise<DraftSnapsho
       })
       .from(riotStatSnapshots)
       .where(and(eq(riotStatSnapshots.queue, "solo"), inArray(riotStatSnapshots.userId, userIds)));
-    for (const s of statsRows) riotRankMap.set(s.userId, s);
+    // Best rank across the player's linked accounts.
+    for (const [userId, s] of bestRankPerUser(statsRows)) riotRankMap.set(userId, s);
   }
 
   const captainIds = new Set(captainTeams.flatMap((t) => t.captains.map((c) => c.userId)));
