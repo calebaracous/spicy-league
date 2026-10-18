@@ -63,7 +63,8 @@ Workers = 1: specs share one admin and one database.
 Through the real UI, with DB assertions after each step:
 
 1. Admin creates a LoL season, opens signups.
-2. Player 20 sees the Riot-link notice instead of the form, gets a fake Riot
+2. Player 20 (seeded with a Discord username, like every e2e user) sees the
+   Riot-link notice instead of the form, gets a fake Riot
    link (`seedRiotLink`), then signs up via the form (quandary answered);
    players 1–19 are seeded as signups.
 3. Admin closes signups, promotes players 1–4, moves #4 above #3

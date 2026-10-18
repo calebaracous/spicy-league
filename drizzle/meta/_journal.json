@@ -57,6 +57,13 @@
       "when": 1792281662959,
       "tag": "0007_group_bo2",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1792288809081,
+      "tag": "0008_discord_username",
+      "breakpoints": true
     }
   ]
 }

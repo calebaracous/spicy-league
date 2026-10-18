@@ -8,6 +8,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { DISCORD_USERNAME_HELP } from "@/lib/discord";
 
 export function SignUpForm() {
   const [isPending, startTransition] = useTransition();
@@ -47,6 +48,22 @@ export function SignUpForm() {
         <p className="text-muted-foreground text-xs">
           Used to sign in. 3–24 characters: letters, numbers, underscore, hyphen. Can&apos;t be
           changed later.
+        </p>
+      </div>
+
+      <div className="space-y-1.5">
+        <Label htmlFor="discordUsername">Discord username</Label>
+        <Input
+          id="discordUsername"
+          name="discordUsername"
+          autoComplete="off"
+          placeholder="spicy_boy"
+          maxLength={33}
+          required
+          disabled={isPending}
+        />
+        <p className="text-muted-foreground text-xs">
+          {DISCORD_USERNAME_HELP}. Admins and captains use it to reach you.
         </p>
       </div>
 

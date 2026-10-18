@@ -6,6 +6,7 @@ import { MatchHistory } from "./_components/match-history";
 import { StatsTabs } from "./_components/stats-tabs";
 import { db } from "@/db/client";
 import { users } from "@/db/schema/auth";
+import { auth } from "@/auth";
 import { accountLinks, riotStatSnapshots } from "@/db/schema/stats";
 import { formatRank } from "@/lib/rank";
 import { opggUrlForRiotId } from "@/lib/opgg";
@@ -72,7 +73,9 @@ export default async function PublicProfilePage({ params }: Props) {
     }),
   );
 
-  const history = await getPlayerMatchHistory(user.id);
+  const [history, viewer] = await Promise.all([getPlayerMatchHistory(user.id), auth()]);
+  // Discord is for contacting players, so only signed-in visitors see it.
+  const discordUsername = viewer?.user ? user.discordUsername : null;
   const hasLolData = riotLinks.length > 0 || !!user.opggUrl;
   const derivedOpgg = new Set(riotLinks.map((l) => opggUrlForRiotId(l.externalHandle)));
   const hasCs2Data = !!steamLink;
@@ -183,6 +186,9 @@ export default async function PublicProfilePage({ params }: Props) {
         <h1 className="text-heading">{displayName}</h1>
         <p className="text-muted-foreground text-sm">@{user.username}</p>
         {user.pronouns ? <p className="text-muted-foreground text-sm">{user.pronouns}</p> : null}
+        {discordUsername ? (
+          <p className="text-muted-foreground text-sm">Discord: {discordUsername}</p>
+        ) : null}
       </header>
       <Separator />
       {user.bio ? <p className="text-base leading-relaxed">{user.bio}</p> : null}

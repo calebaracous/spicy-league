@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -11,6 +11,7 @@ import { accountLinks, riotStatSnapshots } from "@/db/schema/stats";
 import { signOut } from "@/auth";
 import { cookies } from "next/headers";
 import { requireOnboarded } from "@/lib/auth-helpers";
+import { DISCORD_USERNAME_HELP, normalizeDiscordUsername } from "@/lib/discord";
 import { opggUrlForRiotId } from "@/lib/opgg";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -33,6 +34,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   "refresh-rate-limited": "You can only refresh stats once per hour.",
   "name-required": "Display name cannot be empty.",
   "name-too-long": "Display name must be 50 characters or fewer.",
+  "discord-invalid": `That isn't a valid Discord username. ${DISCORD_USERNAME_HELP}.`,
+  "discord-taken": "That Discord username is already on another account.",
 };
 
 export default async function ProfilePage({ searchParams }: { searchParams: SearchParams }) {
@@ -109,6 +112,28 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
     redirect("/profile?saved=1");
   }
 
+  // Own form, like saveOpggUrl. Required for season signups, so it can be
+  // changed but not cleared.
+  async function saveDiscordUsername(formData: FormData) {
+    "use server";
+    const session = await requireOnboarded();
+    const discordUsername = normalizeDiscordUsername(formData.get("discordUsername")?.toString());
+    if (!discordUsername) redirect("/profile?error=discord-invalid");
+
+    const taken = await db.query.users.findFirst({
+      where: and(eq(users.discordUsername, discordUsername), ne(users.id, session.user.id)),
+      columns: { id: true },
+    });
+    if (taken) redirect("/profile?error=discord-taken");
+
+    await db
+      .update(users)
+      .set({ discordUsername, updatedAt: new Date() })
+      .where(eq(users.id, session.user.id));
+
+    redirect("/profile?saved=1");
+  }
+
   async function doSignOut() {
     "use server";
     await signOut();
@@ -142,6 +167,38 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
           <AlertDescription>{errorMessage}</AlertDescription>
         </Alert>
       ) : null}
+
+      {/* Discord: required for season signups, so it sits first and nags when missing */}
+      <Card style={user.discordUsername ? undefined : { borderColor: "var(--accent)" }}>
+        <CardHeader>
+          <CardTitle>Discord</CardTitle>
+          <CardDescription>
+            {user.discordUsername
+              ? "Admins and captains use this to reach you. Shown to signed-in players on your public page."
+              : "Add your Discord username. You need it to sign up for a season, and admins and captains use it to reach you."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form action={saveDiscordUsername} className="space-y-4">
+            <div className="space-y-1.5">
+              <Label htmlFor="discordUsername">Discord username</Label>
+              <Input
+                id="discordUsername"
+                name="discordUsername"
+                defaultValue={user.discordUsername ?? ""}
+                maxLength={33}
+                placeholder="spicy_boy"
+                autoComplete="off"
+                required
+              />
+              <p className="text-muted-foreground text-xs">{DISCORD_USERNAME_HELP}.</p>
+            </div>
+            <div className="flex justify-end">
+              <Button type="submit">Save</Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
 
       {/* Public profile */}
       <Card>

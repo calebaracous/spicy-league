@@ -68,7 +68,7 @@ test("season draft end to end", async ({ browser }) => {
     const page = await signedInPage(browser, P(20).username);
     // LoL signups need a linked Riot account: no form until there is one.
     await page.goto(`/seasons/${slug}/signup`);
-    await expect(page.getByText(/Link your Riot account before signing up/)).toBeVisible();
+    await expect(page.getByText(/A linked Riot account/)).toBeVisible();
     await expect(page.getByRole("button", { name: "Submit signup" })).toHaveCount(0);
     await seedRiotLink(20);
     await page.goto(`/seasons/${slug}/signup`);

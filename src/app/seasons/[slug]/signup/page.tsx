@@ -15,7 +15,7 @@ import { LocalTime } from "@/components/ui/local-time";
 import { Textarea } from "@/components/ui/textarea";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { GAME_LABELS, SIGNUP_QUANDARY, openSignupKind } from "@/lib/seasons";
-import { hasRiotLink } from "@/lib/riot-links";
+import { missingSignupRequirements } from "@/lib/signup-gate";
 import { signInHref } from "@/lib/safe-redirect";
 
 export const generateMetadata = seasonPageMetadata("Sign up");
@@ -149,20 +149,32 @@ export default async function SignupPage({
     );
   }
 
-  if (isOpen && season.game === "lol" && !(await hasRiotLink(session.user.id))) {
+  const missing = isOpen
+    ? await missingSignupRequirements(session.user.id, season.game)
+    : { discord: false, riot: false };
+  if (missing.discord || missing.riot) {
     return (
       <div className="page flex-1 space-y-4 [--page-max:36rem]">
         <Link href={`/seasons/${slug}`} className="text-muted-foreground text-xs hover:underline">
           ← Back to season
         </Link>
         <Alert>
-          <AlertDescription>
-            Link your Riot account before signing up for {season.name}. Captains use your rank and
-            OP.GG to scout the draft.{" "}
-            <Link href="/profile" className="underline underline-offset-2">
-              Link it on your profile
-            </Link>
-            , then come back here.
+          <AlertDescription className="space-y-2">
+            <p>Before signing up for {season.name}, add these on your profile:</p>
+            <ul className="list-disc space-y-1 pl-5">
+              {missing.discord ? (
+                <li>Your Discord username, so admins and captains can reach you.</li>
+              ) : null}
+              {missing.riot ? (
+                <li>A linked Riot account. Captains use your rank and OP.GG to scout the draft.</li>
+              ) : null}
+            </ul>
+            <p>
+              <Link href="/profile" className="underline underline-offset-2">
+                Go to your profile
+              </Link>
+              , then come back here.
+            </p>
           </AlertDescription>
         </Alert>
       </div>

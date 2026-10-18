@@ -32,6 +32,7 @@ files are in git history before the squash commit):
 - `0006_signup_quandary.sql` — nullable `season_signups.quandary`.
 - `0007_group_bo2.sql` — `seasons.group_best_of` (int, default 1) and
   `tiebreaker` added to the `match_stage` enum.
+- `0008_discord_username.sql` — nullable, unique `users.discord_username`.
 
 **Why the baseline's `when` is old.** Drizzle's migrator applies a journal
 entry only if its `when` is greater than the newest `created_at` in
@@ -75,6 +76,11 @@ wiring in `src/lib/auth.ts`).
   - `bio`, `pronouns`, `opggUrl` — free-text profile fields. `opggUrl` is an
     optional *custom* link (e.g. a multi-search); every Riot link already gets
     a derived OP.GG link (`opggUrlForRiotId`, `src/lib/opgg.ts`).
+  - `discordUsername` text **unique**, nullable (migration
+    `0008_discord_username`) — stored normalized (lowercase, no `@`) by
+    `normalizeDiscordUsername` in `src/lib/discord.ts`, so the plain unique
+    constraint is effectively case-insensitive. Required at account signup
+    and for season signups; null on accounts made before it existed.
   - `bannedAt`, `banReason`, `banExpiresAt`, `bannedBy` — league ban
     (migration `0002_user_bans`). Active while `bannedAt` is set and
     `banExpiresAt` is null or in the future (`isBanActive` in
@@ -220,7 +226,7 @@ roster − approved `replacedUserId` + approved `subUserId`.
 
 ### `accountLinks`
 Unique on `(userId, provider, externalId)` (`account_links_user_provider_external_uniq`,
-since migration 0008). Provider is enum `account_provider`:
+since the pre-squash migration 0008). Provider is enum `account_provider`:
 `riot | steam | leetify`.
 
 - **Riot**: up to `MAX_RIOT_ACCOUNTS = 3` links per user

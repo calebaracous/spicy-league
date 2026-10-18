@@ -119,6 +119,12 @@ export const auth = betterAuth({
         defaultValue: null,
         input: false,
       },
+      discordUsername: {
+        type: "string",
+        required: false,
+        defaultValue: null,
+        input: false,
+      },
     },
   },
 

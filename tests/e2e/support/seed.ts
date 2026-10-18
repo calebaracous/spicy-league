@@ -42,7 +42,7 @@ export function seasonSlug(suffix: string) {
   return `${E2E_SLUG_PREFIX}${run().id}-${suffix}`;
 }
 
-/** Create the admin and PLAYER_COUNT players, verified, with the run password. */
+/** Create the admin and PLAYER_COUNT players, verified, with the run password and a Discord username. */
 export async function seedUsers(): Promise<void> {
   const hash = await hashPassword(run().password);
   const people = [
@@ -60,6 +60,8 @@ export async function seedUsers(): Promise<void> {
       emailVerified: true,
       username: p.username,
       name: p.name,
+      // Season signups need a Discord username. Usernames are unique per run.
+      discordUsername: p.username,
       role: p.role,
     });
     await db.insert(accounts).values({

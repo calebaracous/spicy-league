@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import { auth } from "@/lib/auth";
 import { db } from "@/db/client";
 import { users } from "@/db/schema/auth";
+import { DISCORD_USERNAME_HELP, normalizeDiscordUsername } from "@/lib/discord";
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9_-]{3,24}$/;
 
@@ -24,11 +25,21 @@ export async function registerUser(formData: FormData): Promise<{ error: string 
   }
   const username = rawUsername.toLowerCase();
 
+  const discordUsername = normalizeDiscordUsername(formData.get("discordUsername") as string);
+  if (!discordUsername)
+    return { error: `Enter a valid Discord username. ${DISCORD_USERNAME_HELP}.` };
+
   const existing = await db.query.users.findFirst({
     where: eq(users.username, username),
     columns: { id: true },
   });
   if (existing) return { error: "That username is already taken." };
+
+  const discordTaken = await db.query.users.findFirst({
+    where: eq(users.discordUsername, discordUsername),
+    columns: { id: true },
+  });
+  if (discordTaken) return { error: "That Discord username is already on another account." };
 
   const response = await auth.api.signUpEmail({
     body: { email, password, name: username },
@@ -41,7 +52,7 @@ export async function registerUser(formData: FormData): Promise<{ error: string 
 
   await db
     .update(users)
-    .set({ username, updatedAt: new Date() })
+    .set({ username, discordUsername, updatedAt: new Date() })
     .where(eq(users.id, response.user.id));
 
   redirect("/signin/check-email?type=verify");

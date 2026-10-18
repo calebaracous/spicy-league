@@ -89,6 +89,7 @@ export default async function AdminSignupsPage({
       quandary: seasonSignups.quandary,
       createdAt: seasonSignups.createdAt,
       username: users.username,
+      discordUsername: users.discordUsername,
       name: users.name,
       email: users.email,
     })
@@ -370,6 +371,9 @@ export default async function AdminSignupsPage({
                             ) : null}
                           </div>
                           <div className="text-muted-foreground text-xs">{s.email}</div>
+                          <div className="text-muted-foreground text-xs">
+                            {s.discordUsername ? `Discord: ${s.discordUsername}` : "No Discord"}
+                          </div>
                         </td>
                         <td className="py-2 pr-4 text-sm">
                           {formatPrefs(season.game, s.rolePrefs)}

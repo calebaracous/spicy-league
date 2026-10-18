@@ -33,6 +33,7 @@ export async function GET(_req: Request, { params }: { params: Params }) {
       username: users.username,
       name: users.name,
       email: users.email,
+      discordUsername: users.discordUsername,
       rolePrefs: seasonSignups.rolePrefs,
       notes: seasonSignups.notes,
       quandary: seasonSignups.quandary,
@@ -49,6 +50,7 @@ export async function GET(_req: Request, { params }: { params: Params }) {
     ? [
         "Display Name",
         "Email",
+        "Discord",
         "Type",
         "Primary Role",
         "Secondary Role",
@@ -56,7 +58,16 @@ export async function GET(_req: Request, { params }: { params: Params }) {
         "Quandary",
         "Signed Up",
       ]
-    : ["Display Name", "Email", "Type", "Map Preferences", "Notes", "Quandary", "Signed Up"];
+    : [
+        "Display Name",
+        "Email",
+        "Discord",
+        "Type",
+        "Map Preferences",
+        "Notes",
+        "Quandary",
+        "Signed Up",
+      ];
 
   const rows = signups.map((s) => {
     const prefs = s.rolePrefs as Record<string, unknown> | null;
@@ -65,6 +76,7 @@ export async function GET(_req: Request, { params }: { params: Params }) {
       return [
         escapeCell(displayName),
         escapeCell(s.email),
+        escapeCell(s.discordUsername),
         escapeCell(s.kind),
         escapeCell((prefs?.primaryRole as string) ?? ""),
         escapeCell((prefs?.secondaryRole as string) ?? ""),
@@ -76,6 +88,7 @@ export async function GET(_req: Request, { params }: { params: Params }) {
     return [
       escapeCell(displayName),
       escapeCell(s.email),
+      escapeCell(s.discordUsername),
       escapeCell(s.kind),
       escapeCell(((prefs?.mapPrefs as string[]) ?? []).join("; ")),
       escapeCell(s.notes),

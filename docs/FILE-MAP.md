@@ -67,8 +67,8 @@ Rendered by `src/app/page.tsx`:
 
 - `src/app/seasons/page.tsx` — list of non-draft seasons (active + past split).
 - `src/app/seasons/[slug]/page.tsx` — season detail. `StatusPanel` renders per-state CTA. Looks up champion from `matches` when complete.
-- `src/app/seasons/[slug]/signup/page.tsx` — signup form (LoL: roles, CS2: maps). LoL without a Riot link → "link your Riot account" notice instead of the form.
-- `src/app/seasons/[slug]/signup/actions.ts` — `submitSignup`. Validates state + window + one-per-user + Riot link (LoL) + required quandary answer.
+- `src/app/seasons/[slug]/signup/page.tsx` — signup form (LoL: roles, CS2: maps). Missing a Discord username or (LoL) a Riot link → a notice listing what to add on `/profile` instead of the form.
+- `src/app/seasons/[slug]/signup/actions.ts` — `submitSignup`. Validates state + window + one-per-user + Discord username + Riot link (LoL) + required quandary answer.
 - `src/app/seasons/[slug]/captains/page.tsx` — announced captain list (duos grouped on one line).
 - `src/app/seasons/[slug]/draft/page.tsx` — live draft viewer. Fetches initial snapshot, renders `<LiveBoard>`.
 - `src/app/seasons/[slug]/draft/live-board.tsx` — client component; SSE-subscribes to `/api/draft/[slug]/stream`; shows solo-queue rank per pool player (LoL).
@@ -111,12 +111,12 @@ Rendered by `src/app/page.tsx`:
 
 - `src/app/signin/page.tsx` + `_components/sign-in-form.tsx` — **username** + password sign-in with "remember me" checkbox. Client form calls `signInWithUsername`.
 - `src/app/signin/actions.ts` — `signInWithUsername`: looks up email by username, calls `auth.api.signInEmail`. Returns `{ error }` / `{ ok }`; maps `EMAIL_NOT_VERIFIED`.
-- `src/app/signup/page.tsx` + `_components/sign-up-form.tsx` — signup form. Captures email, username, password, confirm.
-- `src/app/signup/actions.ts` — `registerUser` server action. Validates username regex + uniqueness, calls `auth.api.signUpEmail`, writes `username` to DB, redirects to `/signin/check-email?type=verify`.
+- `src/app/signup/page.tsx` + `_components/sign-up-form.tsx` — signup form. Captures username, Discord username, email, password, confirm.
+- `src/app/signup/actions.ts` — `registerUser` server action. Validates username regex + uniqueness and the Discord username (format + uniqueness), calls `auth.api.signUpEmail`, writes `username` + `discordUsername` to DB, redirects to `/signin/check-email?type=verify`.
 - `src/app/signin/check-email/page.tsx` — "verify your email" confirmation page.
 - `src/app/forgot-password/page.tsx` + `_components/forgot-password-form.tsx` — trigger reset email.
 - `src/app/reset-password/page.tsx` + `_components/reset-password-form.tsx` — consume reset token.
-- `src/app/profile/page.tsx` — private profile + account-link UI. Contains inline `saveProfile` and `doSignOut` server actions and the `ERROR_MESSAGES` map.
+- `src/app/profile/page.tsx` — private profile + account-link UI. Contains inline `saveProfile`, `saveOpggUrl`, `saveDiscordUsername` (highlighted card while unset) and `doSignOut` server actions and the `ERROR_MESSAGES` map.
 - `src/app/profile/account-actions.ts` — `linkRiotAccount`, `unlinkRiotAccount` (by `linkId`), `linkCs2Account`, `unlinkCs2Account`, `manualRefreshStats` (rate-limited).
 - `src/app/profile/_components/link-forms.tsx` — client `RiotLinkForm` / `Cs2LinkForm` (`useActionState`, inline errors, input kept).
 - `src/app/profile/constants.ts` — `MAX_RIOT_ACCOUNTS = 3`.
@@ -157,7 +157,7 @@ Rendered by `src/app/page.tsx`:
 - `src/db/schema/stats.ts` — `accountLinks`, `riotStatSnapshots` (per account link), `leetifyStatSnapshots`.
 - `src/db/schema/ten-mans.ts` — `tenMans`, `tenManSignups`, `tenManVotes`, `tenManCaptains`, `tenManPicks`. `ten_man_state` enum.
 
-Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/0001_reconcile_live_schema.sql` (idempotent fix-up for DBs from the pre-squash history), `drizzle/0002_user_bans.sql` (ban columns), `drizzle/0003_match_substitutions.sql` (subs table), `drizzle/0004_sub_signups.sql` (signup kind), `drizzle/0005_season_schedule.sql` (schedule dates), `drizzle/0006_signup_quandary.sql` (signup answer), `drizzle/0007_group_bo2.sql` (group series length + tiebreaker stage), plus `drizzle/meta/`. See [DATA-MODEL.md](DATA-MODEL.md) → Migrations.
+Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/0001_reconcile_live_schema.sql` (idempotent fix-up for DBs from the pre-squash history), `drizzle/0002_user_bans.sql` (ban columns), `drizzle/0003_match_substitutions.sql` (subs table), `drizzle/0004_sub_signups.sql` (signup kind), `drizzle/0005_season_schedule.sql` (schedule dates), `drizzle/0006_signup_quandary.sql` (signup answer), `drizzle/0007_group_bo2.sql` (group series length + tiebreaker stage), `drizzle/0008_discord_username.sql` (Discord username), plus `drizzle/meta/`. See [DATA-MODEL.md](DATA-MODEL.md) → Migrations.
 
 ## Business logic (`src/lib`)
 
@@ -175,7 +175,9 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/backdrop-clips.ts` — home-row backdrop clip registry (`backdropClip(game, index)`, `otherGame`). Clips have `sources: []` until real footage lands.
 - `src/lib/live-season.ts` — `getLiveSeason`, `LIVE_STATE_COPY`, `liveSeasonHref`. Used by header pill + home hero.
 - `src/lib/ten-man.ts` — `PICK_ORDER_C1_C2`, `getActiveTenMan`, `getTenManSnapshot`, `getRecentTenMans`, `electCaptains`. See [TEN-MAN.md](TEN-MAN.md).
-- `src/lib/riot-links.ts` — `hasRiotLink(userId)`: the LoL season signup gate.
+- `src/lib/riot-links.ts` — `hasRiotLink(userId)`: whether a user has a linked Riot account.
+- `src/lib/signup-gate.ts` — `missingSignupRequirements(userId, game)`: the season signup gate (Discord username always, Riot link for LoL).
+- `src/lib/discord.ts` — pure `normalizeDiscordUsername` + `DISCORD_USERNAME_HELP`; shared by account signup and the profile form.
 - `src/lib/opgg.ts` — pure `opggUrlForRiotId(handle)`: NA OP.GG URL from a stored `gameName#tagLine`.
 - `src/lib/riot-api.ts` — Riot API client. `getAccountByRiotId`, `getRankEntries`, `getTopChampions`, `getChampionName` (Data Dragon).
 - `src/lib/stat-refresh.ts` — `refreshRiotStats(userId)` (all of a user's Riot links), `refreshAllRiotStats` (every Riot link); per-link delete-then-insert, 1200ms sleep between links.

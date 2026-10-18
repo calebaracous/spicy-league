@@ -36,14 +36,16 @@ type AppSession = {
 };
 ```
 
-The Better Auth user record also carries `bio`, `pronouns`, `opggUrl` (see
+The Better Auth user record also carries `bio`, `pronouns`, `opggUrl`,
+`discordUsername` (see
 `user.additionalFields` in `src/lib/auth.ts`), but those are **not** on the
 session payload — query the `users` table when you need them. `input: false`
 on `username` means clients cannot set it via Better Auth's auto-generated
 endpoints; we write it from our own signup server action (see
-`src/app/signup/actions.ts`). `bio`, `pronouns`, `opggUrl` are also
-`input: false` and mutated via the inline `saveProfile` action in
-`src/app/profile/page.tsx`.
+`src/app/signup/actions.ts`). `bio`, `pronouns`, `opggUrl`, `discordUsername` are also
+`input: false` and mutated via inline server actions in
+`src/app/profile/page.tsx` (`saveProfile`, `saveOpggUrl`,
+`saveDiscordUsername`).
 
 ## Username vs display name
 
@@ -109,17 +111,28 @@ See `submitSignup`, `submitPick`, `reportMatch`, and everything in
 
 ## Signup flow
 
-- User fills out `/signup` form with email, username, password, confirm password.
+- User fills out `/signup` form with username, Discord username, email,
+  password, confirm password.
 - `registerUser` server action in `src/app/signup/actions.ts`:
   1. Validates passwords match and meet length requirement.
   2. Validates `username` matches `[a-zA-Z0-9_-]{3,24}`, lowercases it.
-  3. Checks DB uniqueness against `users.username`.
-  4. Calls `auth.api.signUpEmail({ body: { email, password, name: username } })`
+  3. Normalizes the Discord username (`normalizeDiscordUsername`,
+     `src/lib/discord.ts`: trim, drop `@`, lowercase, 2–32 of `a-z0-9_.`, no
+     `..`) — required.
+  4. Checks DB uniqueness against `users.username` and `users.discordUsername`.
+  5. Calls `auth.api.signUpEmail({ body: { email, password, name: username } })`
      to create the Better Auth user (sets `name` = username as default display name).
-  5. Writes `username` to `users.username` via Drizzle.
-  6. Redirects to `/signin/check-email?type=verify`.
+  6. Writes `username` and `discordUsername` via Drizzle.
+  7. Redirects to `/signin/check-email?type=verify`.
 - Better Auth sends verification email via Resend on signup.
 - There is no `/onboarding` page — username is captured during signup.
+- Accounts created before the Discord field (October 2026) have
+  `discordUsername = null`. `/profile` shows a highlighted Discord card until
+  they add one, and season signups are blocked until they do
+  (`missingSignupRequirements`, see [SEASON-LIFECYCLE.md](SEASON-LIFECYCLE.md)).
+- Discord usernames are self-reported, not verified with Discord (no OAuth).
+  Visible to admins (signups page + CSV) and to signed-in visitors on
+  `/users/[username]`; never to signed-out visitors.
 
 ## Cookies + sessions
 

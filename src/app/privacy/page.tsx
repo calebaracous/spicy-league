@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="October 13, 2026">
+    <LegalPage title="Privacy Policy" updated="October 17, 2026">
       <p>
         This policy explains what personal data Spicy League collects when you use{" "}
         <a href="https://www.spicyleague.dev">www.spicyleague.dev</a> or interact with our Discord
@@ -35,6 +35,12 @@ export default function PrivacyPage() {
         </li>
         <li>
           <strong>Username and display name</strong>&nbsp;&mdash; both public.
+        </li>
+        <li>
+          <strong>Discord username</strong>&nbsp;&mdash; required to create an account and to sign
+          up for a season, so league admins and captains can reach you. It is shown to signed-in
+          players on your profile and to admins, never to signed-out visitors. We don&rsquo;t verify
+          it with Discord.
         </li>
         <li>
           <strong>Optional profile fields</strong>&nbsp;&mdash; bio, pronouns, and an OP.GG URL, all
