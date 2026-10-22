@@ -35,14 +35,17 @@ export function Hero({ liveHref, liveLabel, game }: HeroProps) {
           className="text-display animate-fade-up mb-8 delay-100"
           style={{ color: "var(--text)", maxWidth: "17ch" }}
         >
-          Gucci <span style={{ color: "var(--accent-text)" }}>Gang</span>
+          Spicy League Season 12:{" "}
+          <span className="block" style={{ color: "var(--accent-text)" }}>
+            League of Legends
+          </span>
         </h1>
 
         <p
           className="animate-fade-up mb-12 text-lg leading-relaxed delay-200 md:text-xl"
           style={{ color: "var(--muted)", maxWidth: "52ch" }}
         >
-          cashmoney
+          gucci gang cashmoney
         </p>
 
         <div className="animate-fade-up mb-20 flex flex-wrap items-center gap-4 delay-300">
