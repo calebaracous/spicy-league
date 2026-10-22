@@ -25,7 +25,7 @@ export function SignupSection({ season, signupCount, topPlayers }: SignupSection
   const signupHref = `/seasons/${season.slug}/signup`;
   const infoHref = `/seasons/${season.slug}`;
 
-  const sectionLabel = isLoL ? "TOP-RANKED SIGNUPS" : "SIGNUPS";
+  const sectionLabel = isLoL ? null : "SIGNUPS";
   const sectionHeading = isLoL ? (
     <>
       Highest-ranked <span style={{ color: "var(--accent-text)" }}>signups</span>
@@ -35,9 +35,7 @@ export function SignupSection({ season, signupCount, topPlayers }: SignupSection
       Registered <span style={{ color: "var(--accent-text)" }}>players</span>
     </>
   );
-  const sectionBody = isLoL
-    ? "Signed-up players with a linked Riot account, ordered by solo queue rank. Ranks refresh daily."
-    : "A random selection of players registered for this season.";
+  const sectionBody = isLoL ? null : "A random selection of players registered for this season.";
 
   return (
     <>
@@ -142,16 +140,18 @@ export function SignupSection({ season, signupCount, topPlayers }: SignupSection
       {topPlayers && topPlayers.length > 0 && (
         <TintedSection tint="subtle-warm" backdrop={backdropClip(season.game, 2)}>
           <Reveal className="mb-14 flex flex-col gap-4">
-            <SectionLabel>{sectionLabel}</SectionLabel>
+            {sectionLabel ? <SectionLabel>{sectionLabel}</SectionLabel> : null}
             <h2 className="text-heading" style={{ color: "var(--text)" }}>
               {sectionHeading}
             </h2>
-            <p
-              className="text-sm leading-relaxed"
-              style={{ color: "var(--muted)", maxWidth: "52ch" }}
-            >
-              {sectionBody}
-            </p>
+            {sectionBody ? (
+              <p
+                className="text-sm leading-relaxed"
+                style={{ color: "var(--muted)", maxWidth: "52ch" }}
+              >
+                {sectionBody}
+              </p>
+            ) : null}
           </Reveal>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
@@ -168,13 +168,15 @@ export function SignupSection({ season, signupCount, topPlayers }: SignupSection
       {!topPlayers && (
         <TintedSection tint="subtle-warm" backdrop={backdropClip(season.game, 2)}>
           <Reveal className="flex max-w-xl flex-col gap-4">
-            <SectionLabel>{sectionLabel}</SectionLabel>
+            {sectionLabel ? <SectionLabel>{sectionLabel}</SectionLabel> : null}
             <h2 className="text-heading" style={{ color: "var(--text)" }}>
               {sectionHeading}
             </h2>
-            <p className="text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
-              {sectionBody}
-            </p>
+            {sectionBody ? (
+              <p className="text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
+                {sectionBody}
+              </p>
+            ) : null}
           </Reveal>
         </TintedSection>
       )}
