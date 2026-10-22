@@ -3,8 +3,6 @@ import { SectionLabel } from "@/components/ui/section-label";
 import { VideoBackdrop } from "@/components/ui/video-backdrop";
 import { backdropClip, type BackdropGame } from "@/lib/backdrop-clips";
 
-const stats = ["11 seasons", "Captains-draft format", "LoL and CS2", "Community-run"];
-
 interface HeroProps {
   liveHref?: string;
   liveLabel?: string;
@@ -48,33 +46,13 @@ export function Hero({ liveHref, liveLabel, game }: HeroProps) {
           gucci gang cashmoney
         </p>
 
-        <div className="animate-fade-up mb-20 flex flex-wrap items-center gap-4 delay-300">
+        <div className="animate-fade-up flex flex-wrap items-center gap-4 delay-300">
           <LinkButton href={liveHref ?? "/seasons"} variant="primary">
             {liveHref ? "Current season" : "View seasons"}
           </LinkButton>
           <LinkButton href="/history" variant="ghost">
             Past seasons →
           </LinkButton>
-        </div>
-
-        <div
-          className="animate-fade-up flex flex-wrap items-center gap-y-3 pt-8 delay-400"
-          style={{ borderTop: "1px solid var(--border)" }}
-        >
-          {stats.map((stat, i) => (
-            <div key={stat} className="flex items-center">
-              {i > 0 ? (
-                <span
-                  className="mx-6 hidden h-4 w-px shrink-0 sm:block"
-                  style={{ backgroundColor: "var(--border)" }}
-                  aria-hidden="true"
-                />
-              ) : null}
-              <span className="pr-4 text-sm sm:pr-0" style={{ color: "var(--muted)" }}>
-                {stat}
-              </span>
-            </div>
-          ))}
         </div>
       </div>
     </section>
