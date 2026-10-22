@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, inArray } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -15,12 +15,14 @@ import { db } from "@/db/client";
 import { seasons } from "@/db/schema/seasons";
 import { seasonSignups, seasonCaptains } from "@/db/schema/seasons";
 import { users } from "@/db/schema/auth";
+import { accountLinks, riotStatSnapshots } from "@/db/schema/stats";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { LocalTime } from "@/components/ui/local-time";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { FlashToast } from "@/components/flash-toast";
+import { bestRankPerUser, formatRank } from "@/lib/rank";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { GAME_LABELS } from "@/lib/seasons";
 
@@ -90,6 +92,7 @@ export default async function AdminSignupsPage({
       createdAt: seasonSignups.createdAt,
       username: users.username,
       discordUsername: users.discordUsername,
+      discordUserId: users.discordUserId,
       name: users.name,
       email: users.email,
     })
@@ -97,6 +100,46 @@ export default async function AdminSignupsPage({
     .innerJoin(users, eq(seasonSignups.userId, users.id))
     .where(eq(seasonSignups.seasonId, season.id))
     .orderBy(asc(seasonSignups.createdAt));
+
+  // LoL: each player's Riot links and best solo rank across them. A link with
+  // no snapshot means the Riot API failed at link time; the daily cron fills it.
+  const signupUserIds = allSignups.map((s) => s.userId);
+  const isLol = season.game === "lol";
+  const [riotLinks, rankRows] =
+    isLol && signupUserIds.length > 0
+      ? await Promise.all([
+          db
+            .select({
+              id: accountLinks.id,
+              userId: accountLinks.userId,
+              handle: accountLinks.externalHandle,
+            })
+            .from(accountLinks)
+            .where(
+              and(eq(accountLinks.provider, "riot"), inArray(accountLinks.userId, signupUserIds)),
+            )
+            .orderBy(asc(accountLinks.linkedAt)),
+          db
+            .select({
+              userId: riotStatSnapshots.userId,
+              accountLinkId: riotStatSnapshots.accountLinkId,
+              tier: riotStatSnapshots.tier,
+              rankDivision: riotStatSnapshots.rankDivision,
+              lp: riotStatSnapshots.lp,
+            })
+            .from(riotStatSnapshots)
+            .where(
+              and(
+                eq(riotStatSnapshots.queue, "solo"),
+                inArray(riotStatSnapshots.userId, signupUserIds),
+              ),
+            ),
+        ])
+      : [[], []];
+  const bestRank = bestRankPerUser(rankRows);
+  const linkHandle = new Map(riotLinks.map((l) => [l.id, l.handle]));
+  const firstLinkByUser = new Map<string, (typeof riotLinks)[number]>();
+  for (const l of riotLinks) if (!firstLinkByUser.has(l.userId)) firstLinkByUser.set(l.userId, l);
 
   const captainRows = await db
     .select({
@@ -341,6 +384,9 @@ export default async function AdminSignupsPage({
                 <thead>
                   <tr className="text-muted-foreground border-b text-left text-xs">
                     <th className="pr-4 pb-2 font-medium">Player</th>
+                    <th className="pr-4 pb-2 font-medium">Signed up as</th>
+                    <th className="pr-4 pb-2 font-medium">Discord</th>
+                    {isLol ? <th className="pr-4 pb-2 font-medium">Rank</th> : null}
                     <th className="pr-4 pb-2 font-medium">
                       {season.game === "lol" ? "Roles" : "Maps"}
                     </th>
@@ -354,6 +400,11 @@ export default async function AdminSignupsPage({
                   {filteredSignups.map((s) => {
                     const isCaptain = captainUserIds.has(s.userId);
                     const isSub = s.kind === "sub";
+                    const rank = bestRank.get(s.userId);
+                    const rankHandle = rank
+                      ? linkHandle.get(rank.accountLinkId)
+                      : firstLinkByUser.get(s.userId)?.handle;
+                    const hasRiot = firstLinkByUser.has(s.userId);
                     return (
                       <tr key={s.id} className="hover:bg-muted/50">
                         <td className="py-2 pr-4">
@@ -364,17 +415,48 @@ export default async function AdminSignupsPage({
                                 Captain
                               </Badge>
                             ) : null}
-                            {isSub ? (
-                              <Badge variant="outline" className="text-xs">
-                                Sub
-                              </Badge>
-                            ) : null}
                           </div>
                           <div className="text-muted-foreground text-xs">{s.email}</div>
-                          <div className="text-muted-foreground text-xs">
-                            {s.discordUsername ? `Discord: ${s.discordUsername}` : "No Discord"}
-                          </div>
                         </td>
+                        <td className="py-2 pr-4 text-xs whitespace-nowrap">
+                          {isSub ? (
+                            <Badge variant="outline" className="text-xs">
+                              Sub only
+                            </Badge>
+                          ) : (
+                            <span className="text-sm">Draft pool</span>
+                          )}
+                        </td>
+                        <td className="py-2 pr-4 text-xs">
+                          {s.discordUsername ? (
+                            <>
+                              <div className="text-sm">{s.discordUsername}</div>
+                              <div className="text-muted-foreground font-mono">
+                                {s.discordUserId ?? "Not matched yet"}
+                              </div>
+                            </>
+                          ) : (
+                            <span className="text-destructive">No Discord account linked</span>
+                          )}
+                        </td>
+                        {isLol ? (
+                          <td className="py-2 pr-4 text-xs whitespace-nowrap">
+                            {!hasRiot ? (
+                              <span className="text-destructive">No Riot account linked</span>
+                            ) : (
+                              <>
+                                <div className="text-sm">
+                                  {rank
+                                    ? formatRank(rank.tier, rank.rankDivision, rank.lp)
+                                    : "Not fetched yet"}
+                                </div>
+                                {rankHandle ? (
+                                  <div className="text-muted-foreground">{rankHandle}</div>
+                                ) : null}
+                              </>
+                            )}
+                          </td>
+                        ) : null}
                         <td className="py-2 pr-4 text-sm">
                           {formatPrefs(season.game, s.rolePrefs)}
                         </td>
