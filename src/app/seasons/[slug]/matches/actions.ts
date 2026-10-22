@@ -12,6 +12,7 @@ import { BO2_RESULTS, hasResult, type Bo2Result } from "@/lib/match-format";
 import { ensureMatchThreads, notifyMatchEvent } from "@/lib/discord-notify";
 import { syncChampionRole } from "@/lib/discord-ping-roles";
 import { mergeReports, syncInBackground } from "@/lib/discord-roles";
+import { logEvent, matchEventData } from "@/lib/events";
 import { getTeamForCaptain } from "@/lib/schedule";
 
 async function getSeasonOrFail(slug: string) {
@@ -125,6 +126,14 @@ export async function reportMatch(slug: string, matchId: string, formData: FormD
       reportedAt: new Date(),
     })
     .where(eq(matches.id, matchId));
+  await logEvent("match.reported", {
+    actorId: session.user.id,
+    seasonId: season.id,
+    data: {
+      ...(await matchEventData(matchId)),
+      score: homeScore !== null && awayScore !== null ? `${homeScore}–${awayScore}` : null,
+    },
+  });
   syncInBackground(`${slug} result reported`, () =>
     notifyMatchEvent(matchId, "reported", reportingTeamId),
   );
@@ -135,7 +144,7 @@ export async function reportMatch(slug: string, matchId: string, formData: FormD
 }
 
 export async function confirmMatch(slug: string, matchId: string) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const season = await getSeasonOrFail(slug);
 
   // Fetch match before update so we know its stage
@@ -150,6 +159,11 @@ export async function confirmMatch(slug: string, matchId: string) {
     .update(matches)
     .set({ state: "confirmed", confirmedAt: new Date() })
     .where(eq(matches.id, matchId));
+  await logEvent("match.confirmed", {
+    actorId: session.user.id,
+    seasonId: season.id,
+    data: await matchEventData(matchId),
+  });
 
   if (match.stage === "semis") {
     // Check if both semis are now confirmed — if so, create the final
@@ -201,7 +215,7 @@ export async function confirmMatch(slug: string, matchId: string) {
 }
 
 export async function disputeMatch(slug: string, matchId: string) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const season = await getSeasonOrFail(slug);
 
   await db
@@ -209,6 +223,11 @@ export async function disputeMatch(slug: string, matchId: string) {
     .set({ state: "disputed", winnerTeamId: null, homeScore: null, awayScore: null })
     .where(and(eq(matches.id, matchId), eq(matches.seasonId, season.id)));
   await clearChampionIfFinal(season.id, matchId);
+  await logEvent("match.disputed", {
+    actorId: session.user.id,
+    seasonId: season.id,
+    data: await matchEventData(matchId),
+  });
   syncInBackground(`${slug} result disputed`, () => notifyMatchEvent(matchId, "disputed"));
 
   revalidatePath(`/seasons/${slug}/matches/${matchId}`);
@@ -217,7 +236,7 @@ export async function disputeMatch(slug: string, matchId: string) {
 }
 
 export async function resetMatch(slug: string, matchId: string) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const season = await getSeasonOrFail(slug);
 
   await db
@@ -233,6 +252,11 @@ export async function resetMatch(slug: string, matchId: string) {
     })
     .where(and(eq(matches.id, matchId), eq(matches.seasonId, season.id)));
   await clearChampionIfFinal(season.id, matchId);
+  await logEvent("match.reset", {
+    actorId: session.user.id,
+    seasonId: season.id,
+    data: await matchEventData(matchId),
+  });
   syncInBackground(`${slug} result reset`, () => notifyMatchEvent(matchId, "reset"));
 
   revalidatePath(`/seasons/${slug}/matches/${matchId}`);

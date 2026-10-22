@@ -29,6 +29,9 @@ export const users = pgTable("users", {
   banReason: text("ban_reason"),
   banExpiresAt: timestamp("ban_expires_at", { mode: "date" }),
   bannedBy: text("banned_by"),
+  // Admins only: events after this are "new" in the /admin/events inbox.
+  // Set by "Mark all as read"; null means everything is unread.
+  eventsSeenAt: timestamp("events_seen_at", { mode: "date" }),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });

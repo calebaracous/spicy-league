@@ -68,7 +68,7 @@ src/
     rate-limit.ts       # Upstash sliding-window limiter (optional).
     env.ts              # Zod-validated env via @t3-oss/env-nextjs.
     utils.ts            # cn() — clsx + tailwind-merge.
-drizzle/                # Migrations: squashed 0000_baseline, then 0001–0011 in order. See DATA-MODEL.md.
+drizzle/                # Migrations: squashed 0000_baseline, then 0001–0012 in order. See DATA-MODEL.md.
 scripts/                # Dev + one-off scripts (test-season seeder, e2e cleanup, Season 12 setup, Discord command registration).
 tests/                  # unit/ (Vitest) and e2e/ (Playwright). See TESTING.md.
 docs/                   # You are here. docs/design/ holds design handoffs (not source of truth).
@@ -209,6 +209,9 @@ Admin (requires `role === "admin"`):
   10-man), active seasons with signup counts, newest accounts, latest season
   signups, then all seasons. Data from `getAdminOverview()`
   (`src/lib/admin-overview.ts`).
+- `/admin/events` — events inbox: everything that happens on the site,
+  filterable, with per-admin unread / mark all as read. See
+  [EVENTS.md](EVENTS.md).
 - `/admin/users` — player search + filters (banned / unverified / admins),
   ban (reason + 1/7/30 days or permanent) and unban
 - `/admin/seasons/new` — create season

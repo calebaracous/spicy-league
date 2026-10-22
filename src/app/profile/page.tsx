@@ -25,6 +25,8 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { FlashToast } from "@/components/flash-toast";
 import { cn } from "@/lib/utils";
+import { diffFields } from "@/lib/event-format";
+import { logEvent } from "@/lib/events";
 
 export const metadata = { title: "Your profile" };
 
@@ -79,10 +81,18 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
     if (!nameRaw) redirect("/profile?error=name-required");
     if (nameRaw.length > 50) redirect("/profile?error=name-too-long");
 
+    const before = await db.query.users.findFirst({
+      where: eq(users.id, session.user.id),
+      columns: { name: true, bio: true, pronouns: true },
+    });
     await db
       .update(users)
       .set({ name: nameRaw, bio, pronouns, updatedAt: new Date() })
       .where(eq(users.id, session.user.id));
+    const changes = diffFields(before ?? {}, { name: nameRaw, bio, pronouns });
+    if (Object.keys(changes).length) {
+      await logEvent("profile.updated", { actorId: session.user.id, data: { changes } });
+    }
 
     redirect("/profile?saved=1");
   }
@@ -106,10 +116,18 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
       if (host !== "op.gg" && !host.endsWith(".op.gg")) redirect("/profile?error=opgg-host");
     }
 
+    const before = await db.query.users.findFirst({
+      where: eq(users.id, session.user.id),
+      columns: { opggUrl: true },
+    });
     await db
       .update(users)
       .set({ opggUrl: opggUrlRaw, updatedAt: new Date() })
       .where(eq(users.id, session.user.id));
+    const changes = diffFields(before ?? {}, { opggUrl: opggUrlRaw });
+    if (Object.keys(changes).length) {
+      await logEvent("profile.opgg_updated", { actorId: session.user.id, data: { changes } });
+    }
 
     redirect("/profile?saved=1");
   }
@@ -142,6 +160,12 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
         updatedAt: new Date(),
       })
       .where(eq(users.id, session.user.id));
+    if (current?.discordUsername !== discordUsername) {
+      await logEvent("profile.discord_updated", {
+        actorId: session.user.id,
+        data: { changes: { discordUsername: [current?.discordUsername ?? null, discordUsername] } },
+      });
+    }
 
     redirect("/profile?saved=1");
   }
@@ -155,6 +179,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
       .update(users)
       .set({ tenManPings: on, updatedAt: new Date() })
       .where(eq(users.id, session.user.id));
+    await logEvent("profile.ten_man_pings", { actorId: session.user.id, data: { enabled: on } });
     syncInBackground("10-man role", () => setTenManRole(session.user.id, on));
     redirect("/profile?saved=1");
   }

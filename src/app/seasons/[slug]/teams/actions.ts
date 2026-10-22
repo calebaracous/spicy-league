@@ -9,6 +9,7 @@ import { teams } from "@/db/schema/drafts";
 import { seasons } from "@/db/schema/seasons";
 import { requireOnboarded } from "@/lib/auth-helpers";
 import { renameTeamInDiscord, syncInBackground } from "@/lib/discord-roles";
+import { logEvent } from "@/lib/events";
 import { getCaptainedTeamId } from "@/lib/schedule";
 import { normalizeTeamName } from "@/lib/team-name";
 
@@ -53,6 +54,11 @@ export async function renameTeam(slug: string, teamId: string, formData: FormDat
   if (clash) redirect(`${back}?error=name-taken`);
 
   await db.update(teams).set({ name }).where(eq(teams.id, team.id));
+  await logEvent("team.renamed", {
+    actorId: session.user.id,
+    seasonId: season.id,
+    data: { from: team.name, to: name },
+  });
   syncInBackground(`${slug} team rename`, () => renameTeamInDiscord(team.id));
 
   // Team names show up all over the season and on the home page.

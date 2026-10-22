@@ -5,12 +5,14 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db/client";
+import { users } from "@/db/schema/auth";
 import { drafts } from "@/db/schema/drafts";
 import { seasons } from "@/db/schema/seasons";
 import { seasonSignups, seasonCaptains } from "@/db/schema/seasons";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { updateSignupRolesForUser } from "@/lib/discord-ping-roles";
 import { syncInBackground } from "@/lib/discord-roles";
+import { logEvent } from "@/lib/events";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -58,7 +60,7 @@ function revalidateCaptains(slug: string) {
 }
 
 export async function promoteCaptain(slug: string, signupId: string) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const season = await loadEditableSeason(slug);
 
   const signup = await db.query.seasonSignups.findFirst({
@@ -82,6 +84,11 @@ export async function promoteCaptain(slug: string, signupId: string) {
     userId: signup.userId,
     captainOrder: (maxOrder ?? 0) + 1,
   });
+  await logEvent("captain.promoted", {
+    actorId: session.user.id,
+    subjectUserId: signup.userId,
+    seasonId: season.id,
+  });
 
   revalidateCaptains(slug);
   redirect(`/admin/seasons/${slug}/signups?saved=1`);
@@ -96,7 +103,7 @@ const REMOVABLE_STATES = ["signups_open", "signups_closed", "captains_selected"]
  * teams exist, removal would break rosters and the schedule, so it's refused.
  */
 export async function removeSignup(slug: string, signupId: string) {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const season = await db.query.seasons.findFirst({ where: eq(seasons.slug, slug) });
   if (!season) redirect("/admin?error=not-found");
@@ -126,6 +133,12 @@ export async function removeSignup(slug: string, signupId: string) {
     await tx.delete(seasonSignups).where(eq(seasonSignups.id, signup.id));
     await renumberCaptains(tx, season.id);
   });
+  await logEvent("signup.removed", {
+    actorId: session.user.id,
+    subjectUserId: signup.userId,
+    seasonId: season.id,
+    data: { kind: signup.kind },
+  });
   syncInBackground(`${slug} signup roles`, () =>
     updateSignupRolesForUser(season.id, signup.userId),
   );
@@ -139,15 +152,24 @@ export async function removeSignup(slug: string, signupId: string) {
 
 /** Drop a captain. Their duo partner (if any) stays on as a solo captain. */
 export async function demoteCaptain(slug: string, captainId: string) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const season = await loadEditableSeason(slug);
 
-  await db.transaction(async (tx) => {
-    await tx
+  const removed = await db.transaction(async (tx) => {
+    const [row] = await tx
       .delete(seasonCaptains)
-      .where(and(eq(seasonCaptains.id, captainId), eq(seasonCaptains.seasonId, season.id)));
+      .where(and(eq(seasonCaptains.id, captainId), eq(seasonCaptains.seasonId, season.id)))
+      .returning({ userId: seasonCaptains.userId });
     await renumberCaptains(tx, season.id);
+    return row;
   });
+  if (removed) {
+    await logEvent("captain.demoted", {
+      actorId: session.user.id,
+      subjectUserId: removed.userId,
+      seasonId: season.id,
+    });
+  }
 
   revalidateCaptains(slug);
   redirect(`/admin/seasons/${slug}/signups?saved=1`);
@@ -155,7 +177,7 @@ export async function demoteCaptain(slug: string, captainId: string) {
 
 /** Move a whole team (one captain or a duo) one place up or down the order. */
 export async function moveCaptain(slug: string, captainOrder: number, direction: "up" | "down") {
-  await requireAdmin();
+  const session = await requireAdmin();
   const season = await loadEditableSeason(slug);
 
   const ordered = await db.query.seasonCaptains.findMany({
@@ -181,6 +203,12 @@ export async function moveCaptain(slug: string, captainOrder: number, direction:
     await tx.update(seasonCaptains).set({ captainOrder: a }).where(at(b));
     await tx.update(seasonCaptains).set({ captainOrder: b }).where(at(-1));
   });
+  await logEvent("captain.moved", {
+    actorId: session.user.id,
+    subjectUserId: ordered.find((c) => c.captainOrder === a)?.userId,
+    seasonId: season.id,
+    data: { order: a, direction },
+  });
 
   revalidateCaptains(slug);
   redirect(`/admin/seasons/${slug}/signups?saved=1`);
@@ -192,7 +220,7 @@ export async function moveCaptain(slug: string, captainOrder: number, direction:
  * team's primary captain; either can draft.
  */
 export async function pairCaptain(slug: string, captainId: string, formData: FormData) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const season = await loadEditableSeason(slug);
   const partnerId = formData.get("partnerId");
 
@@ -216,6 +244,16 @@ export async function pairCaptain(slug: string, captainId: string, formData: For
       .where(eq(seasonCaptains.id, partner.id));
     await renumberCaptains(tx, season.id);
   });
+  const partnerUser = await db.query.users.findFirst({
+    where: eq(users.id, partner.userId),
+    columns: { name: true, username: true },
+  });
+  await logEvent("captain.paired", {
+    actorId: session.user.id,
+    subjectUserId: captain.userId,
+    seasonId: season.id,
+    data: { partner: partnerUser?.name ?? partnerUser?.username ?? null },
+  });
 
   revalidateCaptains(slug);
   redirect(`/admin/seasons/${slug}/signups?saved=paired`);
@@ -223,7 +261,7 @@ export async function pairCaptain(slug: string, captainId: string, formData: For
 
 /** Split a duo: this captain becomes their own team at the end of the order. */
 export async function splitCaptain(slug: string, captainId: string) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const season = await loadEditableSeason(slug);
 
   const [{ maxOrder }] = await db
@@ -231,13 +269,22 @@ export async function splitCaptain(slug: string, captainId: string) {
     .from(seasonCaptains)
     .where(eq(seasonCaptains.seasonId, season.id));
 
-  await db.transaction(async (tx) => {
-    await tx
+  const split = await db.transaction(async (tx) => {
+    const [row] = await tx
       .update(seasonCaptains)
       .set({ captainOrder: (maxOrder ?? 0) + 1 })
-      .where(and(eq(seasonCaptains.id, captainId), eq(seasonCaptains.seasonId, season.id)));
+      .where(and(eq(seasonCaptains.id, captainId), eq(seasonCaptains.seasonId, season.id)))
+      .returning({ userId: seasonCaptains.userId });
     await renumberCaptains(tx, season.id);
+    return row;
   });
+  if (split) {
+    await logEvent("captain.split", {
+      actorId: session.user.id,
+      subjectUserId: split.userId,
+      seasonId: season.id,
+    });
+  }
 
   revalidateCaptains(slug);
   redirect(`/admin/seasons/${slug}/signups?saved=1`);

@@ -10,6 +10,7 @@ import { seasons } from "@/db/schema/seasons";
 import { requireAdmin, requireOnboarded } from "@/lib/auth-helpers";
 import { notifySubDecision, pingSubList } from "@/lib/discord-notify";
 import { syncInBackground } from "@/lib/discord-roles";
+import { logEvent, matchEventData } from "@/lib/events";
 import { checkRateLimit, rateLimits } from "@/lib/rate-limit";
 import { getCaptainedTeamId } from "@/lib/schedule";
 import { checkSubEligibility } from "@/lib/substitutions";
@@ -116,6 +117,12 @@ export async function requestSub(slug: string, matchId: string, formData: FormDa
   } else {
     await db.insert(matchSubstitutions).values({ ...values, matchId, subUserId });
   }
+  await logEvent("sub.requested", {
+    actorId: session.user.id,
+    subjectUserId: subUserId,
+    seasonId: season.id,
+    data: { ...(await matchEventData(matchId)), reason },
+  });
 
   revalidateMatch(slug, matchId);
   redirect(`${here}?saved=sub-requested`);
@@ -139,6 +146,12 @@ export async function withdrawSub(slug: string, matchId: string, subId: string) 
     .update(matchSubstitutions)
     .set({ status: "withdrawn", decidedBy: session.user.id, decidedAt: new Date() })
     .where(eq(matchSubstitutions.id, subId));
+  await logEvent("sub.withdrawn", {
+    actorId: session.user.id,
+    subjectUserId: sub.subUserId,
+    seasonId: season.id,
+    data: await matchEventData(matchId),
+  });
 
   revalidateMatch(slug, matchId);
   redirect(`${here}?saved=sub-withdrawn`);
@@ -147,7 +160,7 @@ export async function withdrawSub(slug: string, matchId: string, subId: string) 
 /** Admin: approve / reject a pending request, or revoke an approved one. */
 export async function decideSub(slug: string, matchId: string, subId: string, formData: FormData) {
   const session = await requireAdmin();
-  const { match } = await load(slug, matchId);
+  const { season, match } = await load(slug, matchId);
   const fallback = `/seasons/${slug}/matches/${matchId}`;
   const back = formData.get("back");
   const decision = formData.get("decision")?.toString();
@@ -156,6 +169,13 @@ export async function decideSub(slug: string, matchId: string, subId: string, fo
     where: and(eq(matchSubstitutions.id, subId), eq(matchSubstitutions.matchId, matchId)),
   });
   if (!sub) redirect(backTo(back, slug, fallback, "error=sub-not-found"));
+  const logDecision = async (d: "approve" | "reject" | "revoke") =>
+    logEvent("sub.decided", {
+      actorId: session.user.id,
+      subjectUserId: sub.subUserId,
+      seasonId: season.id,
+      data: { ...(await matchEventData(matchId)), decision: d },
+    });
 
   if (decision === "approve" || decision === "reject") {
     if (sub.status !== "pending") redirect(backTo(back, slug, fallback, "error=not-pending"));
@@ -178,6 +198,7 @@ export async function decideSub(slug: string, matchId: string, subId: string, fo
         decidedAt: new Date(),
       })
       .where(eq(matchSubstitutions.id, subId));
+    await logDecision(decision);
     syncInBackground(`${slug} sub ${decision}`, () =>
       notifySubDecision(subId, decision === "approve" ? "approved" : "rejected"),
     );
@@ -192,6 +213,7 @@ export async function decideSub(slug: string, matchId: string, subId: string, fo
       .update(matchSubstitutions)
       .set({ status: "withdrawn", decidedBy: session.user.id, decidedAt: new Date() })
       .where(eq(matchSubstitutions.id, subId));
+    await logDecision("revoke");
     syncInBackground(`${slug} sub revoked`, () => notifySubDecision(subId, "revoked"));
     revalidateMatch(slug, matchId);
     redirect(backTo(back, slug, fallback, "saved=sub-revoked"));
@@ -225,5 +247,10 @@ export async function pingSubListAction(slug: string, matchId: string, formData:
   const failed = await pingSubList(matchId, teamId);
   if (failed)
     redirect(`${here}?error=${failed === "no-discord" ? "ping-unavailable" : "ping-failed"}`);
+  await logEvent("sub.pinged", {
+    actorId: session.user.id,
+    seasonId: season.id,
+    data: await matchEventData(matchId),
+  });
   redirect(`${here}?saved=sub-pinged`);
 }

@@ -10,10 +10,11 @@ import { seasons } from "@/db/schema/seasons";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { ensureMatchThreads, postTeamSchedules } from "@/lib/discord-notify";
 import { mergeReports, syncInBackground } from "@/lib/discord-roles";
+import { logEvent } from "@/lib/events";
 import { createTiebreakers, generateSchedule, seedPlayoffs } from "@/lib/schedule";
 
 export async function generateMatchSchedule(slug: string) {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const season = await db.query.seasons.findFirst({ where: eq(seasons.slug, slug) });
   if (!season) redirect("/admin?error=not-found");
@@ -22,6 +23,11 @@ export async function generateMatchSchedule(slug: string) {
   if (created === 0) {
     redirect(`/admin/seasons/${slug}/matches?error=already-generated`);
   }
+  await logEvent("schedule.generated", {
+    actorId: session.user.id,
+    seasonId: season.id,
+    data: { count: created },
+  });
 
   // Discord: a thread per match, then each team's fixtures (linking the threads).
   syncInBackground(`${slug} schedule`, async () =>
@@ -35,7 +41,7 @@ export async function generateMatchSchedule(slug: string) {
 }
 
 export async function seedPlayoffsAction(slug: string) {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const season = await db.query.seasons.findFirst({ where: eq(seasons.slug, slug) });
   if (!season) redirect("/admin?error=not-found");
@@ -57,6 +63,7 @@ export async function seedPlayoffsAction(slug: string) {
   if (created === 0) {
     redirect(`/admin/seasons/${slug}/matches?error=playoffs-already-seeded`);
   }
+  await logEvent("playoffs.seeded", { actorId: session.user.id, seasonId: season.id });
 
   // Seeding from the group stage moves the season on, so admins don't have to
   // flip the state first (the card used to be hidden until they did).
@@ -78,7 +85,7 @@ export async function seedPlayoffsAction(slug: string) {
 }
 
 export async function createTiebreakersAction(slug: string) {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const season = await db.query.seasons.findFirst({ where: eq(seasons.slug, slug) });
   if (!season) redirect("/admin?error=not-found");
@@ -102,6 +109,11 @@ export async function createTiebreakersAction(slug: string) {
 
   const created = await createTiebreakers(season.id);
   if (created === 0) redirect(`/admin/seasons/${slug}/matches?error=no-tiebreaker-needed`);
+  await logEvent("tiebreakers.created", {
+    actorId: session.user.id,
+    seasonId: season.id,
+    data: { count: created },
+  });
 
   syncInBackground(`${slug} tiebreaker threads`, () => ensureMatchThreads(season.id));
 

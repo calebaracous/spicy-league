@@ -11,6 +11,7 @@ import { requireAdmin, requireOnboarded } from "@/lib/auth-helpers";
 import { syncSignupRoles } from "@/lib/discord-ping-roles";
 import { mergeReports, syncInBackground, syncTeamRoles } from "@/lib/discord-roles";
 import { finalizeDraft, loadCaptainTeams, teamForPick, totalPicks } from "@/lib/draft";
+import { logEvent } from "@/lib/events";
 
 async function getSeasonOrFail(slug: string) {
   const season = await db.query.seasons.findFirst({ where: eq(seasons.slug, slug) });
@@ -19,7 +20,7 @@ async function getSeasonOrFail(slug: string) {
 }
 
 export async function startDraft(slug: string) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const season = await getSeasonOrFail(slug);
 
   const captainTeams = await loadCaptainTeams(season.id);
@@ -62,6 +63,7 @@ export async function startDraft(slug: string) {
       .set({ state: "drafting", updatedAt: new Date() })
       .where(eq(seasons.id, season.id));
   }
+  await logEvent("draft.started", { actorId: session.user.id, seasonId: season.id });
 
   revalidatePath(`/admin/seasons/${slug}/draft`);
   revalidatePath(`/seasons/${slug}/draft`);
@@ -70,12 +72,13 @@ export async function startDraft(slug: string) {
 }
 
 export async function pauseDraft(slug: string) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const season = await getSeasonOrFail(slug);
   await db
     .update(drafts)
     .set({ state: "paused" })
     .where(and(eq(drafts.seasonId, season.id), eq(drafts.state, "in_progress")));
+  await logEvent("draft.paused", { actorId: session.user.id, seasonId: season.id });
 
   revalidatePath(`/admin/seasons/${slug}/draft`);
   revalidatePath(`/seasons/${slug}/draft`);
@@ -83,12 +86,13 @@ export async function pauseDraft(slug: string) {
 }
 
 export async function resumeDraft(slug: string) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const season = await getSeasonOrFail(slug);
   await db
     .update(drafts)
     .set({ state: "in_progress" })
     .where(and(eq(drafts.seasonId, season.id), eq(drafts.state, "paused")));
+  await logEvent("draft.resumed", { actorId: session.user.id, seasonId: season.id });
 
   revalidatePath(`/admin/seasons/${slug}/draft`);
   revalidatePath(`/seasons/${slug}/draft`);
@@ -96,7 +100,7 @@ export async function resumeDraft(slug: string) {
 }
 
 export async function undoLastPick(slug: string) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const season = await getSeasonOrFail(slug);
   const draft = await db.query.drafts.findFirst({ where: eq(drafts.seasonId, season.id) });
   if (!draft) redirect(`/admin/seasons/${slug}/draft?error=no-draft`);
@@ -112,6 +116,12 @@ export async function undoLastPick(slug: string) {
   }
 
   await db.delete(draftPicks).where(eq(draftPicks.id, last[0].id));
+  await logEvent("draft.undo", {
+    actorId: session.user.id,
+    subjectUserId: last[0].pickedUserId,
+    seasonId: season.id,
+    data: { pickNumber: last[0].pickNumber },
+  });
 
   revalidatePath(`/admin/seasons/${slug}/draft`);
   revalidatePath(`/seasons/${slug}/draft`);
@@ -208,6 +218,12 @@ export async function submitPick(slug: string, pickedUserId: string, expectedPic
     lostRace = true;
   }
   if (lostRace) redirect(`/seasons/${slug}/draft?error=stale-pick`);
+  await logEvent("draft.pick", {
+    actorId: session.user.id,
+    subjectUserId: pickedUserId,
+    seasonId: season.id,
+    data: { pickNumber: nextPickNumber },
+  });
 
   if (nextPickNumber === total) {
     await finalizeDraft(draft.id);

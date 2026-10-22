@@ -7,6 +7,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/db/client";
 import { accountLinks, riotStatSnapshots } from "@/db/schema/stats";
 import { requireOnboarded } from "@/lib/auth-helpers";
+import { logEvent } from "@/lib/events";
 import { checkRateLimit, rateLimits } from "@/lib/rate-limit";
 import { getAccountByRiotId } from "@/lib/riot-api";
 import { refreshRiotStats } from "@/lib/stat-refresh";
@@ -61,6 +62,10 @@ export async function linkRiotAccount(
     .returning({ id: accountLinks.id });
 
   if (inserted) {
+    await logEvent("riot.linked", {
+      actorId: session.user.id,
+      data: { riotId: `${account.gameName}#${account.tagLine}` },
+    });
     await refreshRiotStats(session.user.id);
   }
 
@@ -76,9 +81,13 @@ export async function unlinkRiotAccount(formData: FormData) {
 
   // Snapshots cascade-delete via FK; this also confirms the link belongs to
   // the requesting user.
-  await db
+  const [removed] = await db
     .delete(accountLinks)
-    .where(and(eq(accountLinks.id, linkId), eq(accountLinks.userId, session.user.id)));
+    .where(and(eq(accountLinks.id, linkId), eq(accountLinks.userId, session.user.id)))
+    .returning({ handle: accountLinks.externalHandle });
+  if (removed) {
+    await logEvent("riot.unlinked", { actorId: session.user.id, data: { riotId: removed.handle } });
+  }
 
   // Defensive: clean up any orphan snapshots (shouldn't exist after cascade).
   await db
@@ -157,6 +166,7 @@ export async function linkCs2Account(
       });
     }
   }
+  await logEvent("cs2.linked", { actorId: session.user.id, data: { steamId } });
 
   revalidatePath("/profile");
   revalidatePath(`/users/${session.user.username}`);
@@ -171,6 +181,7 @@ export async function unlinkCs2Account() {
   await db
     .delete(accountLinks)
     .where(and(eq(accountLinks.userId, session.user.id), eq(accountLinks.provider, "leetify")));
+  await logEvent("cs2.unlinked", { actorId: session.user.id });
   revalidatePath("/profile");
   revalidatePath(`/users/${session.user.username}`);
   redirect("/profile?saved=1");

@@ -101,6 +101,9 @@ link shows a derived OP.GG link (`opggUrlForRiotId`, `src/lib/opgg.ts`) on
 - Auth: Bearer token check against `CRON_SECRET`. Vercel Cron sends this
   header automatically.
 - `maxDuration = 300` (5 minutes).
+- First prunes events older than 60 days (`pruneOldEvents`), and logs a
+  `stats.refreshed` event with the count afterwards. See
+  [EVENTS.md](EVENTS.md).
 
 Manual refresh UI: the "Refresh stats" button on `/profile` calls
 `manualRefreshStats` (in `src/app/profile/account-actions.ts`), which

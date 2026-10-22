@@ -13,6 +13,7 @@ import { requireOnboarded } from "@/lib/auth-helpers";
 import { getActiveBan } from "@/lib/bans";
 import { updateSignupRolesForUser } from "@/lib/discord-ping-roles";
 import { syncInBackground } from "@/lib/discord-roles";
+import { logEvent } from "@/lib/events";
 import { missingSignupRequirements } from "@/lib/signup-gate";
 import { openSignupKind, resolveSignupKind } from "@/lib/seasons";
 
@@ -91,6 +92,11 @@ export async function submitSignup(slug: string, formData: FormData) {
     quandary,
     kind,
   });
+  await logEvent("signup.created", {
+    actorId: session.user.id,
+    seasonId: season.id,
+    data: { kind },
+  });
 
   syncInBackground(`${slug} signup roles`, () =>
     updateSignupRolesForUser(season.id, session.user.id),
@@ -152,6 +158,7 @@ export async function leaveSubList(slug: string) {
       );
     await tx.delete(seasonSignups).where(eq(seasonSignups.id, signup.id));
   });
+  await logEvent("signup.left_subs", { actorId: session.user.id, seasonId: season.id });
   syncInBackground(`${slug} signup roles`, () =>
     updateSignupRolesForUser(season.id, session.user.id),
   );

@@ -14,6 +14,8 @@ import { syncCaptainRole, syncInBackground } from "@/lib/discord-roles";
 import { syncSeasonDiscord } from "@/lib/discord-sync";
 import { deleteOldTeamChannels, emailUnmatchedPlayers, syncNicknames } from "@/lib/discord-admin";
 import { canTransition, isValidSlug, SEASON_STATES } from "@/lib/seasons";
+import { diffFields, type EventType } from "@/lib/event-format";
+import { logEvent } from "@/lib/events";
 
 const gameSchema = z.enum(["lol", "cs2"]);
 
@@ -83,18 +85,29 @@ export async function createSeason(formData: FormData) {
     redirect("/admin/seasons/new?error=slug-taken");
   }
 
-  await db.insert(seasons).values({
-    ...parsed.data,
-    createdBy: session.user.id,
-  });
+  const [created] = await db
+    .insert(seasons)
+    .values({
+      ...parsed.data,
+      createdBy: session.user.id,
+    })
+    .returning({ id: seasons.id });
+  await logEvent("season.created", { actorId: session.user.id, seasonId: created?.id });
 
   revalidatePath("/admin");
   revalidatePath("/seasons");
   redirect(`/admin/seasons/${parsed.data.slug}`);
 }
 
+/** Dates compare by value in the event diff, as ISO strings. */
+function comparable(row: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    Object.entries(row).map(([k, v]) => [k, v instanceof Date ? v.toISOString() : v]),
+  );
+}
+
 export async function updateSeason(slug: string, formData: FormData) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const parsed = parseSeasonInput(formData);
   if (!parsed.success) {
     redirect(`/admin/seasons/${slug}?error=invalid`);
@@ -116,6 +129,19 @@ export async function updateSeason(slug: string, formData: FormData) {
     .update(seasons)
     .set({ ...parsed.data, updatedAt: new Date() })
     .where(eq(seasons.id, existing.id));
+  const after = comparable(parsed.data);
+  const before = comparable(existing);
+  const changes = diffFields(
+    Object.fromEntries(Object.keys(after).map((k) => [k, before[k]])),
+    after,
+  );
+  if (Object.keys(changes).length) {
+    await logEvent("season.updated", {
+      actorId: session.user.id,
+      seasonId: existing.id,
+      data: { changes },
+    });
+  }
 
   revalidatePath("/admin");
   revalidatePath("/seasons");
@@ -124,7 +150,7 @@ export async function updateSeason(slug: string, formData: FormData) {
 }
 
 export async function transitionSeasonState(slug: string, formData: FormData) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const to = formData.get("to");
   if (typeof to !== "string" || !SEASON_STATES.includes(to as SeasonState)) {
     redirect(`/admin/seasons/${slug}?error=invalid-state`);
@@ -142,6 +168,11 @@ export async function transitionSeasonState(slug: string, formData: FormData) {
     .update(seasons)
     .set({ state: nextState, updatedAt: new Date() })
     .where(eq(seasons.id, existing.id));
+  await logEvent("season.state_changed", {
+    actorId: session.user.id,
+    seasonId: existing.id,
+    data: { from: existing.state, to: nextState },
+  });
 
   // Captains are final: give them the Discord Captain role (after the response).
   if (nextState === "captains_selected") {
@@ -164,13 +195,22 @@ export async function transitionSeasonState(slug: string, formData: FormData) {
  * error's text. Unmatched people are listed on the page from the DB.
  */
 export async function syncDiscordRoles(slug: string) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const season = await db.query.seasons.findFirst({ where: eq(seasons.slug, slug) });
   if (!season) redirect("/admin?error=not-found");
   if (!discordConfig()) redirect(`/admin/seasons/${slug}?error=discord-not-configured`);
 
   const report = await syncSeasonDiscord(season.id);
   if (report.errors.length) console.error("[discord] manual sync", JSON.stringify(report));
+  await logEvent("discord.synced", {
+    actorId: session.user.id,
+    seasonId: season.id,
+    data: {
+      assigned: report.assigned,
+      unmatched: report.unmatched.length,
+      errors: report.errors.length,
+    },
+  });
 
   const params = new URLSearchParams({
     discord: `${report.assigned}.${report.unmatched.length}.${report.errors.length}`,
@@ -181,19 +221,24 @@ export async function syncDiscordRoles(slug: string) {
 }
 
 /** Shared shell for the admin Discord tools: auth, season, a one-line result. */
-async function discordTool(slug: string, run: (seasonId: string) => Promise<string>) {
-  await requireAdmin();
+async function discordTool(
+  slug: string,
+  type: EventType,
+  run: (seasonId: string) => Promise<string>,
+) {
+  const session = await requireAdmin();
   const season = await db.query.seasons.findFirst({ where: eq(seasons.slug, slug) });
   if (!season) redirect("/admin?error=not-found");
   if (!discordConfig()) redirect(`/admin/seasons/${slug}?error=discord-not-configured`);
   const note = await run(season.id);
+  await logEvent(type, { actorId: session.user.id, seasonId: season.id, data: { note } });
   revalidatePath(`/admin/seasons/${slug}`);
   redirect(`/admin/seasons/${slug}?${new URLSearchParams({ discordNote: note.slice(0, 300) })}`);
 }
 
 /** Sets everyone's server nickname to their site display name. */
 export async function setDiscordNicknames(slug: string) {
-  await discordTool(slug, async (seasonId) => {
+  await discordTool(slug, "discord.nicknames", async (seasonId) => {
     const r = await syncNicknames(seasonId);
     if (r.errors.length) console.error("[discord] nicknames", JSON.stringify(r));
     return `Nicknames set for ${r.renamed} player${r.renamed === 1 ? "" : "s"}${r.unmatched.length ? `, ${r.unmatched.length} not matched` : ""}${r.errors.length ? `. ${r.errors.length} failed, e.g. ${r.errors[0]}` : "."}`;
@@ -202,7 +247,7 @@ export async function setDiscordNicknames(slug: string) {
 
 /** Deletes older seasons' team channels and categories (irreversible). */
 export async function deleteOldDiscordChannels(slug: string) {
-  await discordTool(slug, async (seasonId) => {
+  await discordTool(slug, "discord.channels_deleted", async (seasonId) => {
     const r = await deleteOldTeamChannels(seasonId);
     if (r.errors.length) console.error("[discord] cleanup", JSON.stringify(r));
     return `Deleted ${r.rolesDeleted} old channel${r.rolesDeleted === 1 ? "" : "s"}${r.errors.length ? `. ${r.errors.length} failed, e.g. ${r.errors[0]}` : "."}`;
@@ -211,7 +256,7 @@ export async function deleteOldDiscordChannels(slug: string) {
 
 /** Emails players with no Discord username, or one that isn't in the server. */
 export async function emailDiscordUnmatched(slug: string) {
-  await discordTool(slug, async (seasonId) => {
+  await discordTool(slug, "discord.emailed_unmatched", async (seasonId) => {
     const { sent, failed } = await emailUnmatchedPlayers(seasonId);
     return `Emailed ${sent} player${sent === 1 ? "" : "s"}${failed ? ` (${failed} failed)` : ""}.`;
   });

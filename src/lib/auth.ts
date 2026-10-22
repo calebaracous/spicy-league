@@ -9,6 +9,7 @@ import { Resend } from "resend";
 import { db } from "@/db/client";
 import { users, sessions, accounts, verifications } from "@/db/schema/auth";
 import { banMessage, getActiveBan } from "@/lib/bans";
+import { logEvent } from "@/lib/events";
 
 const FROM = process.env.AUTH_EMAIL_FROM ?? "no-reply@spicyleague.dev";
 const getResend = () => new Resend(process.env.AUTH_RESEND_KEY);
@@ -131,6 +132,26 @@ export const auth = betterAuth({
   // League bans: refuse to create a session for a banned user. Covers every
   // sign-in path. The sign-in action maps code USER_BANNED to a message.
   databaseHooks: {
+    // Admin events inbox (src/lib/events.ts). Registration is logged by
+    // registerUser, which knows the username.
+    user: {
+      update: {
+        async after(user, ctx) {
+          if (ctx?.path === "/verify-email" && user.emailVerified) {
+            await logEvent("user.email_verified", { actorId: user.id });
+          }
+        },
+      },
+    },
+    account: {
+      update: {
+        async after(account, ctx) {
+          if (ctx?.path === "/reset-password") {
+            await logEvent("user.password_reset", { actorId: account.userId });
+          }
+        },
+      },
+    },
     session: {
       create: {
         async before(session) {

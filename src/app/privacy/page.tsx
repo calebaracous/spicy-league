@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="October 17, 2026">
+    <LegalPage title="Privacy Policy" updated="October 22, 2026">
       <p>
         This policy explains what personal data Spicy League collects when you use{" "}
         <a href="https://www.spicyleague.dev">www.spicyleague.dev</a> or interact with our Discord
@@ -58,6 +58,12 @@ export default function PrivacyPage() {
         <li>
           Our hosting and database providers keep their own operational logs, which may include IP
           addresses.
+        </li>
+        <li>
+          An <strong>activity log</strong> of what happens on the site: for example account
+          creation, profile edits (with the old and new values), linked accounts, signups, draft
+          picks, match reports, and admin actions. Only league admins can see it, it holds no
+          passwords or IP addresses, and entries are deleted after 60 days.
         </li>
       </ul>
 
@@ -208,8 +214,9 @@ export default function PrivacyPage() {
       <p>
         We keep account and league data for as long as your account exists, because season history
         and standings are part of the league&rsquo;s public record. Sessions expire automatically.
-        Riot stat snapshots are overwritten on each refresh rather than accumulating history. If you
-        delete your account, we remove your personal data as described below.
+        Riot stat snapshots are overwritten on each refresh rather than accumulating history. The
+        admin activity log keeps entries for 60 days. If you delete your account, we remove your
+        personal data as described below.
       </p>
 
       <h2>8. Your rights</h2>

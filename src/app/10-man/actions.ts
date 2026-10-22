@@ -15,6 +15,7 @@ import {
 } from "@/db/schema/ten-mans";
 import { requireAdmin, requireAuth } from "@/lib/auth-helpers";
 import { getActiveBan } from "@/lib/bans";
+import { logEvent } from "@/lib/events";
 import { electCaptains, PICK_ORDER_C1_C2 } from "@/lib/ten-man";
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -74,6 +75,7 @@ export async function start10Man(): Promise<TenManActionResult & { id?: string }
       .insert(tenMans)
       .values({ createdBy: session.user.id, state: "signups", lobbyCode: code })
       .returning({ id: tenMans.id });
+    await logEvent("tenman.started", { actorId: session.user.id, data: { tenManId: row.id } });
 
     revalidatePath("/10-man");
     syncInBackground("10-man ping", pingTenMan);
@@ -90,12 +92,13 @@ export async function start10Man(): Promise<TenManActionResult & { id?: string }
  * Admin: cancel any active 10-man before it completes.
  */
 export async function cancel10Man(id: string): Promise<TenManActionResult> {
-  await requireAdmin();
+  const session = await requireAdmin();
   return run(async () => {
     const tm = await getTenManOrFail(id);
     if (tm.state === "complete") throw new TenManError("A completed 10-man cannot be cancelled.");
 
     await db.update(tenMans).set({ state: "cancelled" }).where(eq(tenMans.id, id));
+    await logEvent("tenman.cancelled", { actorId: session.user.id, data: { tenManId: id } });
     revalidate(id);
   });
 }
@@ -111,7 +114,7 @@ export async function joinSignup(id: string): Promise<TenManActionResult> {
     if (await getActiveBan(userId)) {
       throw new TenManError("Your account is suspended from Spicy League.");
     }
-    await db.transaction(async (tx) => {
+    const joined = await db.transaction(async (tx) => {
       // Lock the row
       const [tm] = await tx.select().from(tenMans).where(eq(tenMans.id, id)).for("update");
       if (!tm) throw new TenManError("This 10-man no longer exists.");
@@ -128,7 +131,7 @@ export async function joinSignup(id: string): Promise<TenManActionResult> {
       const existing = await tx.query.tenManSignups.findFirst({
         where: and(eq(tenManSignups.tenManId, id), eq(tenManSignups.userId, userId)),
       });
-      if (existing) return; // idempotent
+      if (existing) return false; // idempotent
 
       const signupOrder = n + 1;
       await tx.insert(tenManSignups).values({ tenManId: id, userId, signupOrder });
@@ -140,7 +143,9 @@ export async function joinSignup(id: string): Promise<TenManActionResult> {
           .set({ state: "voting", signupsClosedAt: new Date() })
           .where(eq(tenMans.id, id));
       }
+      return true;
     });
+    if (joined) await logEvent("tenman.joined", { actorId: userId, data: { tenManId: id } });
 
     revalidate(id);
   });
@@ -181,6 +186,7 @@ export async function leaveSignup(id: string): Promise<TenManActionResult> {
         }
       }
     });
+    await logEvent("tenman.left", { actorId: userId, data: { tenManId: id } });
 
     revalidate(id);
   });
@@ -323,6 +329,11 @@ export async function submitPick(
           .where(eq(tenMans.id, id));
       }
     });
+    await logEvent("tenman.pick", {
+      actorId: callerId,
+      subjectUserId: pickedUserId,
+      data: { tenManId: id, pickNumber: expectedPickNumber },
+    });
 
     revalidate(id);
   });
@@ -335,7 +346,7 @@ export async function reportResult(
   id: string,
   args: { winnerCaptainUserId: string; durationLabel?: string },
 ): Promise<TenManActionResult> {
-  await requireAdmin();
+  const session = await requireAdmin();
   return run(async () => {
     const tm = await getTenManOrFail(id);
     if (tm.state !== "ready")
@@ -359,6 +370,11 @@ export async function reportResult(
         completedAt: new Date(),
       })
       .where(eq(tenMans.id, id));
+    await logEvent("tenman.result", {
+      actorId: session.user.id,
+      subjectUserId: args.winnerCaptainUserId,
+      data: { tenManId: id },
+    });
 
     revalidate(id);
   });

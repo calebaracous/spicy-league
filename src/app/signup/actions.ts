@@ -8,6 +8,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/db/client";
 import { users } from "@/db/schema/auth";
 import { DISCORD_USERNAME_HELP, normalizeDiscordUsername } from "@/lib/discord";
+import { logEvent } from "@/lib/events";
 
 const USERNAME_PATTERN = /^[a-zA-Z0-9_-]{3,24}$/;
 
@@ -54,6 +55,7 @@ export async function registerUser(formData: FormData): Promise<{ error: string 
     .update(users)
     .set({ username, discordUsername, updatedAt: new Date() })
     .where(eq(users.id, response.user.id));
+  await logEvent("user.registered", { actorId: response.user.id });
 
   redirect("/signin/check-email?type=verify");
 }

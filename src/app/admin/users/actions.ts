@@ -9,6 +9,7 @@ import { db } from "@/db/client";
 import { users } from "@/db/schema/auth";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { banUser, unbanUser } from "@/lib/bans";
+import { logEvent } from "@/lib/events";
 
 const DURATION_DAYS: Record<string, number | null> = {
   "1": 1,
@@ -52,11 +53,17 @@ export async function banUserAction(formData: FormData) {
   }
 
   const days = DURATION_DAYS[duration];
+  const expiresAt = days ? new Date(Date.now() + days * 86_400_000) : null;
   await banUser({
     userId,
     adminId: session.user.id,
     reason: reason || null,
-    expiresAt: days ? new Date(Date.now() + days * 86_400_000) : null,
+    expiresAt,
+  });
+  await logEvent("user.banned", {
+    actorId: session.user.id,
+    subjectUserId: userId,
+    data: { reason: reason || null, expiresAt: expiresAt?.toISOString() ?? null },
   });
 
   revalidatePath("/admin");
@@ -65,12 +72,13 @@ export async function banUserAction(formData: FormData) {
 }
 
 export async function unbanUserAction(formData: FormData) {
-  await requireAdmin();
+  const session = await requireAdmin();
   const userId = String(formData.get("userId") ?? "");
   const back = String(formData.get("back") ?? "") || undefined;
   if (!userId) redirect(backTo(back, "error=invalid"));
 
   await unbanUser(userId);
+  await logEvent("user.unbanned", { actorId: session.user.id, subjectUserId: userId });
 
   revalidatePath("/admin");
   revalidatePath("/admin/users");

@@ -96,6 +96,8 @@ wiring in `src/lib/auth.ts`).
     (migration `0002_user_bans`). Active while `bannedAt` is set and
     `banExpiresAt` is null or in the future (`isBanActive` in
     `src/lib/bans.ts`). Expired bans are left in place, just inactive.
+  - `eventsSeenAt` timestamp, nullable (migration `0012_events`) — admins
+    only: when they last marked the events inbox read.
 - `createdAt`, `updatedAt` — auto-defaulted
 
 ### `sessions`
@@ -290,6 +292,13 @@ independent of seasons/teams/matches. Constraints, lifecycle and the
 "one active at a time" partial unique index are documented in
 [TEN-MAN.md](TEN-MAN.md).
 
+## events.ts — admin events inbox
+
+`events` (migration `0012_events`): append-only activity log — `type`
+(text, typed in code), `actorId`, `subjectUserId`, `seasonId` (all FKs
+**set null**), `data` jsonb, `backfilled`, `createdAt` (indexed). Pruned
+after 60 days by the daily cron. See [EVENTS.md](EVENTS.md).
+
 ## Cascade semantics
 
 Most FKs use `onDelete: "cascade"` so deleting a user or a season wipes
@@ -300,6 +309,7 @@ their derived rows. Exceptions:
 - `matches.reportedBy` → set null
 - `ten_mans.createdBy`, `ten_mans.winnerCaptainUserId` → set null (both
   nullable since `0001_reconcile_live_schema`).
+- `events.actorId`, `events.subjectUserId`, `events.seasonId` → set null.
 
 Deleting a **user** cascades to sessions, accounts, signups, captains, team
 memberships, teams they captain (and therefore those teams' matches), draft

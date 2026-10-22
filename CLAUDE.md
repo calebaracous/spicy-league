@@ -32,6 +32,8 @@ source of truth for what's shipped.**
   standings + tiebreakers, playoff seeding.
 - `docs/TEN-MAN.md` — 10-man pickup flow: lifecycle, transactional
   actions, captain vote/election, fixed snake order, SSE.
+- `docs/EVENTS.md` — the admin events inbox: `events` table, `logEvent`
+  call sites, unread/read, 60-day retention, backfill.
 - `docs/INTEGRATIONS.md` — Neon, Resend, Riot API, Upstash, Vercel Cron.
 - `docs/DISCORD.md` — the Discord bot: roles, team channels, match
   threads/notifications/reminders, slash commands, admin tools, how players

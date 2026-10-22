@@ -35,6 +35,7 @@ Trivial shadcn primitives get a single entry at the bottom.
 - `tests/unit/standings.test.ts` — `rankStandings`: Bo2 points, head-to-head, series wins, tiebreaker games, shared ranks.
 - `tests/unit/discord.test.ts` — `normalizeDiscordUsername`.
 - `tests/unit/team-name.test.ts` — team-name rules and the text-channel slug.
+- `tests/unit/event-format.test.ts` — event catalogue, inbox sentences and diffs.
 - `tests/unit/discord-plan.test.ts`, `discord-format.test.ts`, `discord-verify.test.ts` — Discord sync decisions, message formatting, interaction signatures.
 - `playwright.config.ts` — e2e config: serial, builds + starts the app on :3100 with auth URLs overridden to localhost.
 - `tests/e2e/global-setup.ts` / `global-teardown.ts` — seed run-scoped admin + players; delete all e2e-tagged data afterwards.
@@ -43,6 +44,7 @@ Trivial shadcn primitives get a single entry at the bottom.
 
 ## Scripts
 
+- `scripts/backfill-events.mjs` — dry run / `--apply`: reconstructs events inbox rows from existing timestamps (retention window, before the first live event). See EVENTS.md.
 - `scripts/e2e-cleanup.mjs` — `npm run test:e2e:cleanup`: deletes e2e-tagged seasons/users; `--legacy` also removes the old seed-test-season data.
 - `scripts/season-12-setup.mjs` — one-off: deletes every season + 10-man and obvious test users (numbered bot usernames / test email domains, never admins), then creates Spicy League Season 12 (Bo2 group stage). Dry run unless `--apply`. Needs migrations 0005 and 0007.
 - `scripts/seed-test-season.ts` — refuses to run without `ALLOW_TEST_SEED=1` (it writes to the live DB from `.env.local`). Seeds `test-s1` LoL season with 4 captain + 16 bot accounts (re-runnable; cleans first). Run with `ALLOW_TEST_SEED=1 npx tsx --env-file=.env.local scripts/seed-test-season.ts`. Credentials are in the file header.
@@ -100,7 +102,8 @@ Rendered by `src/app/page.tsx`:
 ## Admin pages
 
 - `src/app/admin/layout.tsx` — wraps admin section with `requireAdmin()`.
-- `src/app/admin/page.tsx` — admin overview (stats, needs-attention list, active seasons, newest accounts, latest signups) + all seasons.
+- `src/app/admin/page.tsx` — admin overview (Events button with unread count, stats, needs-attention list, active seasons, newest accounts, latest signups) + all seasons.
+- `src/app/admin/events/page.tsx` — events inbox: filters, unread highlight, paging. `actions.ts` — `markAllEventsRead`.
 - `src/app/admin/users/page.tsx` — player search/filters, ban + unban forms. `actions.ts` — `banUserAction`, `unbanUserAction`.
 - `src/app/admin/seasons/new/page.tsx` — create season form.
 - `src/app/admin/seasons/actions.ts` — `createSeason`, `updateSeason`, `transitionSeasonState` (→ `captains_selected` schedules the Discord Captain role sync), `syncDiscordRoles`. zod-validated.
@@ -141,7 +144,7 @@ Rendered by `src/app/page.tsx`:
 - `src/app/api/auth/[...all]/route.ts` — Better Auth handler via `toNextJsHandler`.
 - `src/app/api/draft/[slug]/stream/route.ts` — season draft SSE. 2-second DB poll, emits `update` on hash change, keep-alive ping otherwise. `maxDuration = 300`. See [DRAFT.md](DRAFT.md).
 - `src/app/api/ten-man/[id]/stream/route.ts` — 10-man SSE, same pattern. See [TEN-MAN.md](TEN-MAN.md).
-- `src/app/api/cron/refresh-stats/route.ts` — daily cron. `CRON_SECRET` bearer auth. Calls `refreshAllRiotStats()`.
+- `src/app/api/cron/refresh-stats/route.ts` — daily cron. `CRON_SECRET` bearer auth. Prunes old events, calls `refreshAllRiotStats()`, logs `stats.refreshed`.
 
 
 ## Auth / session
@@ -160,6 +163,7 @@ Rendered by `src/app/page.tsx`:
 - `src/db/schema/drafts.ts` — `drafts`, `draftPicks`, `teams`, `teamMembers`. `draft_state` enum.
 - `src/db/schema/matches.ts` — `matches` table + `match_stage` / `match_state` enums.
 - `src/db/schema/stats.ts` — `accountLinks`, `riotStatSnapshots` (per account link), `leetifyStatSnapshots`.
+- `src/db/schema/events.ts` — `events` (admin events inbox).
 - `src/db/schema/ten-mans.ts` — `tenMans`, `tenManSignups`, `tenManVotes`, `tenManCaptains`, `tenManPicks`. `ten_man_state` enum.
 
 Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/0001_reconcile_live_schema.sql` (idempotent fix-up for DBs from the pre-squash history), `drizzle/0002_user_bans.sql` (ban columns), `drizzle/0003_match_substitutions.sql` (subs table), `drizzle/0004_sub_signups.sql` (signup kind), `drizzle/0005_season_schedule.sql` (schedule dates), `drizzle/0006_signup_quandary.sql` (signup answer), `drizzle/0007_group_bo2.sql` (group series length + tiebreaker stage), `drizzle/0008_discord_username.sql` (Discord username), `drizzle/0009_discord_roles.sql` (Discord user ID + team role ID), `drizzle/0010_discord_team_channels.sql` (team channel + season category IDs), `drizzle/0011_discord_threads_pings.sql` (match thread ID + 10-man ping opt-in), plus `drizzle/meta/`. See [DATA-MODEL.md](DATA-MODEL.md) → Migrations.
@@ -203,6 +207,8 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/substitution-rules.ts` — pure sub eligibility rules (`evaluateSubRequest`, `MAX_SUBS_PER_TEAM`, error messages).
 - `src/lib/substitutions.ts` — sub DB helpers: eligibility check, derived lineups, candidates, player match history, pending requests.
 - `src/lib/bans.ts` — `isBanActive`, `getActiveBan` (DB read), `banUser` (also deletes sessions), `unbanUser`, `banMessage`.
+- `src/lib/events.ts` — `logEvent`, `matchEventData`, `pruneOldEvents` (60-day retention), `listEvents` (filters + cursor), `unreadFor` / `countUnreadEvents` / `markEventsSeen`.
+- `src/lib/event-format.ts` — pure: `EVENT_TYPES` → category, `describeEvent` / `describeDetails` (sentence segments, diffs), `diffFields`.
 - `src/lib/admin-overview.ts` — `getAdminOverview()`: stats, newest accounts, latest signups, active seasons, action items.
 - `src/lib/safe-redirect.ts` — `safeCallbackUrl` (same-origin paths only) + `signInHref(path)` for sign-in links that return the user.
 - `src/lib/season-meta.ts` — `getSeasonName` (request-cached) + `seasonPageMetadata("Page")` for season sub-page `<title>`s.

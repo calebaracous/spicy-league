@@ -8,15 +8,19 @@ import { LocalTime } from "@/components/ui/local-time";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { getAdminOverview } from "@/lib/admin-overview";
+import { requireAdmin } from "@/lib/auth-helpers";
+import { countUnreadEvents, getEventsSeenAt } from "@/lib/events";
 import { GAME_LABELS, SEASON_STATE_LABELS } from "@/lib/seasons";
 import { cn } from "@/lib/utils";
 
 export const metadata = { title: "Admin" };
 
 export default async function AdminPage() {
-  const [allSeasons, overview] = await Promise.all([
+  const session = await requireAdmin();
+  const [allSeasons, overview, unreadEvents] = await Promise.all([
     db.query.seasons.findMany({ orderBy: [desc(seasons.createdAt)] }),
     getAdminOverview(),
+    getEventsSeenAt(session.user.id).then((seenAt) => countUnreadEvents(session.user.id, seenAt)),
   ]);
   const { stats, latestUsers, latestSignups, activeSeasons, actionItems } = overview;
 
@@ -38,6 +42,17 @@ export default async function AdminPage() {
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link
+            href="/admin/events"
+            className={cn(buttonVariants({ variant: "outline", size: "lg" }), "gap-2")}
+          >
+            Events
+            {unreadEvents > 0 ? (
+              <Badge aria-label={`${unreadEvents} new`}>
+                {unreadEvents > 99 ? "99+" : unreadEvents}
+              </Badge>
+            ) : null}
+          </Link>
           <Link
             href="/admin/users"
             className={cn(buttonVariants({ variant: "outline", size: "lg" }))}
