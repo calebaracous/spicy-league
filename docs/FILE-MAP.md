@@ -240,8 +240,8 @@ Freelance-style (hex tokens):
 - `src/components/ui/snake-order-strip.tsx` — 8-cell C1/C2 pick-order strip + `SNAKE_ORDER`. 10-man draft.
 - `src/components/ui/vs-divider.tsx` — "VS" separator (vertical at md+, horizontal when teams stack). 10-man ready/complete.
 - `src/components/ui/local-time.tsx` — client; `LocalTime` (formats a date in the viewer's timezone), `LocalDateTimeInput` (datetime-local that submits UTC ISO), `useHydrated`.
-- `src/components/ui/confirm-submit-button.tsx` — client; submit `Button` that `confirm()`s first. Destructive admin forms.
-- `src/components/ui/pending-submit-button.tsx` — client; submit `Button` that shows a spinner and disables itself while its form submits (`useFormStatus`). Slow admin actions (Sync Discord).
+- `src/components/ui/confirm-submit-button.tsx` — client; `PendingSubmitButton` that `confirm()`s first. Destructive admin forms.
+- `src/components/ui/pending-submit-button.tsx` — client; submit `Button` that shows a spinner and disables itself while its form's server action runs (`useFormStatus`). Every server-component action form.
 
 shadcn (OKLCH tokens):
 - `alert.tsx`, `badge.tsx`, `button.tsx`, `card.tsx`, `input.tsx`, `label.tsx`, `select.tsx`, `separator.tsx`, `sonner.tsx`, `textarea.tsx` — standard shadcn generators under `src/components/ui/`.

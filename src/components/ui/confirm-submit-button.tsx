@@ -2,21 +2,21 @@
 
 import type { ComponentProps } from "react";
 
-import { Button } from "@/components/ui/button";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 
 /**
  * Submit button for server-component forms whose action is destructive or
  * hard to reverse (undo pick, reset match, lifecycle moves). Asks first;
- * cancelling the prompt stops the submit.
+ * cancelling the prompt stops the submit. Locked with a spinner while the
+ * action runs, like PendingSubmitButton.
  */
 export function ConfirmSubmitButton({
   confirmMessage,
   onClick,
   ...props
-}: ComponentProps<typeof Button> & { confirmMessage: string }) {
+}: ComponentProps<typeof PendingSubmitButton> & { confirmMessage: string }) {
   return (
-    <Button
-      type="submit"
+    <PendingSubmitButton
       {...props}
       onClick={(e) => {
         if (!window.confirm(confirmMessage)) {

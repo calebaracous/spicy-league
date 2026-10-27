@@ -7,9 +7,11 @@ import { useFormStatus } from "react-dom";
 import { Button } from "@/components/ui/button";
 
 /**
- * Submit button for server-component forms whose action is slow (Discord
- * sync): while the form is submitting it shows a spinner and is disabled, so
- * it can't be clicked again until the action finishes.
+ * Submit button for server-component forms with a server action: while the
+ * action runs it shows a spinner and is disabled, so it can't be clicked
+ * again until the response comes back. Use it for every action submit
+ * (ConfirmSubmitButton builds on it); client forms with their own pending
+ * state (useActionState / useTransition) disable their buttons directly.
  */
 export function PendingSubmitButton({
   pendingLabel,

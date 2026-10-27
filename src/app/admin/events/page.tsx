@@ -6,7 +6,7 @@ import { db } from "@/db/client";
 import { seasons } from "@/db/schema/seasons";
 import { FlashToast } from "@/components/flash-toast";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { Input } from "@/components/ui/input";
 import { LocalTime } from "@/components/ui/local-time";
 import { requireAdmin } from "@/lib/auth-helpers";
@@ -86,9 +86,9 @@ export default async function AdminEventsPage({ searchParams }: { searchParams: 
           {unread > 0 ? (
             <form action={markAllEventsRead}>
               <input type="hidden" name="upTo" value={renderedAt.toISOString()} />
-              <Button type="submit" variant="outline" size="sm">
+              <PendingSubmitButton variant="outline" size="sm">
                 Mark all as read
-              </Button>
+              </PendingSubmitButton>
             </form>
           ) : null}
         </div>

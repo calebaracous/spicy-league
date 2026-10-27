@@ -16,7 +16,8 @@ import { setTenManRole } from "@/lib/discord-ping-roles";
 import { syncInBackground } from "@/lib/discord-roles";
 import { opggUrlForRiotId } from "@/lib/opgg";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -204,9 +205,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
           </p>
         </div>
         <form action={doSignOut}>
-          <Button type="submit" variant="outline">
-            Sign out
-          </Button>
+          <PendingSubmitButton variant="outline">Sign out</PendingSubmitButton>
         </form>
       </header>
       <Separator />
@@ -244,7 +243,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
               <p className="text-muted-foreground text-xs">{DISCORD_USERNAME_HELP}.</p>
             </div>
             <div className="flex justify-end">
-              <Button type="submit">Save</Button>
+              <PendingSubmitButton>Save</PendingSubmitButton>
             </div>
           </form>
           <form
@@ -255,9 +254,9 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
               <input type="checkbox" name="tenManPings" defaultChecked={user.tenManPings} />
               Ping me in Discord when a 10-man opens
             </label>
-            <Button type="submit" variant="outline" size="sm">
+            <PendingSubmitButton variant="outline" size="sm">
               Save
-            </Button>
+            </PendingSubmitButton>
           </form>
         </CardContent>
       </Card>
@@ -312,7 +311,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
               >
                 View public page
               </Link>
-              <Button type="submit">Save</Button>
+              <PendingSubmitButton>Save</PendingSubmitButton>
             </div>
           </form>
         </CardContent>
@@ -364,14 +363,13 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
                     </div>
                     <form action={unlinkRiotAccount}>
                       <input type="hidden" name="linkId" value={link.id} />
-                      <Button
-                        type="submit"
+                      <PendingSubmitButton
                         variant="ghost"
                         size="sm"
                         className="text-destructive hover:text-destructive"
                       >
                         Unlink
-                      </Button>
+                      </PendingSubmitButton>
                     </form>
                   </div>
                 );
@@ -387,9 +385,9 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
                   )}
                 </p>
                 <form action={manualRefreshStats}>
-                  <Button type="submit" variant="outline" size="sm">
+                  <PendingSubmitButton variant="outline" size="sm">
                     Refresh stats
-                  </Button>
+                  </PendingSubmitButton>
                 </form>
               </div>
             </div>
@@ -430,9 +428,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
                 defaultValue={user.opggUrl ?? ""}
                 placeholder="https://op.gg/lol/multisearch/na?summoners=…"
               />
-              <Button type="submit" variant="outline">
-                Save
-              </Button>
+              <PendingSubmitButton variant="outline">Save</PendingSubmitButton>
             </form>
           </div>
         </CardContent>
@@ -455,14 +451,13 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
                   <p className="font-mono text-sm">{steamLink.externalId}</p>
                 </div>
                 <form action={unlinkCs2Account}>
-                  <Button
-                    type="submit"
+                  <PendingSubmitButton
                     variant="ghost"
                     size="sm"
                     className="text-destructive hover:text-destructive"
                   >
                     Unlink
-                  </Button>
+                  </PendingSubmitButton>
                 </form>
               </div>
               {leetifyLink ? (

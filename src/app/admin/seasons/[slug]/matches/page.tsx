@@ -17,7 +17,8 @@ import { seasonPageMetadata } from "@/lib/season-meta";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FlashToast } from "@/components/flash-toast";
@@ -202,16 +203,14 @@ export default async function AdminMatchesPage({
                     <form action={decideSub.bind(null, slug, p.matchId, p.id)}>
                       <input type="hidden" name="decision" value="approve" />
                       <input type="hidden" name="back" value={here} />
-                      <Button type="submit" size="sm">
-                        Approve
-                      </Button>
+                      <PendingSubmitButton size="sm">Approve</PendingSubmitButton>
                     </form>
                     <form action={decideSub.bind(null, slug, p.matchId, p.id)}>
                       <input type="hidden" name="decision" value="reject" />
                       <input type="hidden" name="back" value={here} />
-                      <Button type="submit" size="sm" variant="ghost">
+                      <PendingSubmitButton size="sm" variant="ghost">
                         Reject
-                      </Button>
+                      </PendingSubmitButton>
                     </form>
                   </div>
                 </li>
@@ -238,10 +237,10 @@ export default async function AdminMatchesPage({
               </p>
             ) : (
               <form action={generateWithSlug}>
-                <Button type="submit">
+                <PendingSubmitButton>
                   Generate schedule ({allTeams.length} teams,{" "}
                   {(allTeams.length * (allTeams.length - 1)) / 2} matches)
-                </Button>
+                </PendingSubmitButton>
               </form>
             )}
           </CardContent>
@@ -366,9 +365,9 @@ export default async function AdminMatchesPage({
                                 {m.state === "reported" ? (
                                   <>
                                     <form action={confirmWithSlug.bind(null, m.id)}>
-                                      <Button type="submit" size="sm" variant="default">
+                                      <PendingSubmitButton size="sm" variant="default">
                                         Confirm
-                                      </Button>
+                                      </PendingSubmitButton>
                                     </form>
                                     <form action={disputeWithSlug.bind(null, m.id)}>
                                       <ConfirmSubmitButton
@@ -479,9 +478,9 @@ export default async function AdminMatchesPage({
                                     {m.state === "reported" ? (
                                       <>
                                         <form action={confirmWithSlug.bind(null, m.id)}>
-                                          <Button type="submit" size="sm" variant="default">
+                                          <PendingSubmitButton size="sm" variant="default">
                                             Confirm
-                                          </Button>
+                                          </PendingSubmitButton>
                                         </form>
                                         <form action={disputeWithSlug.bind(null, m.id)}>
                                           <ConfirmSubmitButton

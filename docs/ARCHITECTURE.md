@@ -158,6 +158,12 @@ again" via `unstable_retry`); `notFound()` and unmatched URLs render
 - **Destructive admin buttons** (undo pick, reset/dispute match, lifecycle
   moves, seed playoffs) use `ConfirmSubmitButton`
   (`src/components/ui/confirm-submit-button.tsx`) inside the `<form>`.
+- **Submit buttons lock while their action runs.** In server-component
+  forms, never a plain `<Button type="submit">`: use `PendingSubmitButton`
+  (`src/components/ui/pending-submit-button.tsx`, `useFormStatus`: spinner +
+  disabled until the response) or `ConfirmSubmitButton`, which builds on it.
+  Client components disable their buttons from `useActionState` /
+  `useTransition` pending state (10-man boards, draft Pick, auth forms).
 - **Page titles**: every route sets one (`metadata` or `generateMetadata`).
   Season sub-pages use `seasonPageMetadata("Page")` from
   `src/lib/season-meta.ts` → "Page · Season name".

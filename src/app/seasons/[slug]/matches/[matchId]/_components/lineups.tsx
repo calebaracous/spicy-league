@@ -2,7 +2,7 @@ import Link from "next/link";
 
 import { decideSub, pingSubListAction, requestSub, withdrawSub } from "../../sub-actions";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { Input } from "@/components/ui/input";
@@ -167,16 +167,14 @@ export function MatchLineups({
                             <form action={decideSub.bind(null, slug, matchId, r.id)}>
                               <input type="hidden" name="decision" value="approve" />
                               <input type="hidden" name="back" value={here} />
-                              <Button type="submit" size="sm">
-                                Approve
-                              </Button>
+                              <PendingSubmitButton size="sm">Approve</PendingSubmitButton>
                             </form>
                             <form action={decideSub.bind(null, slug, matchId, r.id)}>
                               <input type="hidden" name="decision" value="reject" />
                               <input type="hidden" name="back" value={here} />
-                              <Button type="submit" size="sm" variant="ghost">
+                              <PendingSubmitButton size="sm" variant="ghost">
                                 Reject
-                              </Button>
+                              </PendingSubmitButton>
                             </form>
                           </>
                         ) : null}
@@ -195,9 +193,9 @@ export function MatchLineups({
                         ) : null}
                         {canWithdraw && !isAdmin ? (
                           <form action={withdrawSub.bind(null, slug, matchId, r.id)}>
-                            <Button type="submit" size="sm" variant="ghost">
+                            <PendingSubmitButton size="sm" variant="ghost">
                               Withdraw
-                            </Button>
+                            </PendingSubmitButton>
                           </form>
                         ) : null}
                       </div>
@@ -292,7 +290,7 @@ export function MatchLineups({
                     placeholder="e.g. Away this week"
                   />
                 </div>
-                <Button type="submit">Request sub</Button>
+                <PendingSubmitButton>Request sub</PendingSubmitButton>
               </form>
             ) : null}
 
@@ -312,9 +310,9 @@ export function MatchLineups({
                 ) : (
                   <input type="hidden" name="teamId" value={managedTeamIds[0]} />
                 )}
-                <Button type="submit" variant="outline" size="sm">
+                <PendingSubmitButton variant="outline" size="sm">
                   Ping the Sub list on Discord
-                </Button>
+                </PendingSubmitButton>
                 <span className="text-muted-foreground text-xs">
                   Asks available subs in this match&apos;s Discord thread.
                 </span>

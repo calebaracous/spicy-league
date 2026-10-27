@@ -11,7 +11,7 @@ import { users } from "@/db/schema/auth";
 import { auth } from "@/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { LocalTime } from "@/components/ui/local-time";
@@ -257,7 +257,7 @@ export default async function MatchDetailPage({
                 <p className="text-muted-foreground text-xs">
                   Both maps are always played. A 1–1 is a draw: one map win each.
                 </p>
-                <Button type="submit">Submit result</Button>
+                <PendingSubmitButton>Submit result</PendingSubmitButton>
               </form>
             ) : (
               <form action={reportWithIds} className="space-y-4">
@@ -303,7 +303,7 @@ export default async function MatchDetailPage({
                     />
                   </div>
                 </div>
-                <Button type="submit">Submit result</Button>
+                <PendingSubmitButton>Submit result</PendingSubmitButton>
               </form>
             )}
           </CardContent>

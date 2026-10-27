@@ -14,7 +14,7 @@ import { db } from "@/db/client";
 import { seasons } from "@/db/schema/seasons";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -415,7 +415,7 @@ export default async function EditSeasonPage({
               <Link href="/admin" className={cn(buttonVariants({ variant: "outline" }))}>
                 Cancel
               </Link>
-              <Button type="submit">Save changes</Button>
+              <PendingSubmitButton>Save changes</PendingSubmitButton>
             </div>
           </form>
         </CardContent>

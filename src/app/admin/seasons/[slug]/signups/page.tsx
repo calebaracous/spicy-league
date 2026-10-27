@@ -19,7 +19,7 @@ import { accountLinks, riotStatSnapshots } from "@/db/schema/stats";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { LocalTime } from "@/components/ui/local-time";
-import { Button } from "@/components/ui/button";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { FlashToast } from "@/components/flash-toast";
 import { bestRankPerUser, formatRank } from "@/lib/rank";
@@ -264,20 +264,19 @@ export default async function AdminSignupsPage({
                             <span className="text-sm font-medium">{c.name ?? c.username}</span>
                             {isDuo ? (
                               <form action={splitWithSlug.bind(null, c.id)}>
-                                <Button type="submit" variant="ghost" size="sm">
+                                <PendingSubmitButton variant="ghost" size="sm">
                                   Split
-                                </Button>
+                                </PendingSubmitButton>
                               </form>
                             ) : null}
                             <form action={demoteWithSlug.bind(null, c.id)}>
-                              <Button
-                                type="submit"
+                              <PendingSubmitButton
                                 variant="ghost"
                                 size="sm"
                                 className="text-destructive hover:text-destructive"
                               >
                                 Remove
-                              </Button>
+                              </PendingSubmitButton>
                             </form>
                           </li>
                         ))}
@@ -306,25 +305,24 @@ export default async function AdminSignupsPage({
                               </option>
                             ))}
                           </select>
-                          <Button type="submit" variant="outline" size="sm">
+                          <PendingSubmitButton variant="outline" size="sm">
                             Pair
-                          </Button>
+                          </PendingSubmitButton>
                         </form>
                       ) : null}
                       <form action={moveWithSlug.bind(null, team.order, "up")}>
-                        <Button type="submit" variant="ghost" size="sm" disabled={i === 0}>
+                        <PendingSubmitButton variant="ghost" size="sm" disabled={i === 0}>
                           ↑
-                        </Button>
+                        </PendingSubmitButton>
                       </form>
                       <form action={moveWithSlug.bind(null, team.order, "down")}>
-                        <Button
-                          type="submit"
+                        <PendingSubmitButton
                           variant="ghost"
                           size="sm"
                           disabled={i === captainTeams.length - 1}
                         >
                           ↓
-                        </Button>
+                        </PendingSubmitButton>
                       </form>
                     </div>
                   </div>
@@ -473,9 +471,9 @@ export default async function AdminSignupsPage({
                           <div className="flex items-center justify-end gap-1">
                             {!isCaptain && !isSub ? (
                               <form action={promoteWithSlug.bind(null, s.id)}>
-                                <Button type="submit" variant="outline" size="sm">
+                                <PendingSubmitButton variant="outline" size="sm">
                                   Make captain
-                                </Button>
+                                </PendingSubmitButton>
                               </form>
                             ) : null}
                             {canRemove || isSub ? (

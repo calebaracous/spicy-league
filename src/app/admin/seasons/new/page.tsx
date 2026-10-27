@@ -2,7 +2,8 @@ import Link from "next/link";
 
 import { createSeason } from "@/app/admin/seasons/actions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -170,7 +171,7 @@ export default async function NewSeasonPage({ searchParams }: { searchParams: Se
               <Link href="/admin" className={cn(buttonVariants({ variant: "outline" }))}>
                 Cancel
               </Link>
-              <Button type="submit">Create draft</Button>
+              <PendingSubmitButton>Create draft</PendingSubmitButton>
             </div>
           </form>
         </CardContent>

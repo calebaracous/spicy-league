@@ -10,7 +10,7 @@ import { seasons, seasonSignups } from "@/db/schema/seasons";
 import { renameTeam } from "./actions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { Input } from "@/components/ui/input";
 import { FlashToast } from "@/components/flash-toast";
 import { SeasonNav } from "@/components/season-nav";
@@ -198,9 +198,7 @@ export default async function TeamsPage({
                         required
                         className="min-w-0 flex-1"
                       />
-                      <Button type="submit" size="sm">
-                        Save
-                      </Button>
+                      <PendingSubmitButton size="sm">Save</PendingSubmitButton>
                       <p className="text-muted-foreground w-full text-xs">
                         {TEAM_NAME_HELP}. Your Discord role and channels are renamed too.
                       </p>

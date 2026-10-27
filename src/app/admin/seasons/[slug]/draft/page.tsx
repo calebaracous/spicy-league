@@ -15,7 +15,8 @@ import { seasonPageMetadata } from "@/lib/season-meta";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -117,25 +118,23 @@ export default async function AdminDraftPage({
           <div className="flex flex-wrap gap-2">
             {!draft || draft.state === "pending" || draft.state === "paused" ? (
               <form action={startWithSlug}>
-                <Button type="submit">
+                <PendingSubmitButton>
                   {!draft
                     ? "Start draft"
                     : draft.state === "paused"
                       ? "Resume draft"
                       : "Start draft"}
-                </Button>
+                </PendingSubmitButton>
               </form>
             ) : null}
             {draft?.state === "in_progress" ? (
               <form action={pauseWithSlug}>
-                <Button type="submit" variant="outline">
-                  Pause
-                </Button>
+                <PendingSubmitButton variant="outline">Pause</PendingSubmitButton>
               </form>
             ) : null}
             {draft?.state === "paused" ? (
               <form action={resumeWithSlug}>
-                <Button type="submit">Resume</Button>
+                <PendingSubmitButton>Resume</PendingSubmitButton>
               </form>
             ) : null}
             {draft && draft.state !== "completed" && pickCount > 0 ? (

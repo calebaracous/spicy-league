@@ -8,7 +8,7 @@ import { seasons } from "@/db/schema/seasons";
 import { seasonSignups } from "@/db/schema/seasons";
 import { auth } from "@/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
+import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { LocalTime } from "@/components/ui/local-time";
@@ -354,7 +354,9 @@ export default async function SignupPage({
               >
                 Cancel
               </Link>
-              <Button type="submit">{isSub ? "Join the sub list" : "Submit signup"}</Button>
+              <PendingSubmitButton>
+                {isSub ? "Join the sub list" : "Submit signup"}
+              </PendingSubmitButton>
             </div>
           </form>
         </CardContent>
