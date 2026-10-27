@@ -126,7 +126,8 @@ export type TickerItem = { id: string; text: string; postedAt: string };
  * The newest `count` announcements worth showing, newest first: ordinary
  * messages and replies only (no pins/joins/boosts), using the first embed's
  * title or description when the message itself has no text, and skipping
- * anything that ends up empty (an image on its own, a bare ping).
+ * anything that ends up empty (an image on its own, a bare ping). With
+ * `authorIds`, only those users' posts count; empty means everyone's.
  */
 export function tickerItems(
   messages: Array<{
@@ -134,14 +135,17 @@ export function tickerItems(
     type: number;
     content: string;
     timestamp: string;
+    author: { id: string };
     embeds: Array<{ title?: string; description?: string }>;
   }>,
   names: MentionNames,
   count: number,
+  authorIds: string[] = [],
 ): TickerItem[] {
   const items: TickerItem[] = [];
   for (const m of messages) {
     if (m.type !== 0 && m.type !== 19) continue;
+    if (authorIds.length > 0 && !authorIds.includes(m.author.id)) continue;
     const embed = m.embeds[0];
     const source = m.content.trim() || embed?.title || embed?.description || "";
     const text = plainMessageText(source, names);

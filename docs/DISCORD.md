@@ -102,8 +102,10 @@ registered by `scripts/discord-register-commands.mjs` — keep its list and
 The latest 6 messages in `DISCORD_ANNOUNCEMENTS_CHANNEL_ID` scroll in a band
 right under the nav bar, above the hero
 (`src/app/_sections/announcements-ticker.tsx`), each linking
-to the message in Discord. `src/lib/discord-announcements.ts` reads the
-channel (`listMessages`, 18 messages so skipped ones don't leave gaps) and
+to the message in Discord. If `DISCORD_ANNOUNCEMENTS_AUTHOR_IDS` is set (in
+production: calebaracous only), only those users' posts count; others are
+skipped. `src/lib/discord-announcements.ts` reads the channel
+(`listMessages`, the last 50 so skipped ones don't leave gaps) and
 caches the result for **5 minutes** with `unstable_cache` — the home page is
 `force-dynamic`, so without it every visit would call Discord. A new
 announcement shows up within 5 minutes. `plainMessageText` / `tickerItems`

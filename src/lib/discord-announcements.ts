@@ -6,10 +6,11 @@ import { discordConfig, listChannels, listMessages, listRoles } from "@/lib/disc
 import { tickerItems, type MentionNames } from "@/lib/discord-format";
 
 /**
- * The home-page ticker: the latest messages in DISCORD_ANNOUNCEMENTS_CHANNEL_ID,
- * as plain text. Cached for 5 minutes (the home page is force-dynamic, so
- * without this every visit would call Discord). Needs the bot's Message
- * Content intent, or every message reads as empty. See docs/DISCORD.md.
+ * The home-page ticker: the latest messages in DISCORD_ANNOUNCEMENTS_CHANNEL_ID
+ * (only DISCORD_ANNOUNCEMENTS_AUTHOR_IDS' posts, if set), as plain text.
+ * Cached for 5 minutes (the home page is force-dynamic, so without this every
+ * visit would call Discord). Needs the bot's Message Content intent, or every
+ * message reads as empty. See docs/DISCORD.md.
  */
 
 export const TICKER_COUNT = 6;
@@ -27,8 +28,9 @@ async function fetchAnnouncements(): Promise<Announcement[]> {
   const channelId = cfg?.announcementsChannelId;
   if (!cfg || !channelId) return [];
 
-  // Extra messages so skipped ones (pins, image-only posts) don't leave gaps.
-  const messages = await listMessages(cfg, channelId, TICKER_COUNT * 3);
+  // Extra messages so skipped ones (other authors, pins, image-only posts)
+  // don't leave gaps.
+  const messages = await listMessages(cfg, channelId, 50);
   const all = messages.map((m) => m.content).join("\n");
   const [roles, channels] = await Promise.all([
     all.includes("<@&") ? listRoles(cfg) : [],
@@ -41,7 +43,7 @@ async function fetchAnnouncements(): Promise<Announcement[]> {
     roles: new Map(roles.map((r) => [r.id, r.name])),
     channels: new Map(channels.map((c) => [c.id, c.name])),
   };
-  return tickerItems(messages, names, TICKER_COUNT).map((item) => ({
+  return tickerItems(messages, names, TICKER_COUNT, cfg.announcementsAuthorIds).map((item) => ({
     ...item,
     url: `https://discord.com/channels/${cfg.guildId}/${channelId}/${item.id}`,
   }));
@@ -49,7 +51,11 @@ async function fetchAnnouncements(): Promise<Announcement[]> {
 
 const cachedAnnouncements = unstable_cache(
   fetchAnnouncements,
-  ["discord-announcements", process.env.DISCORD_ANNOUNCEMENTS_CHANNEL_ID ?? ""],
+  [
+    "discord-announcements",
+    process.env.DISCORD_ANNOUNCEMENTS_CHANNEL_ID ?? "",
+    process.env.DISCORD_ANNOUNCEMENTS_AUTHOR_IDS ?? "",
+  ],
   { revalidate: 300, tags: ["discord-announcements"] },
 );
 

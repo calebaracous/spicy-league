@@ -34,6 +34,8 @@ export type DiscordConfig = {
   tenManChannelId: string | null;
   /** Channel whose latest messages the home-page ticker shows; null → no ticker. */
   announcementsChannelId: string | null;
+  /** Only these users' posts go in the ticker; empty → everyone's. */
+  announcementsAuthorIds: string[];
 };
 
 export function discordConfig(): DiscordConfig | null {
@@ -45,6 +47,7 @@ export function discordConfig(): DiscordConfig | null {
     matchesChannelId: env.DISCORD_MATCHES_CHANNEL_ID ?? null,
     tenManChannelId: env.DISCORD_TEN_MAN_CHANNEL_ID ?? null,
     announcementsChannelId: env.DISCORD_ANNOUNCEMENTS_CHANNEL_ID ?? null,
+    announcementsAuthorIds: env.DISCORD_ANNOUNCEMENTS_AUTHOR_IDS?.split(",") ?? [],
   };
 }
 
@@ -77,6 +80,7 @@ export type DiscordMessage = {
   /** Empty unless the bot has the Message Content intent (docs/DISCORD.md). */
   content: string;
   timestamp: string;
+  author: { id: string };
   mentions: Array<{ id: string; username: string; global_name?: string | null }>;
   embeds: Array<{ title?: string; description?: string }>;
 };

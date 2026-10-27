@@ -39,6 +39,7 @@ builds that don't need runtime secrets.
 | `DISCORD_CAPTAIN_ROLE_ID` | Discord role sync (optional) | Existing Captain role. Unset → the bot uses a role named "Captain", creating it if needed. |
 | `DISCORD_MATCHES_CHANNEL_ID` | Discord match threads | Text channel the bot opens a thread per match in. Unset → no threads (and no sub-list pings). |
 | `DISCORD_TEN_MAN_CHANNEL_ID` | Discord 10-man pings | Channel for "@10-man a 10-man is open". Unset → no pings. |
+| `DISCORD_ANNOUNCEMENTS_AUTHOR_IDS` | Ticker author filter (optional) | Comma-separated Discord user IDs (Developer Mode → Copy User ID); only their posts go in the ticker. Production: calebaracous only. Unset → everyone's posts. |
 | `DISCORD_ANNOUNCEMENTS_CHANNEL_ID` | Home-page announcements ticker | Channel whose latest 6 messages scroll in a band under the nav on the home page. Unset → no ticker. Needs the bot's Message Content intent, or every message reads as empty and the ticker hides. |
 | `DISCORD_APPLICATION_ID` | Discord slash commands | Used by `scripts/discord-register-commands.mjs`. |
 | `DISCORD_PUBLIC_KEY` | Discord slash commands | 64-hex key; `/api/discord/interactions` 404s without it and rejects unsigned requests. |

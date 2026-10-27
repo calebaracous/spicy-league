@@ -52,12 +52,17 @@ describe("tickerItems", () => {
   const msg = (
     id: string,
     content: string,
-    extra: Partial<{ type: number; embeds: [] | [{ title?: string }] }> = {},
+    extra: Partial<{
+      type: number;
+      embeds: [] | [{ title?: string }];
+      author: { id: string };
+    }> = {},
   ) => ({
     id,
     type: 0,
     content,
     timestamp: "2026-10-22T12:00:00.000Z",
+    author: { id: "111" },
     embeds: [],
     ...extra,
   });
@@ -81,5 +86,15 @@ describe("tickerItems", () => {
       ["4", "Embed title"],
       ["6", "a reply"],
     ]);
+  });
+
+  it("keeps only the listed authors' posts, or everyone's when none are listed", () => {
+    const messages = [
+      msg("1", "mine"),
+      msg("2", "someone else's", { author: { id: "999" } }),
+      msg("3", "also mine"),
+    ];
+    expect(tickerItems(messages, names, 6, ["111"]).map((i) => i.id)).toEqual(["1", "3"]);
+    expect(tickerItems(messages, names, 6).map((i) => i.id)).toEqual(["1", "2", "3"]);
   });
 });
