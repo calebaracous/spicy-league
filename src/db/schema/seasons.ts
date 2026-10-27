@@ -47,6 +47,10 @@ export const seasons = pgTable(
     // Group-stage series length. 1 = report a winner (+ optional score);
     // 2 = Bo2 series, reported as 2–0 / 1–1 / 0–2, and a 1–1 is a draw.
     groupBestOf: integer("group_best_of").notNull().default(1),
+    // Prize pool in whole dollars, and its payout split in percent per
+    // place (1st first, sums to 100). Both null = no prize pool.
+    prizePool: integer("prize_pool"),
+    prizeSplit: integer("prize_split").array(),
     // Discord category holding this season's team channels (syncTeamRoles).
     discordCategoryId: text("discord_category_id"),
     championTeamId: text("champion_team_id"),

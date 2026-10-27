@@ -158,6 +158,8 @@ const FIELD_LABELS: Record<string, string> = {
   semisAt: "Semis",
   finalAt: "Final",
   groupBestOf: "Group best-of",
+  prizePool: "Prize pool ($)",
+  prizeSplit: "Payout split (%)",
 };
 
 /** Before → after lines shown under an edit. */

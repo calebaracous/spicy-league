@@ -8,6 +8,7 @@ import { TintedSection } from "@/components/ui/tinted-section";
 import { backdropClip } from "@/lib/backdrop-clips";
 import type { CaptainInfo, PlayerInfo } from "@/lib/homepage";
 import type { Season } from "@/db/schema/seasons";
+import { PrizePoolLine } from "./prize-pool-line";
 
 interface DraftSectionProps {
   season: Season;
@@ -37,6 +38,7 @@ export function DraftSection({ season, captains, topNonCaptains }: DraftSectionP
               ? "The snake draft is in progress. Picks appear on the draft page as they are made."
               : "Captains have been selected. Picks will appear on the draft page once the draft starts."}
           </p>
+          <PrizePoolLine season={season} className="text-sm" />
         </Reveal>
 
         {captains.length > 0 && (

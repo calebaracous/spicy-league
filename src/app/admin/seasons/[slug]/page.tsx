@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { LocalDateTimeInput, LocalTime } from "@/components/ui/local-time";
 import { Textarea } from "@/components/ui/textarea";
+import { formatPrizeSplit } from "@/lib/prize-pool";
 import { FlashToast } from "@/components/flash-toast";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { GAME_LABELS, SEASON_STATE_LABELS, nextStates } from "@/lib/seasons";
@@ -42,7 +43,7 @@ type SearchParams = Promise<{
 type Params = Promise<{ slug: string }>;
 
 const ERROR_MESSAGES: Record<string, string> = {
-  invalid: "Some fields are invalid.",
+  invalid: "Some fields are invalid. A prize pool needs a payout split that adds up to 100.",
   "slug-taken": "That slug is already in use.",
   "invalid-state": "That state isn't recognized.",
   "bad-transition": "That transition isn't allowed from the current state.",
@@ -340,6 +341,34 @@ export default async function EditSeasonPage({
               </select>
               <p className="text-muted-foreground text-xs">
                 Set before group results come in: it changes how matches are reported and ranked.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="prizePool">Prize pool ($)</Label>
+                <Input
+                  id="prizePool"
+                  name="prizePool"
+                  type="number"
+                  min={1}
+                  step={1}
+                  inputMode="numeric"
+                  placeholder="None"
+                  defaultValue={season.prizePool ?? ""}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="prizeSplit">Payout split (%)</Label>
+                <Input
+                  id="prizeSplit"
+                  name="prizeSplit"
+                  placeholder="75/25"
+                  defaultValue={season.prizeSplit ? formatPrizeSplit(season.prizeSplit) : ""}
+                />
+              </div>
+              <p className="text-muted-foreground text-xs sm:col-span-2">
+                Whole dollars. Split is percent per place, 1st first, adding up to 100 (e.g. 75/25).
+                Leave the prize pool blank for none.
               </p>
             </div>
             <div className="space-y-1.5">

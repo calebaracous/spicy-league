@@ -36,6 +36,7 @@ Trivial shadcn primitives get a single entry at the bottom.
 - `tests/unit/discord.test.ts` — `normalizeDiscordUsername`.
 - `tests/unit/team-name.test.ts` — team-name rules and the text-channel slug.
 - `tests/unit/event-format.test.ts` — event catalogue, inbox sentences and diffs.
+- `tests/unit/prize-pool.test.ts` — prize split parsing, per-place payouts, USD formatting.
 - `tests/unit/discord-plan.test.ts`, `discord-format.test.ts`, `discord-ticker.test.ts`, `discord-verify.test.ts` — Discord sync decisions, message formatting, announcements-ticker text, interaction signatures.
 - `playwright.config.ts` — e2e config: serial, builds + starts the app on :3100 with auth URLs overridden to localhost.
 - `tests/e2e/global-setup.ts` / `global-teardown.ts` — seed run-scoped admin + players; delete all e2e-tagged data afterwards.
@@ -69,11 +70,12 @@ Rendered by `src/app/page.tsx`:
 - `upcoming-section.tsx` — `upcoming` state (signups_open with future `signupOpensAt`).
 - `off-season-section.tsx` — `off_season` state: last season podium.
 - `past-seasons-strip.tsx` — last 3 complete seasons, always rendered.
+- `prize-pool-line.tsx` — `PrizePoolLine` ("$250 prize pool · 1st $187.50 · 2nd $62.50") used by the signup, draft and live sections; renders nothing without a prize pool.
 
 ## Public season pages
 
-- `src/app/seasons/page.tsx` — list of non-draft seasons (active + past split).
-- `src/app/seasons/[slug]/page.tsx` — season detail. `StatusPanel` renders per-state CTA. Looks up champion from `matches` when complete.
+- `src/app/seasons/page.tsx` — list of non-draft seasons (active + past split); active cards show the prize pool.
+- `src/app/seasons/[slug]/page.tsx` — season detail. `StatusPanel` renders per-state CTA. Prize pool tiles (pool + each place's payout) above the schedule. Looks up champion from `matches` when complete.
 - `src/app/seasons/[slug]/signup/page.tsx` — signup form (LoL: roles, CS2: maps; "interested in being a captain" checkbox, pre-filled from `users.captainInterest`, hidden for sub signups). Missing a Discord username or (LoL) a Riot link → a notice listing what to add on `/profile` instead of the form.
 - `src/app/seasons/[slug]/signup/actions.ts` — `submitSignup`. Validates state + window + one-per-user + Discord username + Riot link (LoL) + required quandary answer. Draft-pool signups also save the captain checkbox to `users.captainInterest`.
 - `src/app/seasons/[slug]/captains/page.tsx` — announced captain list (duos grouped on one line).
@@ -106,7 +108,7 @@ Rendered by `src/app/page.tsx`:
 - `src/app/admin/page.tsx` — admin overview (Events button with unread count, stats, needs-attention list, active seasons, newest accounts, latest signups) + all seasons.
 - `src/app/admin/events/page.tsx` — events inbox: filters, unread highlight, paging. `actions.ts` — `markAllEventsRead`.
 - `src/app/admin/users/page.tsx` — player search/filters, ban + unban forms. `actions.ts` — `banUserAction`, `unbanUserAction`.
-- `src/app/admin/seasons/new/page.tsx` — create season form.
+- `src/app/admin/seasons/new/page.tsx` — create season form (incl. prize pool + payout split, also on the edit form).
 - `src/app/admin/seasons/actions.ts` — `createSeason`, `updateSeason`, `transitionSeasonState` (→ `captains_selected` schedules the Discord Captain role sync), `syncDiscordRoles`. zod-validated.
 - `src/app/admin/seasons/[slug]/page.tsx` — edit metadata + state transition buttons + "Discord roles" card (match status per player, Sync button).
 - `src/app/admin/seasons/[slug]/signups/page.tsx` — signup roster (draft pool vs sub only, Discord username + matched ID, LoL best solo rank + Riot ID or "No Riot account linked"), "Wants captain" badge + filter (`?captain=1`) and an "Interested in captaining" list in the Captains card (`users.captainInterest`), captain promotion UI, captains grouped by team with Pair with… / Split for duo captains.
@@ -174,6 +176,7 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/utils.ts` — `cn()` from clsx + tailwind-merge.
 - `src/lib/env.ts` — t3-env + zod schema. See [ENV.md](ENV.md).
 - `src/lib/seasons.ts` — `SEASON_STATES`, `SUB_SIGNUP_STATES` + `openSignupKind` (player vs sub signups) + `resolveSignupKind` (sub-only choice), `TRANSITIONS` state machine, `nextStates`, `canTransition`, `SEASON_STATE_LABELS`, `GAME_LABELS`, `PUBLIC_STATES`, `isPublic`, `isValidSlug`, `slugify`, `seasonSchedule` (ordered key-dates list).
+- `src/lib/prize-pool.ts` — `prizePayouts` (dollars per place from `seasons.prizePool` / `prizeSplit`), `parsePrizeSplit` ("75/25"), `formatPrizeSplit`, `formatUsd`, `describePayouts`.
 - `src/lib/draft.ts` — `TEAM_SIZE`, `PICKS_PER_TEAM`, `picksForTeam`, `snakeOrder` (skips full teams), `groupCaptainTeams` / `loadCaptainTeams` (solo + duo captains), `teamForPick`, `totalPicks`, `getDraftSnapshot` (incl. solo-queue rank per pool player), `finalizeDraft`. See [DRAFT.md](DRAFT.md).
 - `src/lib/standings.ts` — pure `rankStandings`: points (2/1/0), head-to-head mini-table, series wins, game diff, tiebreaker games; shared ranks + `tiebreakersNeeded`. `PLAYOFF_SPOTS`.
 - `src/lib/match-format.ts` — pure: `isDraw` / `hasResult` / `resultFor`, `BO2_RESULTS`, `GROUP_BEST_OF_OPTIONS`, `formatStructure`, `roundLabel`.

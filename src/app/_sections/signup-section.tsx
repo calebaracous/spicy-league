@@ -9,6 +9,7 @@ import { VideoBackdrop } from "@/components/ui/video-backdrop";
 import { backdropClip, placeholderBackdrop } from "@/lib/backdrop-clips";
 import type { PlayerInfo } from "@/lib/homepage";
 import type { Season } from "@/db/schema/seasons";
+import { PrizePoolLine } from "./prize-pool-line";
 
 interface SignupSectionProps {
   season: Season;
@@ -71,6 +72,8 @@ export function SignupSection({ season, signupCount, topPlayers }: SignupSection
               <h2 className="text-heading" style={{ color: "var(--text)" }}>
                 {season.name}
               </h2>
+
+              <PrizePoolLine season={season} className="text-lg" />
 
               <p className="text-base leading-relaxed" style={{ color: "var(--muted)" }}>
                 {season.signupClosesAt && (

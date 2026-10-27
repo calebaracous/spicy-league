@@ -18,7 +18,8 @@ export const metadata = { title: "New season · Admin" };
 type SearchParams = Promise<{ error?: string }>;
 
 const ERROR_MESSAGES: Record<string, string> = {
-  invalid: "Some fields are invalid. Double-check name, slug, and game.",
+  invalid:
+    "Some fields are invalid. Double-check name, slug, game, and that a prize pool's payout split adds up to 100.",
   "slug-taken": "That slug is already in use. Pick a different one.",
 };
 
@@ -112,6 +113,28 @@ export default async function NewSeasonPage({ searchParams }: { searchParams: Se
               </select>
               <p className="text-muted-foreground text-xs">
                 Set before group results come in: it changes how matches are reported and ranked.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="prizePool">Prize pool ($)</Label>
+                <Input
+                  id="prizePool"
+                  name="prizePool"
+                  type="number"
+                  min={1}
+                  step={1}
+                  inputMode="numeric"
+                  placeholder="None"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="prizeSplit">Payout split (%)</Label>
+                <Input id="prizeSplit" name="prizeSplit" placeholder="75/25" />
+              </div>
+              <p className="text-muted-foreground text-xs sm:col-span-2">
+                Whole dollars. Split is percent per place, 1st first, adding up to 100 (e.g. 75/25).
+                Leave the prize pool blank for none.
               </p>
             </div>
             <div className="space-y-1.5">

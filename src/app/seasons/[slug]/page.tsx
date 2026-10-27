@@ -17,6 +17,7 @@ import { FlashToast } from "@/components/flash-toast";
 import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { leaveSubList } from "./signup/actions";
 import { formatStructure, roundLabel } from "@/lib/match-format";
+import { formatUsd, prizePayouts } from "@/lib/prize-pool";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { getCaptainedTeamId, getTeamForCaptain } from "@/lib/schedule";
 import { GAME_LABELS, openSignupKind, SEASON_STATE_LABELS, seasonSchedule } from "@/lib/seasons";
@@ -282,6 +283,7 @@ export default async function SeasonDetailPage({
     : null;
 
   const schedule = seasonSchedule(season);
+  const payouts = prizePayouts(season);
 
   return (
     <div className="page flex-1 space-y-8 [--page-max:48rem]">
@@ -440,6 +442,23 @@ export default async function SeasonDetailPage({
               All teams
             </Link>
           </div>
+        </section>
+      ) : null}
+
+      {payouts.length > 0 ? (
+        <section aria-label="Prize pool" className="grid gap-3 sm:grid-cols-3">
+          <div className="rounded-lg border p-4" style={{ borderColor: "var(--accent)" }}>
+            <p className="text-muted-foreground text-xs tracking-wide uppercase">Prize pool</p>
+            <p className="mt-1 text-2xl font-semibold">{formatUsd(season.prizePool!)}</p>
+          </div>
+          {payouts.map(({ place, percent, amount }) => (
+            <div key={place} className="rounded-lg border p-4">
+              <p className="text-muted-foreground text-xs tracking-wide uppercase">
+                {place} place · {percent}%
+              </p>
+              <p className="mt-1 text-2xl font-semibold">{formatUsd(amount)}</p>
+            </div>
+          ))}
         </section>
       ) : null}
 

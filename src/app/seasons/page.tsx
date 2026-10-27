@@ -5,6 +5,7 @@ import { db } from "@/db/client";
 import { seasons } from "@/db/schema/seasons";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { formatUsd } from "@/lib/prize-pool";
 import { GAME_LABELS, SEASON_STATE_LABELS } from "@/lib/seasons";
 
 export const metadata = { title: "Seasons" };
@@ -63,7 +64,18 @@ export default async function SeasonsIndexPage() {
                   </h3>
                   <Badge>{SEASON_STATE_LABELS[season.state]}</Badge>
                 </div>
-                <p className="text-muted-foreground mt-1 text-xs">{GAME_LABELS[season.game]}</p>
+                <p className="text-muted-foreground mt-1 text-xs">
+                  {GAME_LABELS[season.game]}
+                  {season.prizePool ? (
+                    <>
+                      {" "}
+                      ·{" "}
+                      <span style={{ color: "var(--accent-text)" }}>
+                        {formatUsd(season.prizePool)} prize pool
+                      </span>
+                    </>
+                  ) : null}
+                </p>
                 {season.description ? (
                   <p className="mt-3 line-clamp-2 text-sm">{season.description}</p>
                 ) : null}

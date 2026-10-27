@@ -8,6 +8,7 @@ import { TintedSection } from "@/components/ui/tinted-section";
 import { backdropClip } from "@/lib/backdrop-clips";
 import type { NextMatchInfo, PlayerInfo } from "@/lib/homepage";
 import type { Season } from "@/db/schema/seasons";
+import { PrizePoolLine } from "./prize-pool-line";
 import { SEASON_STATE_LABELS } from "@/lib/seasons";
 
 interface LiveSectionProps {
@@ -47,6 +48,7 @@ export function LiveSection({ season, nextMatch, topPlayers }: LiveSectionProps)
           <h2 className="text-heading" style={{ color: "var(--text)" }}>
             Next match
           </h2>
+          <PrizePoolLine season={season} className="text-sm" />
         </Reveal>
 
         {nextMatch ? (

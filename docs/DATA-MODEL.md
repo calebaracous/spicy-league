@@ -143,6 +143,13 @@ Auth, not queried directly by app code.
   reported as 2–0 / 1–1 / 0–2 where 1–1 is a draw. Edited in the admin
   season form (`GROUP_BEST_OF_OPTIONS`). See [MATCHES.md](MATCHES.md) →
   Group format.
+- `prizePool` int (whole dollars) + `prizeSplit` int[] (percent per place,
+  1st first, sums to 100), both nullable (migration `0014_prize_pool`).
+  Null pool = no prize pool; the admin form only saves a split alongside a
+  pool (`parsePrizeSplit` in `src/lib/prize-pool.ts`, zod refine in
+  `seasonInputSchema`). Display only: season page tiles, `/seasons` card,
+  `PrizePoolLine` in the signup / draft / live home sections. Payouts are
+  computed (`prizePayouts`), never stored.
 - `discordCategoryId` (migration `0010`) — Discord category holding the
   season's team channels, created by `syncTeamRoles`.
 - `championTeamId` — set by `confirmMatch` when the **final** is

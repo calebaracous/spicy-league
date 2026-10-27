@@ -14,6 +14,7 @@ import { syncCaptainRole, syncInBackground } from "@/lib/discord-roles";
 import { syncSeasonDiscord } from "@/lib/discord-sync";
 import { deleteOldTeamChannels, emailUnmatchedPlayers, syncNicknames } from "@/lib/discord-admin";
 import { canTransition, isValidSlug, SEASON_STATES } from "@/lib/seasons";
+import { parsePrizeSplit } from "@/lib/prize-pool";
 import { diffFields, type EventType } from "@/lib/event-format";
 import { logEvent } from "@/lib/events";
 
@@ -24,34 +25,47 @@ const optionalDate = z
   .optional()
   .transform((v) => (v && v.length > 0 ? new Date(v) : null));
 
-const seasonInputSchema = z.object({
-  name: z.string().trim().min(3).max(80),
-  slug: z
-    .string()
-    .trim()
-    .toLowerCase()
-    .refine(isValidSlug, "Slug must be 3–48 chars, lowercase alphanumeric with hyphens"),
-  game: gameSchema,
-  // See seasons.groupBestOf. Only 1 and 2 have a reporting flow.
-  groupBestOf: z.enum(["1", "2"]).transform(Number),
-  description: z
-    .string()
-    .max(5000)
-    .optional()
-    .transform((v) => v?.trim() || null),
-  rules: z
-    .string()
-    .max(10000)
-    .optional()
-    .transform((v) => v?.trim() || null),
-  signupOpensAt: optionalDate,
-  signupClosesAt: optionalDate,
-  draftAt: optionalDate,
-  seasonStartAt: optionalDate,
-  groupStageEndsAt: optionalDate,
-  semisAt: optionalDate,
-  finalAt: optionalDate,
-});
+const seasonInputSchema = z
+  .object({
+    name: z.string().trim().min(3).max(80),
+    slug: z
+      .string()
+      .trim()
+      .toLowerCase()
+      .refine(isValidSlug, "Slug must be 3–48 chars, lowercase alphanumeric with hyphens"),
+    game: gameSchema,
+    // See seasons.groupBestOf. Only 1 and 2 have a reporting flow.
+    groupBestOf: z.enum(["1", "2"]).transform(Number),
+    description: z
+      .string()
+      .max(5000)
+      .optional()
+      .transform((v) => v?.trim() || null),
+    rules: z
+      .string()
+      .max(10000)
+      .optional()
+      .transform((v) => v?.trim() || null),
+    signupOpensAt: optionalDate,
+    signupClosesAt: optionalDate,
+    draftAt: optionalDate,
+    seasonStartAt: optionalDate,
+    groupStageEndsAt: optionalDate,
+    semisAt: optionalDate,
+    finalAt: optionalDate,
+    // Whole dollars; blank = no prize pool (and the split is ignored).
+    prizePool: z
+      .string()
+      .nullish()
+      .transform((v) => (v?.trim() ? Number(v) : null))
+      .refine((v) => v === null || (Number.isInteger(v) && v > 0 && v <= 1_000_000)),
+    prizeSplit: z.string().nullish(),
+  })
+  .transform(({ prizeSplit, ...rest }) => ({
+    ...rest,
+    prizeSplit: rest.prizePool === null ? null : parsePrizeSplit(prizeSplit ?? ""),
+  }))
+  .refine((v) => v.prizePool === null || v.prizeSplit !== null);
 
 function parseSeasonInput(formData: FormData) {
   return seasonInputSchema.safeParse({
@@ -68,6 +82,8 @@ function parseSeasonInput(formData: FormData) {
     groupStageEndsAt: formData.get("groupStageEndsAt"),
     semisAt: formData.get("semisAt"),
     finalAt: formData.get("finalAt"),
+    prizePool: formData.get("prizePool"),
+    prizeSplit: formData.get("prizeSplit"),
   });
 }
 
@@ -99,10 +115,13 @@ export async function createSeason(formData: FormData) {
   redirect(`/admin/seasons/${parsed.data.slug}`);
 }
 
-/** Dates compare by value in the event diff, as ISO strings. */
+/** Dates and arrays compare by value in the event diff, as strings. */
 function comparable(row: Record<string, unknown>): Record<string, unknown> {
   return Object.fromEntries(
-    Object.entries(row).map(([k, v]) => [k, v instanceof Date ? v.toISOString() : v]),
+    Object.entries(row).map(([k, v]) => [
+      k,
+      v instanceof Date ? v.toISOString() : Array.isArray(v) ? v.join("/") : v,
+    ]),
   );
 }
 
