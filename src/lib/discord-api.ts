@@ -18,6 +18,11 @@ const MAX_RETRIES = 3;
  * admin re-runs the sync later.
  */
 const MAX_WAIT_MS = 5_000;
+/**
+ * Member role adds/removes share a bucket that a bulk sync drains quickly;
+ * Discord then asks for 6–10s. Short enough to sit through.
+ */
+const MEMBER_ROLE_MAX_WAIT_MS = 15_000;
 
 export type DiscordConfig = {
   token: string;
@@ -87,7 +92,11 @@ async function call<T>(
   cfg: DiscordConfig,
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
   path: string,
-  { body, reason }: { body?: unknown; reason?: string } = {},
+  {
+    body,
+    reason,
+    maxWaitMs = MAX_WAIT_MS,
+  }: { body?: unknown; reason?: string; maxWaitMs?: number } = {},
 ): Promise<T | null> {
   for (let attempt = 0; ; attempt++) {
     const res = await fetch(`${API}${path}`, {
@@ -106,7 +115,7 @@ async function call<T>(
     if (res.status === 429) {
       const data = (await res.json().catch(() => null)) as { retry_after?: number } | null;
       const waitMs = Math.ceil((data?.retry_after ?? 1) * 1000);
-      if (attempt >= MAX_RETRIES || waitMs > MAX_WAIT_MS) {
+      if (attempt >= MAX_RETRIES || waitMs > maxWaitMs) {
         throw new DiscordApiError(429, null, `rate limited, retry in ${Math.ceil(waitMs / 1000)}s`);
       }
       await new Promise((r) => setTimeout(r, waitMs));
@@ -158,7 +167,10 @@ export async function addMemberRole(
   roleId: string,
   reason: string,
 ) {
-  await call(cfg, "PUT", `/guilds/${cfg.guildId}/members/${userId}/roles/${roleId}`, { reason });
+  await call(cfg, "PUT", `/guilds/${cfg.guildId}/members/${userId}/roles/${roleId}`, {
+    reason,
+    maxWaitMs: MEMBER_ROLE_MAX_WAIT_MS,
+  });
 }
 
 export async function removeMemberRole(
@@ -169,6 +181,7 @@ export async function removeMemberRole(
 ) {
   await call(cfg, "DELETE", `/guilds/${cfg.guildId}/members/${userId}/roles/${roleId}`, {
     reason,
+    maxWaitMs: MEMBER_ROLE_MAX_WAIT_MS,
   });
 }
 

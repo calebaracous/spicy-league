@@ -124,8 +124,10 @@ unique within the season (case-insensitive).
 
 **Rate limit:** Discord lets a channel be renamed only **twice per 10
 minutes**. The client sits through short rate limits but fails fast on long
-ones (`MAX_WAIT_MS`), so a third quick rename leaves the channels on the old
-name; the role still renames. Run Sync later to catch up.
+ones (`MAX_WAIT_MS`, 5s), so a third quick rename leaves the channels on the old
+name; the role still renames. Run Sync later to catch up. Member role
+adds/removes wait longer (`MEMBER_ROLE_MAX_WAIT_MS`, 15s): a bulk sync drains
+that bucket and Discord asks for 6–10s, which used to drop grants.
 
 ## Matching players to Discord accounts
 
