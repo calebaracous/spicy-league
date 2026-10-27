@@ -78,7 +78,9 @@ everything under `src/app/admin/**/actions.ts`, `startDraft` / `pauseDraft` /
 `resumeDraft` / `undoLastPick` in `src/app/seasons/[slug]/draft/actions.ts`,
 `confirmMatch` / `disputeMatch` / `resetMatch` in
 `src/app/seasons/[slug]/matches/actions.ts`, and `start10Man` /
-`cancel10Man` / `reportResult` in `src/app/10-man/actions.ts`.
+`cancel10Man` / `reportResult` in `src/app/10-man/actions.ts`, and the
+admin tools on a player's public page (`src/app/users/[username]/admin-actions.ts`:
+Discord username / matched ID, Riot links, stat refresh).
 
 **Onboarded check pattern**: season and profile mutations use
 `requireOnboarded()` so we never have a team member with a null username.

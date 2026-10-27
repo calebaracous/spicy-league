@@ -1,4 +1,4 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -10,8 +10,9 @@ import { users } from "@/db/schema/auth";
 import { accountLinks, riotStatSnapshots } from "@/db/schema/stats";
 import { signOut } from "@/auth";
 import { cookies } from "next/headers";
+import { setDiscordUsername } from "@/lib/account-edits";
 import { requireOnboarded } from "@/lib/auth-helpers";
-import { DISCORD_USERNAME_HELP, normalizeDiscordUsername } from "@/lib/discord";
+import { DISCORD_USERNAME_HELP } from "@/lib/discord";
 import { setTenManRole } from "@/lib/discord-ping-roles";
 import { syncInBackground } from "@/lib/discord-roles";
 import { opggUrlForRiotId } from "@/lib/opgg";
@@ -138,35 +139,12 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
   async function saveDiscordUsername(formData: FormData) {
     "use server";
     const session = await requireOnboarded();
-    const discordUsername = normalizeDiscordUsername(formData.get("discordUsername")?.toString());
-    if (!discordUsername) redirect("/profile?error=discord-invalid");
-
-    const taken = await db.query.users.findFirst({
-      where: and(eq(users.discordUsername, discordUsername), ne(users.id, session.user.id)),
-      columns: { id: true },
-    });
-    if (taken) redirect("/profile?error=discord-taken");
-
-    // A different username may be a different Discord account: forget the
-    // resolved ID so the next role sync searches again.
-    const current = await db.query.users.findFirst({
-      where: eq(users.id, session.user.id),
-      columns: { discordUsername: true },
-    });
-    await db
-      .update(users)
-      .set({
-        discordUsername,
-        ...(current?.discordUsername !== discordUsername ? { discordUserId: null } : {}),
-        updatedAt: new Date(),
-      })
-      .where(eq(users.id, session.user.id));
-    if (current?.discordUsername !== discordUsername) {
-      await logEvent("profile.discord_updated", {
-        actorId: session.user.id,
-        data: { changes: { discordUsername: [current?.discordUsername ?? null, discordUsername] } },
-      });
-    }
+    const error = await setDiscordUsername(
+      session.user.id,
+      formData.get("discordUsername")?.toString(),
+      session.user.id,
+    );
+    if (error) redirect(`/profile?error=discord-${error}`);
 
     redirect("/profile?saved=1");
   }

@@ -21,12 +21,27 @@ function FormError({ message }: { message?: string }) {
   );
 }
 
-export function RiotLinkForm({ label, hint }: { label: string; hint: string }) {
-  const [state, action, pending] = useActionState<LinkFormState, FormData>(linkRiotAccount, {});
+/**
+ * `linkAction` + `userId` let the admin tools on /users/[username] reuse this
+ * to link an account to someone else's profile.
+ */
+export function RiotLinkForm({
+  label,
+  hint,
+  linkAction = linkRiotAccount,
+  userId,
+}: {
+  label: string;
+  hint: string;
+  linkAction?: (prev: LinkFormState, formData: FormData) => Promise<LinkFormState>;
+  userId?: string;
+}) {
+  const [state, action, pending] = useActionState<LinkFormState, FormData>(linkAction, {});
   const [riotId, setRiotId] = useState("");
 
   return (
     <form action={action} className="space-y-3">
+      {userId ? <input type="hidden" name="userId" value={userId} /> : null}
       <div className="space-y-1.5">
         <Label htmlFor="riotId">{label}</Label>
         <Input

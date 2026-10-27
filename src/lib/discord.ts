@@ -19,3 +19,13 @@ export function normalizeDiscordUsername(raw: string | null | undefined): string
   if (!DISCORD_USERNAME.test(v) || v.includes("..")) return null;
   return v;
 }
+
+/**
+ * Discord user IDs (`users.discordUserId`) are numeric snowflakes, 17–20
+ * digits today. Admins can set one by hand when the username search can't
+ * find the player. Returns null if it isn't one.
+ */
+export function normalizeDiscordUserId(raw: string | null | undefined): string | null {
+  const v = (raw ?? "").trim();
+  return /^\d{17,20}$/.test(v) ? v : null;
+}

@@ -33,7 +33,8 @@ Trivial shadcn primitives get a single entry at the bottom.
 - `tests/unit/player-stats.test.ts` — directory W–D–L tallies (subs, sat-out, Bo2 draws, 10-man) and rank helpers (`bestRankPerUser`).
 - `tests/unit/season-schedule.test.ts` — `seasonSchedule` ordering, skipping unset dates, group stage range.
 - `tests/unit/standings.test.ts` — `rankStandings`: Bo2 points, head-to-head, series wins, tiebreaker games, shared ranks.
-- `tests/unit/discord.test.ts` — `normalizeDiscordUsername`.
+- `tests/unit/discord.test.ts` — `normalizeDiscordUsername`, `normalizeDiscordUserId`.
+- `tests/unit/riot-id.test.ts` — `parseRiotId` (`GameName#TAG`).
 - `tests/unit/team-name.test.ts` — team-name rules and the text-channel slug.
 - `tests/unit/event-format.test.ts` — event catalogue, inbox sentences and diffs.
 - `tests/unit/prize-pool.test.ts` — prize split parsing, per-place payouts, USD formatting.
@@ -138,7 +139,9 @@ Rendered by `src/app/page.tsx`:
 - `src/app/history/_components/zoomable-image.tsx` — client; tap a screenshot to open it full-size in a native `<dialog>`.
 - `src/app/users/page.tsx` — public player directory ("Players" in the nav).
 - `src/app/users/_components/player-directory.tsx` — client; search box, A–Z jump bar, grouped player rows with stats + rank.
-- `src/app/users/[username]/page.tsx` — public profile; per-Riot-account rank + top champs, Steam/Leetify links.
+- `src/app/users/[username]/page.tsx` — public profile; per-Riot-account rank + top champs, Steam/Leetify links. Admins also get the "Admin tools" card (`?saved=` / `?error=` flash).
+- `src/app/users/[username]/_components/admin-account-tools.tsx` — admin-only card: edit Discord username, set/clear the matched Discord user ID, link/unlink Riot accounts, refresh stats (no rate limit). `ADMIN_ERROR_MESSAGES`.
+- `src/app/users/[username]/admin-actions.ts` — `requireAdmin` actions behind that card; the target is the hidden `userId` field.
 - `src/app/users/[username]/_components/stats-tabs.tsx` — client tab switcher (LoL / CS2).
 - `src/app/terms/page.tsx`, `src/app/privacy/page.tsx` — static legal pages using `LegalPage`.
 
@@ -189,8 +192,10 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/live-season.ts` — `getLiveSeason`, `LIVE_STATE_COPY`, `liveSeasonHref`. Used by header pill + home hero.
 - `src/lib/ten-man.ts` — `PICK_ORDER_C1_C2`, `getActiveTenMan`, `getTenManSnapshot`, `getRecentTenMans`, `electCaptains`. See [TEN-MAN.md](TEN-MAN.md).
 - `src/lib/riot-links.ts` — `hasRiotLink(userId)`: whether a user has a linked Riot account.
+- `src/lib/riot-id.ts` — pure `parseRiotId(raw)`: `GameName#TAG` → parts or null.
+- `src/lib/account-edits.ts` — `setDiscordUsername`, `setDiscordUserId`, `addRiotLink`, `removeRiotLink` for any user + actor; shared by `/profile` and the admin tools on `/users/[username]`. Admin edits log the player as `subjectUserId`.
 - `src/lib/signup-gate.ts` — `missingSignupRequirements(userId, game)`: the season signup gate (Discord username always, Riot link for LoL).
-- `src/lib/discord.ts` — pure `normalizeDiscordUsername` + `DISCORD_USERNAME_HELP`; shared by account signup and the profile form.
+- `src/lib/discord.ts` — pure `normalizeDiscordUsername` + `DISCORD_USERNAME_HELP`; shared by account signup and the profile form. `normalizeDiscordUserId` (17–20 digit snowflake) for the admin override.
 - `src/lib/discord-api.ts` — Discord REST client for the bot (`discordConfig`, member search, roles); retries 429s. See [DISCORD.md](DISCORD.md).
 - `src/lib/discord-plan.ts` — pure role-sync decisions: `pickExactMember`, `captainRoleChanges`, `staleTeamRoles`.
 - `src/lib/discord-roles.ts` — shared bot plumbing (`grant`, `revoke`, `leagueRoleId`, `syncExclusiveRole`, `syncInBackground` via `after()`, `mergeReports`), `syncCaptainRole`, `syncTeamRoles` (team roles + private text/voice channels), `renameTeamInDiscord`.

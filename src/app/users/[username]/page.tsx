@@ -2,6 +2,7 @@ import { and, eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { ADMIN_ERROR_MESSAGES, AdminAccountTools } from "./_components/admin-account-tools";
 import { MatchHistory } from "./_components/match-history";
 import { StatsTabs } from "./_components/stats-tabs";
 import { db } from "@/db/client";
@@ -12,13 +13,18 @@ import { formatRank } from "@/lib/rank";
 import { opggUrlForRiotId } from "@/lib/opgg";
 import { getChampionName } from "@/lib/riot-api";
 import { getPlayerMatchHistory } from "@/lib/substitutions";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent } from "@/components/ui/card";
+import { FlashToast } from "@/components/flash-toast";
 import { LocalTime } from "@/components/ui/local-time";
 import { Separator } from "@/components/ui/separator";
 
-type Props = { params: Promise<{ username: string }> };
+type Props = {
+  params: Promise<{ username: string }>;
+  searchParams: Promise<{ saved?: string; error?: string }>;
+};
 
-export async function generateMetadata({ params }: Props) {
+export async function generateMetadata({ params }: Pick<Props, "params">) {
   const { username } = await params;
   return { title: username };
 }
@@ -32,8 +38,8 @@ function winRate(wins: number | null, losses: number | null): string {
 
 type ChampEntry = { championId: number; championPoints: number };
 
-export default async function PublicProfilePage({ params }: Props) {
-  const { username } = await params;
+export default async function PublicProfilePage({ params, searchParams }: Props) {
+  const [{ username }, { saved, error }] = await Promise.all([params, searchParams]);
   const normalized = username.toLowerCase();
 
   const user = await db.query.users.findFirst({
@@ -76,6 +82,8 @@ export default async function PublicProfilePage({ params }: Props) {
   const [history, viewer] = await Promise.all([getPlayerMatchHistory(user.id), auth()]);
   // Discord is for contacting players, so only signed-in visitors see it.
   const discordUsername = viewer?.user ? user.discordUsername : null;
+  const isAdmin = viewer?.user.role === "admin";
+  const errorMessage = isAdmin && error ? (ADMIN_ERROR_MESSAGES[error] ?? null) : null;
   const hasLolData = riotLinks.length > 0 || !!user.opggUrl;
   const derivedOpgg = new Set(riotLinks.map((l) => opggUrlForRiotId(l.externalHandle)));
   const hasCs2Data = !!steamLink;
@@ -191,6 +199,12 @@ export default async function PublicProfilePage({ params }: Props) {
         ) : null}
       </header>
       <Separator />
+      {isAdmin && saved ? <FlashToast message="Saved." /> : null}
+      {errorMessage ? (
+        <Alert variant="destructive">
+          <AlertDescription>{errorMessage}</AlertDescription>
+        </Alert>
+      ) : null}
       {user.bio ? <p className="text-base leading-relaxed">{user.bio}</p> : null}
 
       {hasAnyStats ? (
@@ -208,6 +222,14 @@ export default async function PublicProfilePage({ params }: Props) {
       ) : null}
 
       <MatchHistory matches={history} />
+
+      {isAdmin ? (
+        <AdminAccountTools
+          user={user}
+          riotLinks={riotLinks}
+          lastRefreshed={riotSnapshots[0]?.capturedAt ?? null}
+        />
+      ) : null}
     </div>
   );
 }

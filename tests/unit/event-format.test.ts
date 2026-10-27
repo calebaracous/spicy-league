@@ -45,6 +45,21 @@ describe("event catalogue", () => {
 });
 
 describe("describeEvent", () => {
+  it("names the player when an admin edits their accounts", () => {
+    expect(text(describeEvent(view("riot.linked", { data: { riotId: "Bot#NA1" } })))).toBe(
+      "Captain One linked Riot account Bot#NA1 to Bot 3",
+    );
+    expect(
+      text(describeEvent(view("riot.unlinked", { subject: null, data: { riotId: "Bot#NA1" } }))),
+    ).toBe("Captain One unlinked Riot account Bot#NA1");
+    expect(text(describeEvent(view("profile.discord_updated")))).toBe(
+      "Captain One changed the Discord details of Bot 3",
+    );
+    expect(text(describeEvent(view("profile.discord_updated", { subject: null })))).toBe(
+      "Captain One changed their Discord username",
+    );
+  });
+
   it("links people to their profile and seasons to admin pages", () => {
     const segs = describeEvent(view("captain.promoted"));
     expect(segs).toContainEqual({ text: "Captain One", href: "/users/captain1" });

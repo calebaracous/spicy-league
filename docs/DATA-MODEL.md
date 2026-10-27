@@ -90,8 +90,10 @@ wiring in `src/lib/auth.ts`).
     and for season signups; null on accounts made before it existed.
   - `discordUserId` text, nullable (migration `0009_discord_roles`) — Discord's
     numeric ID, resolved from `discordUsername` by the first role sync and
-    cleared when the username changes or Discord reports them gone. See
-    [DISCORD.md](DISCORD.md).
+    cleared when the username changes or Discord reports them gone. Admins
+    can also set it by hand (`setDiscordUserId`, `src/lib/account-edits.ts`);
+    not unique in the DB, but that action refuses an ID already on another
+    user. See [DISCORD.md](DISCORD.md).
   - `tenManPings` boolean, default false (migration `0011`) — opted in on
     `/profile` to the Discord "10-man" ping role.
   - `captainInterest` boolean, default false (migration `0013`) — "interested
@@ -267,7 +269,7 @@ since the pre-squash migration 0008). Provider is enum `account_provider`:
 `riot | steam | leetify`.
 
 - **Riot**: up to `MAX_RIOT_ACCOUNTS = 3` links per user
-  (`src/app/profile/constants.ts`, enforced in `linkRiotAccount`). The
+  (`src/app/profile/constants.ts`, enforced in `addRiotLink`, `src/lib/account-edits.ts`). The
   same PUUID can't be linked twice by one user.
 - **Steam / Leetify**: app code keeps one per user (update-in-place in
   `linkCs2Account`), but the DB would allow more.
@@ -347,7 +349,7 @@ season and 10-man state.
   unique.
 - Signups only accept users whose username is non-null. Enforced by
   `requireOnboarded()`.
-- Max 3 Riot links per user. Enforced in `linkRiotAccount`.
+- Max 3 Riot links per user. Enforced in `addRiotLink` (`src/lib/account-edits.ts`).
 - 10-man invariants (10 signups, 2 captains, 8 picks) — enforced in
   `src/app/10-man/actions.ts`; see [TEN-MAN.md](TEN-MAN.md).
 

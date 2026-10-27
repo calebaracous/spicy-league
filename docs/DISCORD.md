@@ -160,7 +160,11 @@ the first sync searches the server (`GET /guilds/{id}/members/search`, no
 privileged intent) and keeps only an **exact** username match, saving it to
 `users.discordUserId`. It's cleared when the player changes their username on
 `/profile`, or when Discord says they've left. Slash commands also learn the
-ID from whoever runs them. Usernames are self-reported; nothing proves the
+ID from whoever runs them. When the search can't find someone (typo, the
+wrong username), an admin can fix the username or paste the numeric ID
+(Discord → Copy User ID) in the **Admin tools** card on their public page
+`/users/[username]`; roles follow on the next season sync. One ID can't be
+matched to two accounts (checked in code, not the DB). Usernames are self-reported; nothing proves the
 account belongs to the player.
 
 ## Files

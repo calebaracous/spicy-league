@@ -146,6 +146,7 @@ const FIELD_LABELS: Record<string, string> = {
   pronouns: "Pronouns",
   opggUrl: "OP.GG URL",
   discordUsername: "Discord username",
+  discordUserId: "Discord user ID",
   slug: "Slug",
   game: "Game",
   description: "Description",
@@ -195,8 +196,12 @@ export function describeEvent(e: EventView): Segment[] {
       return [actor, " edited their profile"];
     case "profile.opgg_updated":
       return [actor, " changed their OP.GG link"];
+    // A subject means an admin edited someone else's (admin tools on
+    // /users/[username]); the player's own edits have none.
     case "profile.discord_updated":
-      return [actor, " changed their Discord username"];
+      return e.subject
+        ? [actor, " changed the Discord details of ", subject]
+        : [actor, " changed their Discord username"];
     case "profile.ten_man_pings":
       return [actor, d.enabled ? " turned on 10-man pings" : " turned off 10-man pings"];
     case "profile.captain_interest":
@@ -205,9 +210,13 @@ export function describeEvent(e: EventView): Segment[] {
         d.enabled ? " is interested in being a captain" : " is no longer interested in captaining",
       ];
     case "riot.linked":
-      return [actor, " linked Riot account ", str(d.riotId)];
+      return e.subject
+        ? [actor, " linked Riot account ", str(d.riotId), " to ", subject]
+        : [actor, " linked Riot account ", str(d.riotId)];
     case "riot.unlinked":
-      return [actor, " unlinked Riot account ", str(d.riotId)];
+      return e.subject
+        ? [actor, " unlinked Riot account ", str(d.riotId), " from ", subject]
+        : [actor, " unlinked Riot account ", str(d.riotId)];
     case "cs2.linked":
       return [actor, " linked Steam account ", str(d.steamId)];
     case "cs2.unlinked":
