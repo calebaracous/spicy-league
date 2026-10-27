@@ -208,7 +208,9 @@ export default async function AdminSignupsPage({
   const lolRoles = ["top", "jungle", "mid", "adc", "support", "fill"];
 
   return (
-    <div className="page flex-1 space-y-6 [--page-max:64rem]">
+    // Wider than the site container (--container-max) so the roster table has
+    // room for its columns; the header and Captains card keep the 64rem cap.
+    <div className="page flex-1 space-y-6 [--container-max:100rem] [--page-max:64rem]">
       <header className="space-y-1">
         <Link
           href={`/admin/seasons/${slug}`}
@@ -375,8 +377,8 @@ export default async function AdminSignupsPage({
         </CardContent>
       </Card>
 
-      {/* Roster */}
-      <Card>
+      {/* Roster: many columns, so it drops the page cap and uses the full width */}
+      <Card className="[--page-max:none]">
         <CardHeader>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>

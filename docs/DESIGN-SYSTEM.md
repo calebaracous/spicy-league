@@ -79,6 +79,9 @@ vertical padding, with each direct child capped at `--page-max` and
 left-aligned so narrow content lines up with the header logo. Set the width
 per page with an arbitrary property: `className="page flex-1 space-y-8
 [--page-max:48rem]"`. Page titles use `<h1 className="text-heading">`.
+A child can drop the cap with `[--page-max:none]`; a page that needs to be
+wider than the site container (the admin signups roster table) also raises
+`[--container-max:100rem]` on its `.page` wrapper.
 
 `--navbar-height: 64px` is exposed so sticky-offset calculations can share
 it (currently used only in `src/components/site-header-client.tsx`).
