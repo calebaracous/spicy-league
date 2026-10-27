@@ -23,6 +23,9 @@ export const users = pgTable("users", {
   discordUserId: text("discord_user_id"),
   // Opted in on /profile to the Discord "10-man" ping role.
   tenManPings: boolean("ten_man_pings").notNull().default(false),
+  // "Interested in being a captain" — set on /profile or the season signup
+  // form. A hint for admins choosing captains; nothing gates on it.
+  captainInterest: boolean("captain_interest").notNull().default(false),
   // League ban (see src/lib/bans.ts). Active while bannedAt is set and
   // banExpiresAt is null (permanent) or in the future.
   bannedAt: timestamp("banned_at", { mode: "date" }),

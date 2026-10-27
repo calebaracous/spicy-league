@@ -4,6 +4,7 @@ import Link from "next/link";
 
 import { submitSignup } from "./actions";
 import { db } from "@/db/client";
+import { users } from "@/db/schema/auth";
 import { seasons } from "@/db/schema/seasons";
 import { seasonSignups } from "@/db/schema/seasons";
 import { auth } from "@/auth";
@@ -149,6 +150,15 @@ export default async function SignupPage({
     );
   }
 
+  // Pre-fills the captain checkbox; the same flag is editable on /profile.
+  const captainInterest =
+    (
+      await db.query.users.findFirst({
+        where: eq(users.id, session.user.id),
+        columns: { captainInterest: true },
+      })
+    )?.captainInterest ?? false;
+
   const missing = isOpen
     ? await missingSignupRequirements(session.user.id, season.game)
     : { discord: false, riot: false };
@@ -260,6 +270,24 @@ export default async function SignupPage({
                   </label>
                 ))}
               </fieldset>
+            )}
+
+            {isSub ? null : (
+              <label className="flex cursor-pointer items-start gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  name="captainInterest"
+                  defaultChecked={captainInterest}
+                  className="mt-0.5"
+                />
+                <span className="space-y-0.5">
+                  <span className="block font-medium">I&apos;m interested in being a captain</span>
+                  <span className="text-muted-foreground block text-xs">
+                    Admins see this when choosing captains. Only counts if you&apos;re in the draft
+                    pool. You can change it later on your profile.
+                  </span>
+                </span>
+              </label>
             )}
 
             {season.game === "lol" ? (

@@ -1,0 +1,1 @@
+ALTER TABLE "users" ADD COLUMN "captain_interest" boolean DEFAULT false NOT NULL;

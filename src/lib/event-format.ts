@@ -26,6 +26,7 @@ export const EVENT_TYPES = {
   "profile.opgg_updated": "accounts",
   "profile.discord_updated": "accounts",
   "profile.ten_man_pings": "accounts",
+  "profile.captain_interest": "accounts",
   "riot.linked": "accounts",
   "riot.unlinked": "accounts",
   "cs2.linked": "accounts",
@@ -196,6 +197,11 @@ export function describeEvent(e: EventView): Segment[] {
       return [actor, " changed their Discord username"];
     case "profile.ten_man_pings":
       return [actor, d.enabled ? " turned on 10-man pings" : " turned off 10-man pings"];
+    case "profile.captain_interest":
+      return [
+        actor,
+        d.enabled ? " is interested in being a captain" : " is no longer interested in captaining",
+      ];
     case "riot.linked":
       return [actor, " linked Riot account ", str(d.riotId)];
     case "riot.unlinked":

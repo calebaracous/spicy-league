@@ -74,8 +74,8 @@ Rendered by `src/app/page.tsx`:
 
 - `src/app/seasons/page.tsx` — list of non-draft seasons (active + past split).
 - `src/app/seasons/[slug]/page.tsx` — season detail. `StatusPanel` renders per-state CTA. Looks up champion from `matches` when complete.
-- `src/app/seasons/[slug]/signup/page.tsx` — signup form (LoL: roles, CS2: maps). Missing a Discord username or (LoL) a Riot link → a notice listing what to add on `/profile` instead of the form.
-- `src/app/seasons/[slug]/signup/actions.ts` — `submitSignup`. Validates state + window + one-per-user + Discord username + Riot link (LoL) + required quandary answer.
+- `src/app/seasons/[slug]/signup/page.tsx` — signup form (LoL: roles, CS2: maps; "interested in being a captain" checkbox, pre-filled from `users.captainInterest`, hidden for sub signups). Missing a Discord username or (LoL) a Riot link → a notice listing what to add on `/profile` instead of the form.
+- `src/app/seasons/[slug]/signup/actions.ts` — `submitSignup`. Validates state + window + one-per-user + Discord username + Riot link (LoL) + required quandary answer. Draft-pool signups also save the captain checkbox to `users.captainInterest`.
 - `src/app/seasons/[slug]/captains/page.tsx` — announced captain list (duos grouped on one line).
 - `src/app/seasons/[slug]/draft/page.tsx` — live draft viewer. Fetches initial snapshot, renders `<LiveBoard>`.
 - `src/app/seasons/[slug]/draft/live-board.tsx` — client component; SSE-subscribes to `/api/draft/[slug]/stream`; shows solo-queue rank per pool player (LoL).
@@ -109,9 +109,9 @@ Rendered by `src/app/page.tsx`:
 - `src/app/admin/seasons/new/page.tsx` — create season form.
 - `src/app/admin/seasons/actions.ts` — `createSeason`, `updateSeason`, `transitionSeasonState` (→ `captains_selected` schedules the Discord Captain role sync), `syncDiscordRoles`. zod-validated.
 - `src/app/admin/seasons/[slug]/page.tsx` — edit metadata + state transition buttons + "Discord roles" card (match status per player, Sync button).
-- `src/app/admin/seasons/[slug]/signups/page.tsx` — signup roster (draft pool vs sub only, Discord username + matched ID, LoL best solo rank + Riot ID or "No Riot account linked"), captain promotion UI, captains grouped by team with Pair with… / Split for duo captains.
+- `src/app/admin/seasons/[slug]/signups/page.tsx` — signup roster (draft pool vs sub only, Discord username + matched ID, LoL best solo rank + Riot ID or "No Riot account linked"), "Wants captain" badge + filter (`?captain=1`) and an "Interested in captaining" list in the Captains card (`users.captainInterest`), captain promotion UI, captains grouped by team with Pair with… / Split for duo captains.
 - `src/app/admin/seasons/[slug]/signups/actions.ts` — `promoteCaptain`, `demoteCaptain`, `moveCaptain` (whole team; swap via a `-1` placeholder), `pairCaptain` / `splitCaptain` (duo captains), `removeSignup` (pre-draft only; drops captain spot + renumbers), `getSignupStats`. Captain changes lock once the draft starts; `renumberCaptains` keeps duos on one order.
-- `src/app/admin/seasons/[slug]/signups/export/route.ts` — CSV download of signup roster.
+- `src/app/admin/seasons/[slug]/signups/export/route.ts` — CSV download of signup roster (incl. "Wants Captain").
 - `src/app/admin/seasons/[slug]/draft/page.tsx` — admin draft board with start/pause/resume/undo controls.
 - `src/app/admin/seasons/[slug]/matches/page.tsx` — schedule generation + playoff seeding + confirm/dispute/reset buttons.
 - `src/app/admin/seasons/[slug]/matches/actions.ts` — `generateMatchSchedule`, `seedPlayoffsAction`.
@@ -125,7 +125,7 @@ Rendered by `src/app/page.tsx`:
 - `src/app/signin/check-email/page.tsx` — "verify your email" confirmation page.
 - `src/app/forgot-password/page.tsx` + `_components/forgot-password-form.tsx` — trigger reset email.
 - `src/app/reset-password/page.tsx` + `_components/reset-password-form.tsx` — consume reset token.
-- `src/app/profile/page.tsx` — private profile + account-link UI. Contains inline `saveProfile`, `saveOpggUrl`, `saveDiscordUsername` (highlighted card while unset) and `doSignOut` server actions and the `ERROR_MESSAGES` map.
+- `src/app/profile/page.tsx` — private profile + account-link UI. Contains inline `saveProfile`, `saveOpggUrl`, `saveDiscordUsername` (highlighted card while unset), `saveTenManPings`, `saveCaptainInterest` ("Captaining" card) and `doSignOut` server actions and the `ERROR_MESSAGES` map.
 - `src/app/profile/account-actions.ts` — `linkRiotAccount`, `unlinkRiotAccount` (by `linkId`), `linkCs2Account`, `unlinkCs2Account`, `manualRefreshStats` (rate-limited).
 - `src/app/profile/_components/link-forms.tsx` — client `RiotLinkForm` / `Cs2LinkForm` (`useActionState`, inline errors, input kept).
 - `src/app/profile/constants.ts` — `MAX_RIOT_ACCOUNTS = 3`.
@@ -167,7 +167,7 @@ Rendered by `src/app/page.tsx`:
 - `src/db/schema/events.ts` — `events` (admin events inbox).
 - `src/db/schema/ten-mans.ts` — `tenMans`, `tenManSignups`, `tenManVotes`, `tenManCaptains`, `tenManPicks`. `ten_man_state` enum.
 
-Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/0001_reconcile_live_schema.sql` (idempotent fix-up for DBs from the pre-squash history), `drizzle/0002_user_bans.sql` (ban columns), `drizzle/0003_match_substitutions.sql` (subs table), `drizzle/0004_sub_signups.sql` (signup kind), `drizzle/0005_season_schedule.sql` (schedule dates), `drizzle/0006_signup_quandary.sql` (signup answer), `drizzle/0007_group_bo2.sql` (group series length + tiebreaker stage), `drizzle/0008_discord_username.sql` (Discord username), `drizzle/0009_discord_roles.sql` (Discord user ID + team role ID), `drizzle/0010_discord_team_channels.sql` (team channel + season category IDs), `drizzle/0011_discord_threads_pings.sql` (match thread ID + 10-man ping opt-in), plus `drizzle/meta/`. See [DATA-MODEL.md](DATA-MODEL.md) → Migrations.
+Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/0001_reconcile_live_schema.sql` (idempotent fix-up for DBs from the pre-squash history), `drizzle/0002_user_bans.sql` (ban columns), `drizzle/0003_match_substitutions.sql` (subs table), `drizzle/0004_sub_signups.sql` (signup kind), `drizzle/0005_season_schedule.sql` (schedule dates), `drizzle/0006_signup_quandary.sql` (signup answer), `drizzle/0007_group_bo2.sql` (group series length + tiebreaker stage), `drizzle/0008_discord_username.sql` (Discord username), `drizzle/0009_discord_roles.sql` (Discord user ID + team role ID), `drizzle/0010_discord_team_channels.sql` (team channel + season category IDs), `drizzle/0011_discord_threads_pings.sql` (match thread ID + 10-man ping opt-in), `drizzle/0012_events.sql` (events inbox), `drizzle/0013_captain_interest.sql` (captain interest flag), plus `drizzle/meta/`. See [DATA-MODEL.md](DATA-MODEL.md) → Migrations.
 
 ## Business logic (`src/lib`)
 

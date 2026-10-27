@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { db } from "@/db/client";
+import { users } from "@/db/schema/auth";
 import { matches, matchSubstitutions } from "@/db/schema/matches";
 import { seasons } from "@/db/schema/seasons";
 import { seasonSignups } from "@/db/schema/seasons";
@@ -97,6 +98,23 @@ export async function submitSignup(slug: string, formData: FormData) {
     seasonId: season.id,
     data: { kind },
   });
+
+  // The form's captain checkbox is the user's standing preference (also on
+  // /profile). Sub signups can't captain, so they leave it untouched.
+  if (kind === "player") {
+    const captainInterest = formData.get("captainInterest") === "on";
+    const updated = await db
+      .update(users)
+      .set({ captainInterest, updatedAt: new Date() })
+      .where(and(eq(users.id, session.user.id), ne(users.captainInterest, captainInterest)))
+      .returning({ id: users.id });
+    if (updated.length) {
+      await logEvent("profile.captain_interest", {
+        actorId: session.user.id,
+        data: { enabled: captainInterest },
+      });
+    }
+  }
 
   syncInBackground(`${slug} signup roles`, () =>
     updateSignupRolesForUser(season.id, session.user.id),

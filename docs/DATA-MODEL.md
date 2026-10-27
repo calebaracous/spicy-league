@@ -38,6 +38,8 @@ files are in git history before the squash commit):
   `teams.discord_voice_channel_id`, `seasons.discord_category_id`.
 - `0011_discord_threads_pings.sql` — `matches.discord_thread_id`,
   `users.ten_man_pings` (boolean, default false).
+- `0012_events.sql` — `events` table + `users.events_seen_at`.
+- `0013_captain_interest.sql` — `users.captain_interest` (boolean, default false).
 
 **Why the baseline's `when` is old.** Drizzle's migrator applies a journal
 entry only if its `when` is greater than the newest `created_at` in
@@ -92,6 +94,12 @@ wiring in `src/lib/auth.ts`).
     [DISCORD.md](DISCORD.md).
   - `tenManPings` boolean, default false (migration `0011`) — opted in on
     `/profile` to the Discord "10-man" ping role.
+  - `captainInterest` boolean, default false (migration `0013`) — "interested
+    in being a captain". A standing per-user preference, **not** per season:
+    set on `/profile` and by the season signup form's checkbox
+    (`submitSignup` writes it for draft-pool signups; sub signups leave it
+    alone). Admin-only signal on the admin signups page and CSV export;
+    nothing gates on it and captains are still promoted by hand.
   - `bannedAt`, `banReason`, `banExpiresAt`, `bannedBy` — league ban
     (migration `0002_user_bans`). Active while `bannedAt` is set and
     `banExpiresAt` is null or in the future (`isBanActive` in

@@ -185,6 +185,22 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
     redirect("/profile?saved=1");
   }
 
+  // "Interested in being a captain" — also set by the season signup form.
+  async function saveCaptainInterest(formData: FormData) {
+    "use server";
+    const session = await requireOnboarded();
+    const on = formData.get("captainInterest") === "on";
+    await db
+      .update(users)
+      .set({ captainInterest: on, updatedAt: new Date() })
+      .where(eq(users.id, session.user.id));
+    await logEvent("profile.captain_interest", {
+      actorId: session.user.id,
+      data: { enabled: on },
+    });
+    redirect("/profile?saved=1");
+  }
+
   async function doSignOut() {
     "use server";
     await signOut();
@@ -253,6 +269,31 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
             <label className="flex items-center gap-2 text-sm">
               <input type="checkbox" name="tenManPings" defaultChecked={user.tenManPings} />
               Ping me in Discord when a 10-man opens
+            </label>
+            <PendingSubmitButton variant="outline" size="sm">
+              Save
+            </PendingSubmitButton>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Captain interest: a hint for admins picking captains */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Captaining</CardTitle>
+          <CardDescription>
+            Let admins know you&apos;d like to captain a team. Only admins see this, and they still
+            choose captains by hand. The season signup form updates this too.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form
+            action={saveCaptainInterest}
+            className="flex flex-wrap items-center justify-between gap-3"
+          >
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" name="captainInterest" defaultChecked={user.captainInterest} />
+              I&apos;m interested in being a captain
             </label>
             <PendingSubmitButton variant="outline" size="sm">
               Save

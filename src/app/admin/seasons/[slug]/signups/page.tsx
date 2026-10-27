@@ -29,7 +29,12 @@ import { GAME_LABELS } from "@/lib/seasons";
 export const generateMetadata = seasonPageMetadata("Signups · Admin");
 
 type Params = Promise<{ slug: string }>;
-type SearchParams = Promise<{ saved?: string; error?: string; role?: string }>;
+type SearchParams = Promise<{
+  saved?: string;
+  error?: string;
+  role?: string;
+  captain?: string;
+}>;
 
 const ERROR_MESSAGES: Record<string, string> = {
   "not-found": "Signup not found.",
@@ -74,7 +79,8 @@ export default async function AdminSignupsPage({
   searchParams: SearchParams;
 }) {
   const { slug } = await params;
-  const { saved, error, role: roleFilter } = await searchParams;
+  const { saved, error, role: roleFilter, captain } = await searchParams;
+  const captainFilter = captain === "1";
 
   const season = await db.query.seasons.findFirst({
     where: eq(seasons.slug, slug),
@@ -93,6 +99,7 @@ export default async function AdminSignupsPage({
       username: users.username,
       discordUsername: users.discordUsername,
       discordUserId: users.discordUserId,
+      captainInterest: users.captainInterest,
       name: users.name,
       email: users.email,
     })
@@ -169,14 +176,26 @@ export default async function AdminSignupsPage({
   const recommended = Math.floor(draftPoolSize / 5);
   const errorMessage = error ? ERROR_MESSAGES[error] : null;
 
-  // Filter signups by role (LoL only)
-  const filteredSignups =
-    season.game === "lol" && roleFilter
-      ? allSignups.filter((s) => {
-          const p = s.rolePrefs as LolPrefs | null;
-          return p?.primaryRole === roleFilter || p?.secondaryRole === roleFilter;
-        })
-      : allSignups;
+  // Draft-pool players who said they'd like to captain (users.captainInterest)
+  // and aren't captains yet. Sub-only signups can't be promoted.
+  const interestedNonCaptains = allSignups.filter(
+    (s) => s.captainInterest && s.kind === "player" && !captainUserIds.has(s.userId),
+  );
+
+  // Filter signups by role (LoL only) and/or captain interest
+  const filteredSignups = allSignups.filter((s) => {
+    if (captainFilter && !s.captainInterest) return false;
+    if (season.game !== "lol" || !roleFilter) return true;
+    const p = s.rolePrefs as LolPrefs | null;
+    return p?.primaryRole === roleFilter || p?.secondaryRole === roleFilter;
+  });
+  const filterHref = (f: { role?: string; captain?: boolean }) => {
+    const q = new URLSearchParams();
+    if (f.role) q.set("role", f.role);
+    if (f.captain) q.set("captain", "1");
+    const qs = q.toString();
+    return `/admin/seasons/${slug}/signups${qs ? `?${qs}` : ""}`;
+  };
 
   const promoteWithSlug = promoteCaptain.bind(null, slug);
   const removeWithSlug = removeSignup.bind(null, slug);
@@ -239,6 +258,21 @@ export default async function AdminSignupsPage({
           </CardDescription>
         </CardHeader>
         <CardContent>
+          {interestedNonCaptains.length > 0 ? (
+            <p className="text-muted-foreground mb-3 text-sm">
+              Interested in captaining:{" "}
+              <span className="text-foreground">
+                {interestedNonCaptains.map((s) => s.name ?? s.username).join(", ")}
+              </span>{" "}
+              ·{" "}
+              <Link
+                href={filterHref({ captain: true })}
+                className="hover:text-foreground underline underline-offset-2"
+              >
+                show in roster
+              </Link>
+            </p>
+          ) : null}
           {captainTeams.length === 0 ? (
             <p className="text-muted-foreground text-sm">
               No captains yet. Promote players from the roster below.
@@ -350,32 +384,44 @@ export default async function AdminSignupsPage({
               <CardDescription className="mt-1">
                 {filteredSignups.length} player{filteredSignups.length !== 1 ? "s" : ""}
                 {roleFilter ? ` · filtered by ${LOL_ROLE_LABELS[roleFilter] ?? roleFilter}` : ""}
+                {captainFilter ? " · wants to captain" : ""}
               </CardDescription>
             </div>
-            {season.game === "lol" ? (
-              <div className="flex flex-wrap gap-1">
-                <Link
-                  href={`/admin/seasons/${slug}/signups`}
-                  className={`rounded px-2 py-1 text-xs ${!roleFilter ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}
-                >
-                  All
-                </Link>
-                {lolRoles.map((r) => (
+            <div className="flex flex-wrap gap-1">
+              <Link
+                href={filterHref({ role: roleFilter, captain: !captainFilter })}
+                className={`rounded px-2 py-1 text-xs ${captainFilter ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}
+              >
+                Wants captain
+              </Link>
+              {season.game === "lol" ? (
+                <>
+                  <span className="bg-border mx-1 w-px" aria-hidden />
                   <Link
-                    key={r}
-                    href={`/admin/seasons/${slug}/signups?role=${r}`}
-                    className={`rounded px-2 py-1 text-xs ${roleFilter === r ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}
+                    href={filterHref({ captain: captainFilter })}
+                    className={`rounded px-2 py-1 text-xs ${!roleFilter ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}
                   >
-                    {LOL_ROLE_LABELS[r]}
+                    All
                   </Link>
-                ))}
-              </div>
-            ) : null}
+                  {lolRoles.map((r) => (
+                    <Link
+                      key={r}
+                      href={filterHref({ role: r, captain: captainFilter })}
+                      className={`rounded px-2 py-1 text-xs ${roleFilter === r ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"}`}
+                    >
+                      {LOL_ROLE_LABELS[r]}
+                    </Link>
+                  ))}
+                </>
+              ) : null}
+            </div>
           </div>
         </CardHeader>
         <CardContent>
           {filteredSignups.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No signups yet.</p>
+            <p className="text-muted-foreground text-sm">
+              {allSignups.length === 0 ? "No signups yet." : "No signups match these filters."}
+            </p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -411,6 +457,10 @@ export default async function AdminSignupsPage({
                             {isCaptain ? (
                               <Badge variant="secondary" className="text-xs">
                                 Captain
+                              </Badge>
+                            ) : s.captainInterest && !isSub ? (
+                              <Badge variant="outline" className="text-xs">
+                                Wants captain
                               </Badge>
                             ) : null}
                           </div>
