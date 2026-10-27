@@ -97,11 +97,13 @@ export function plainMessageText(content: string, names: MentionNames, max = 160
     .replace(/\[([^\]]+)\]\(<?[^)\s]+>?\)/g, "$1")
     .replace(/<(https?:\/\/[^>\s]+)>/g, "$1")
     .replace(/`([^`]+)`/g, "$1")
-    .replace(/\*\*(.+?)\*\*/g, "$1")
-    .replace(/__(.+?)__/g, "$1")
-    .replace(/~~(.+?)~~/g, "$1")
+    .replace(/\*\*([\s\S]+?)\*\*/g, "$1")
+    .replace(/__([\s\S]+?)__/g, "$1")
+    .replace(/~~([\s\S]+?)~~/g, "$1")
     .replace(/(^|[^\w*])\*(?!\s)(.+?)\*(?!\w)/gm, "$1$2")
-    .replace(/(^|\W)_(?!\s)(.+?)_(?!\w)/gm, "$1$2");
+    .replace(/(^|\W)_(?!\s)(.+?)_(?!\w)/gm, "$1$2")
+    // Markers left without a partner (a strikethrough never closed).
+    .replace(/\*\*|~~|\|\|/g, "");
   text = text
     .split("\n")
     .map((line) =>

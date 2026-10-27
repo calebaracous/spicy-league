@@ -31,6 +31,11 @@ describe("plainMessageText", () => {
     );
   });
 
+  it("drops markers left unclosed and handles multi-line strikethrough", () => {
+    expect(plainMessageText("unpaid work uwu ~~", names)).toBe("unpaid work uwu");
+    expect(plainMessageText("~~old\nplan~~ new **plan", names)).toBe("old · plan new plan");
+  });
+
   it("formats Discord timestamps in Eastern time", () => {
     // 2026-11-01T03:00:00Z is still Oct 31 in New York.
     expect(plainMessageText("Draft on <t:1793502000:F>", names)).toBe("Draft on Oct 31");
