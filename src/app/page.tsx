@@ -38,8 +38,9 @@ export default async function Home() {
 
   return (
     <>
+      <AnnouncementsTicker items={announcements} />
       <Hero liveHref={liveHref} liveLabel={heroLabel} game={game} />
-      {announcements.length > 0 ? <AnnouncementsTicker items={announcements} /> : <Divider />}
+      <Divider />
 
       {data.state === "signup_lol" && (
         <SignupSection

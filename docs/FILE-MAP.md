@@ -62,7 +62,7 @@ Trivial shadcn primitives get a single entry at the bottom.
 
 Rendered by `src/app/page.tsx`:
 - `hero.tsx` — headline, CTA, stats row. Accepts `liveLabel` + `liveHref` overrides.
-- `announcements-ticker.tsx` — full-width band under the hero scrolling the latest 6 Discord #announcements messages (CSS marquee, `.ticker-*` in `globals.css`); replaced by a plain divider when there are none.
+- `announcements-ticker.tsx` — full-width band between the nav and the hero scrolling the latest 6 Discord #announcements messages (CSS marquee, `.ticker-*` in `globals.css`); renders nothing when there are none.
 - `signup-section.tsx` — `signup_lol` / `signup_cs2` state: signup count + top-ranked (LoL) or random (CS2) players.
 - `draft-section.tsx` — `draft` state: captain badges + top non-captains; CTA to draft or season page.
 - `live-section.tsx` — `live` state: next scheduled match + top players.

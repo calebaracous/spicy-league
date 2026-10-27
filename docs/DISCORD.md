@@ -100,7 +100,8 @@ registered by `scripts/discord-register-commands.mjs` — keep its list and
 ### Announcements ticker (home page)
 
 The latest 6 messages in `DISCORD_ANNOUNCEMENTS_CHANNEL_ID` scroll in a band
-under the hero (`src/app/_sections/announcements-ticker.tsx`), each linking
+right under the nav bar, above the hero
+(`src/app/_sections/announcements-ticker.tsx`), each linking
 to the message in Discord. `src/lib/discord-announcements.ts` reads the
 channel (`listMessages`, 18 messages so skipped ones don't leave gaps) and
 caches the result for **5 minutes** with `unstable_cache` — the home page is
@@ -114,8 +115,7 @@ embed's title stands in for an empty message.
 
 Needs the **Message Content** privileged intent (Bot tab → Privileged
 Gateway Intents): without it Discord returns every message with empty text,
-so the ticker has nothing to show and hides itself (the page falls back to
-the plain divider). It also hides if Discord errors; that's logged as
+so the ticker has nothing to show and hides itself. It also hides if Discord errors; that's logged as
 `[discord] announcements ticker:` and not cached, so the next visit retries.
 
 ### Admin tools (`/admin/seasons/[slug]` → Discord card)

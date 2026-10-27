@@ -7,7 +7,7 @@ import type { Announcement } from "@/lib/discord-announcements";
 import { cn } from "@/lib/utils";
 
 /**
- * Full-width band under the hero scrolling the latest #announcements
+ * Full-width band between the nav and the hero, scrolling the latest #announcements
  * messages (src/lib/discord-announcements.ts). CSS-only marquee: the list is
  * rendered twice and the track slides by half its width, so it loops
  * seamlessly. Pauses on hover and keyboard focus; reduced-motion users get a
