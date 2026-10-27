@@ -182,7 +182,7 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/rank.ts` — pure LoL rank helpers: `formatRank` ("Gold II · 45 LP"), `formatTier` ("Gold II"), `rankScore` (lower = better), `bestRankPerUser` (best solo rank across a user's linked accounts — use it anywhere one rank per player is shown), `capitalize`.
 - `src/lib/player-stats.ts` — pure tallies for the player directory: `tallyMatchRecords` (derived lineups, sat-out excluded), `tallyTenManRecords`.
 - `src/lib/players.ts` — `getPlayerDirectory()`: onboarded users A–Z with career stats, from whole-table queries tallied in memory.
-- `src/lib/backdrop-clips.ts` — home-row backdrop clip registry (`backdropClip(game, index)`, `otherGame`). LoL clips `lol-1..3` are live (`loopSources(id)` → WebM + MP4); CS2 clips still have `sources: []`.
+- `src/lib/backdrop-clips.ts` — home-row backdrop clip registry (`backdropClip(game, index)`, `placeholderBackdrop(game)` for the still-art "Signups open" row, `otherGame`). LoL clips `lol-1..3` are live (`loopSources(id)` → WebM + MP4); CS2 clips still have `sources: []`.
 - `src/lib/live-season.ts` — `getLiveSeason`, `LIVE_STATE_COPY`, `liveSeasonHref`. Used by header pill + home hero.
 - `src/lib/ten-man.ts` — `PICK_ORDER_C1_C2`, `getActiveTenMan`, `getTenManSnapshot`, `getRecentTenMans`, `electCaptains`. See [TEN-MAN.md](TEN-MAN.md).
 - `src/lib/riot-links.ts` — `hasRiotLink(userId)`: whether a user has a linked Riot account.
@@ -251,7 +251,7 @@ shadcn (OKLCH tokens):
 ## Public assets
 
 - `public/videos/` — home-row backdrop loops: `lol-1..3` as `.webm` (AV1) + `.mp4` (H.264), 10s each.
-- `public/videos/posters/` — backdrop posters: `lol-1..3.jpg` (first frame of each clip), `cs2-1/2.svg` placeholders.
+- `public/videos/posters/` — backdrop posters: `lol-1..3.jpg` (first frame of each clip), `lol-placeholder.svg` (still art for the "Signups open" row), `cs2-1/2.svg` placeholders.
 - `public/history/` — screenshots for the `/history` archive (seasons 1–11 + Zero Space).
 - `public/logo.svg`, `public/icon-512.svg` — vector flame mark (240×240 / 512×512 artboards). Source-of-truth shape lives inline in `src/components/ui/logo-mark.tsx`.
 - `public/icon-{16,32,64,128,192,512}.png` — favicon + PWA app-icon raster sizes. Wired via `metadata.icons` in `src/app/layout.tsx`.

@@ -175,7 +175,10 @@ Every full-width row on `/` has a muted, looping gameplay clip behind it at
 - **Assets:** `public/videos/` (clips) and `public/videos/posters/`. LoL has
   three real clips (`lol-1..3`, 10s loops from our own replays: hero =
   `lol-1`, so the three LoL rows never repeat); CS2 is still SVG
-  placeholders with `sources: []`, so no CS2 video is requested. To add a
+  placeholders with `sources: []`, so no CS2 video is requested. The
+  "Signups open" row deliberately has no footage: it uses
+  `placeholderBackdrop(game)`, the still pre-footage art
+  (`posters/lol-placeholder.svg`; `cs2-2.svg` for CS2). To add a
   clip: encode a 10s seamless loop at 1280×720/30fps, no audio, as AV1 WebM +
   H.264 MP4 (~1.5–3 MB each), save its first frame as `posters/<id>.jpg`, and
   set `sources: loopSources("<id>")`. The loop is made seamless by cutting

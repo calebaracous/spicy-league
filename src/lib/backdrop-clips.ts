@@ -54,6 +54,17 @@ export function backdropClip(game: BackdropGame, index = 0): BackdropClip {
   return clips[index % clips.length];
 }
 
+/**
+ * Still placeholder art instead of footage, for rows that should stay calm
+ * (the "Signups open" row). LoL uses the original pre-footage poster; CS2's
+ * clips are still placeholders anyway.
+ */
+export function placeholderBackdrop(game: BackdropGame): BackdropClip {
+  return game === "lol"
+    ? { id: "lol-placeholder", game, poster: "/videos/posters/lol-placeholder.svg", sources: [] }
+    : CLIPS.cs2[1];
+}
+
 export function otherGame(game: BackdropGame): BackdropGame {
   return game === "lol" ? "cs2" : "lol";
 }
