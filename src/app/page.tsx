@@ -1,7 +1,9 @@
+import { getAnnouncements } from "@/lib/discord-announcements";
 import { getHomepageData } from "@/lib/homepage";
 import { LIVE_STATE_COPY, liveSeasonHref } from "@/lib/live-season";
 import { otherGame } from "@/lib/backdrop-clips";
 import { Divider } from "@/components/ui/divider";
+import { AnnouncementsTicker } from "./_sections/announcements-ticker";
 import { Hero } from "./_sections/hero";
 import { SignupSection } from "./_sections/signup-section";
 import { DraftSection } from "./_sections/draft-section";
@@ -18,7 +20,7 @@ const HERO_LABELS: Record<string, string> = {
 };
 
 export default async function Home() {
-  const data = await getHomepageData();
+  const [data, announcements] = await Promise.all([getHomepageData(), getAnnouncements()]);
 
   const heroLabel =
     data.state === "upcoming" || data.state === "off_season"
@@ -37,7 +39,7 @@ export default async function Home() {
   return (
     <>
       <Hero liveHref={liveHref} liveLabel={heroLabel} game={game} />
-      <Divider />
+      {announcements.length > 0 ? <AnnouncementsTicker items={announcements} /> : <Divider />}
 
       {data.state === "signup_lol" && (
         <SignupSection

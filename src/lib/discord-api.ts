@@ -32,6 +32,8 @@ export type DiscordConfig = {
   matchesChannelId: string | null;
   /** Channel for 10-man pings; null → no 10-man pings. */
   tenManChannelId: string | null;
+  /** Channel whose latest messages the home-page ticker shows; null → no ticker. */
+  announcementsChannelId: string | null;
 };
 
 export function discordConfig(): DiscordConfig | null {
@@ -42,6 +44,7 @@ export function discordConfig(): DiscordConfig | null {
     captainRoleId: env.DISCORD_CAPTAIN_ROLE_ID ?? null,
     matchesChannelId: env.DISCORD_MATCHES_CHANNEL_ID ?? null,
     tenManChannelId: env.DISCORD_TEN_MAN_CHANNEL_ID ?? null,
+    announcementsChannelId: env.DISCORD_ANNOUNCEMENTS_CHANNEL_ID ?? null,
   };
 }
 
@@ -66,6 +69,17 @@ export class DiscordApiError extends Error {
 export type DiscordMember = { user: { id: string; username: string } };
 export type DiscordRole = { id: string; name: string };
 export type DiscordChannel = { id: string; name: string; type: number; parent_id: string | null };
+/** The fields of a message the announcements ticker reads. */
+export type DiscordMessage = {
+  id: string;
+  /** 0 = default, 19 = reply; anything else is a system message (pins, joins…). */
+  type: number;
+  /** Empty unless the bot has the Message Content intent (docs/DISCORD.md). */
+  content: string;
+  timestamp: string;
+  mentions: Array<{ id: string; username: string; global_name?: string | null }>;
+  embeds: Array<{ title?: string; description?: string }>;
+};
 
 /** Channel types we create. */
 export const CHANNEL_TYPE = { text: 0, voice: 2, category: 4 } as const;
@@ -237,6 +251,16 @@ export async function renameChannel(
     body: { name: name.slice(0, 100) },
     reason,
   });
+}
+
+/** A channel's latest messages, newest first (needs View Channel + Read Message History). */
+export async function listMessages(
+  cfg: DiscordConfig,
+  channelId: string,
+  limit: number,
+): Promise<DiscordMessage[]> {
+  const q = new URLSearchParams({ limit: String(Math.min(100, limit)) });
+  return (await call<DiscordMessage[]>(cfg, "GET", `/channels/${channelId}/messages?${q}`)) ?? [];
 }
 
 /**

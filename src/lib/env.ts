@@ -20,6 +20,7 @@ export const env = createEnv({
     DISCORD_CAPTAIN_ROLE_ID: z.string().regex(/^\d+$/).optional(),
     DISCORD_MATCHES_CHANNEL_ID: z.string().regex(/^\d+$/).optional(),
     DISCORD_TEN_MAN_CHANNEL_ID: z.string().regex(/^\d+$/).optional(),
+    DISCORD_ANNOUNCEMENTS_CHANNEL_ID: z.string().regex(/^\d+$/).optional(),
     DISCORD_APPLICATION_ID: z.string().regex(/^\d+$/).optional(),
     DISCORD_PUBLIC_KEY: z
       .string()
@@ -48,6 +49,7 @@ export const env = createEnv({
     DISCORD_CAPTAIN_ROLE_ID: process.env.DISCORD_CAPTAIN_ROLE_ID,
     DISCORD_MATCHES_CHANNEL_ID: process.env.DISCORD_MATCHES_CHANNEL_ID,
     DISCORD_TEN_MAN_CHANNEL_ID: process.env.DISCORD_TEN_MAN_CHANNEL_ID,
+    DISCORD_ANNOUNCEMENTS_CHANNEL_ID: process.env.DISCORD_ANNOUNCEMENTS_CHANNEL_ID,
     DISCORD_APPLICATION_ID: process.env.DISCORD_APPLICATION_ID,
     DISCORD_PUBLIC_KEY: process.env.DISCORD_PUBLIC_KEY,
     DISCORD_INVITE_URL: process.env.DISCORD_INVITE_URL,

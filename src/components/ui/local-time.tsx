@@ -21,12 +21,13 @@ export function useHydrated(): boolean {
   );
 }
 
-type Preset = "datetime" | "date" | "weekday-datetime" | "date-short";
+type Preset = "datetime" | "date" | "weekday-datetime" | "date-short" | "month-day";
 
 const PRESETS: Record<Preset, Intl.DateTimeFormatOptions> = {
   datetime: { dateStyle: "medium", timeStyle: "short" },
   date: { month: "long", day: "numeric", year: "numeric" },
   "date-short": { month: "short", day: "numeric", year: "numeric" },
+  "month-day": { month: "short", day: "numeric" },
   "weekday-datetime": {
     weekday: "short",
     month: "short",
@@ -40,6 +41,7 @@ const HAS_TIME: Record<Preset, boolean> = {
   datetime: true,
   date: false,
   "date-short": false,
+  "month-day": false,
   "weekday-datetime": true,
 };
 

@@ -28,6 +28,7 @@ the real UI against a real database and is run on demand.
 - `team-name.test.ts` — `normalizeTeamName`, `teamTextChannelName`
 - `discord-plan.test.ts` — `pickExactMember`, `roleHolderChanges`, `staleTeamRoles`
 - `discord-format.test.ts` — Discord timestamps, thread names, result lines, the standings table
+- `discord-ticker.test.ts` — `plainMessageText` (mentions, markdown, spoilers, timestamps, truncation) and `tickerItems` (which messages the home-page ticker shows)
 - `discord-verify.test.ts` — Ed25519 interaction signatures (real key pair)
 
 `src/lib/draft.ts`, `schedule.ts` and other server modules import `server-only`, which throws

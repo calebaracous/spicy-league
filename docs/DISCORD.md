@@ -97,6 +97,27 @@ username (`siteUser` in `src/lib/discord-commands.ts`). Commands are
 registered by `scripts/discord-register-commands.mjs` — keep its list and
 `handleCommand` in sync.
 
+### Announcements ticker (home page)
+
+The latest 6 messages in `DISCORD_ANNOUNCEMENTS_CHANNEL_ID` scroll in a band
+under the hero (`src/app/_sections/announcements-ticker.tsx`), each linking
+to the message in Discord. `src/lib/discord-announcements.ts` reads the
+channel (`listMessages`, 18 messages so skipped ones don't leave gaps) and
+caches the result for **5 minutes** with `unstable_cache` — the home page is
+`force-dynamic`, so without it every visit would call Discord. A new
+announcement shows up within 5 minutes. `plainMessageText` / `tickerItems`
+(`discord-format.ts`, tested) turn Discord markdown into one plain line:
+mentions become names (`@everyone`/`@here` dropped), custom emoji and
+formatting are stripped, spoilers become `[spoiler]`, `<t:…>` dates show in
+US Eastern, system messages and image-only posts are skipped, and an
+embed's title stands in for an empty message.
+
+Needs the **Message Content** privileged intent (Bot tab → Privileged
+Gateway Intents): without it Discord returns every message with empty text,
+so the ticker has nothing to show and hides itself (the page falls back to
+the plain divider). It also hides if Discord errors; that's logged as
+`[discord] announcements ticker:` and not cached, so the next visit retries.
+
 ### Admin tools (`/admin/seasons/[slug]` → Discord card)
 
 The card lists everyone in the season (signups, captains, rosters) as
@@ -147,7 +168,7 @@ account belongs to the player.
 - `src/lib/discord-plan.ts` — pure: `pickExactMember`, `roleHolderChanges`,
   `staleTeamRoles`.
 - `src/lib/discord-format.ts` — pure message formatting (timestamps,
-  mentions, result lines, the standings table).
+  mentions, result lines, the standings table, ticker text).
 - `src/lib/discord-roles.ts` — shared plumbing (`grant`, `revoke`,
   `leagueRoleId`, `syncExclusiveRole`, `syncInBackground`, `mergeReports`),
   Captain, team roles + channels, team renames.
@@ -157,11 +178,13 @@ account belongs to the player.
 - `src/lib/discord-sync.ts` — `syncSeasonDiscord` (everything, for the button).
 - `src/lib/discord-admin.ts` — admin card roster, nicknames, channel
   cleanup, nudge emails.
+- `src/lib/discord-announcements.ts`, `src/app/_sections/announcements-ticker.tsx`
+  — home-page announcements ticker.
 - `src/lib/discord-commands.ts`, `src/lib/discord-verify.ts`,
   `src/app/api/discord/interactions/route.ts` — slash commands.
 - `src/app/api/cron/discord-reminders/route.ts` — daily reminders.
 - `scripts/discord-register-commands.mjs` — registers slash commands.
-- Tests: `tests/unit/discord-{plan,format,verify}.test.ts`,
+- Tests: `tests/unit/discord-{plan,format,verify,ticker}.test.ts`,
   `tests/unit/team-name.test.ts`.
 - DB: `users.discord_user_id`, `users.ten_man_pings`,
   `teams.discord_role_id`, `teams.discord_text_channel_id`,
@@ -174,7 +197,10 @@ account belongs to the player.
    → *New Application* → name it "Spicy League". From *General Information*
    copy the **Application ID** and **Public Key**.
 2. **Create the bot user.** *Bot* tab → *Reset Token* → copy the token (you
-   only see it once). Leave *Public Bot* off. No privileged intents needed.
+   only see it once). Leave *Public Bot* off (if Discord refuses, set
+   *Installation → Install Link* to **None** first). Under *Privileged Gateway
+   Intents* turn on **Message Content** (the announcements ticker needs it to
+   read message text); the other two stay off.
 3. **Invite it.** *OAuth2* → *URL Generator* → scopes **bot** and
    **applications.commands**, permissions **Manage Roles, Manage Channels,
    Manage Nicknames, View Channels, Send Messages, Send Messages in Threads,
@@ -188,12 +214,13 @@ account belongs to the player.
    roles and members ranked below it.
 5. **Channels.** Create (or pick) a text channel for match threads, e.g.
    `#matches`, and one for 10-man pings. Make sure the bot can view and post
-   in them. Turn on Developer Mode (User Settings → Advanced) and copy their
+   in them, and can view and read the history of `#announcements`. Turn on Developer Mode (User Settings → Advanced) and copy their
    IDs, the server ID, and the Captain role ID if one already exists.
 6. **Env vars** in Vercel (Production; Preview too if you want it there):
    - `DISCORD_BOT_TOKEN`, `DISCORD_GUILD_ID` — required.
-   - `DISCORD_MATCHES_CHANNEL_ID`, `DISCORD_TEN_MAN_CHANNEL_ID` — match
-     threads / 10-man pings.
+   - `DISCORD_MATCHES_CHANNEL_ID`, `DISCORD_TEN_MAN_CHANNEL_ID`,
+     `DISCORD_ANNOUNCEMENTS_CHANNEL_ID` — match threads / 10-man pings /
+     home-page ticker.
    - `DISCORD_APPLICATION_ID`, `DISCORD_PUBLIC_KEY` — slash commands.
    - `DISCORD_CAPTAIN_ROLE_ID`, `DISCORD_INVITE_URL` — optional.
    Redeploy. Keep the token out of chat, git and screenshots; if it leaks,

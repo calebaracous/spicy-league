@@ -115,6 +115,11 @@ Utility classes:
 - `.animate-page` — applied by `src/app/template.tsx` to every page
 - `.delay-50/100/200/300/400/500/600/700` — animation-delay helpers
 
+**Ticker**: `tickerScroll` + `.ticker` / `.ticker-viewport` / `.ticker-track`
+/ `.ticker-copy` / `.ticker-item` (the home-page announcements band). The track
+holds the list twice and slides by -50% for a seamless loop; paused on
+hover/focus; under reduced motion it stops and becomes a scrollable row.
+
 **Scroll reveal**: `.reveal` + `.reveal-visible` (CSS) combined with
 `Reveal` (React, `src/components/ui/reveal.tsx`). Uses IntersectionObserver.
 Reduced-motion users get the visible state via CSS media query — no JS

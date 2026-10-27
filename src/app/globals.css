@@ -477,8 +477,56 @@ h6 {
   background: linear-gradient(180deg, var(--bg) 0%, rgba(185, 28, 28, 0.03) 50%, var(--bg) 100%);
 }
 
+/* ─── Announcements Ticker ──────────────────────────────────────────── */
+/* src/app/_sections/announcements-ticker.tsx: the track holds the list twice,
+   so sliding it by -50% loops seamlessly. */
+@keyframes tickerScroll {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.ticker-viewport {
+  overflow: hidden;
+  mask-image: linear-gradient(90deg, transparent, #000 40px, #000 calc(100% - 40px), transparent);
+}
+
+.ticker-track {
+  display: flex;
+  width: max-content;
+  animation: tickerScroll var(--ticker-duration, 60s) linear infinite;
+}
+
+.ticker:hover .ticker-track,
+.ticker:focus-within .ticker-track {
+  animation-play-state: paused;
+}
+
+.ticker-item {
+  color: var(--text);
+  transition: color 0.15s;
+}
+
+.ticker-item:hover {
+  color: var(--accent-text);
+}
+
 /* ─── Reduced Motion ─────────────────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
+  /* A still row the reader can scroll, without the duplicate copy. */
+  .ticker-track {
+    animation: none !important;
+  }
+  .ticker-viewport {
+    overflow-x: auto;
+    mask-image: none;
+  }
+  .ticker-copy {
+    display: none;
+  }
   *,
   *::before,
   *::after {

@@ -36,7 +36,7 @@ Trivial shadcn primitives get a single entry at the bottom.
 - `tests/unit/discord.test.ts` — `normalizeDiscordUsername`.
 - `tests/unit/team-name.test.ts` — team-name rules and the text-channel slug.
 - `tests/unit/event-format.test.ts` — event catalogue, inbox sentences and diffs.
-- `tests/unit/discord-plan.test.ts`, `discord-format.test.ts`, `discord-verify.test.ts` — Discord sync decisions, message formatting, interaction signatures.
+- `tests/unit/discord-plan.test.ts`, `discord-format.test.ts`, `discord-ticker.test.ts`, `discord-verify.test.ts` — Discord sync decisions, message formatting, announcements-ticker text, interaction signatures.
 - `playwright.config.ts` — e2e config: serial, builds + starts the app on :3100 with auth URLs overridden to localhost.
 - `tests/e2e/global-setup.ts` / `global-teardown.ts` — seed run-scoped admin + players; delete all e2e-tagged data afterwards.
 - `tests/e2e/support/` — `env.ts` (DB URL, markers), `db.ts` (assert helpers incl. `getCaptainTeams` / `getTeams` keyed by primary captain, `cleanupE2EData`), `seed.ts` (users, signups, `seedDraftSeason`), `pages.ts` (sign-in, live-board + admin-draft helpers, `freezeLiveUpdates`).
@@ -62,6 +62,7 @@ Trivial shadcn primitives get a single entry at the bottom.
 
 Rendered by `src/app/page.tsx`:
 - `hero.tsx` — headline, CTA, stats row. Accepts `liveLabel` + `liveHref` overrides.
+- `announcements-ticker.tsx` — full-width band under the hero scrolling the latest 6 Discord #announcements messages (CSS marquee, `.ticker-*` in `globals.css`); replaced by a plain divider when there are none.
 - `signup-section.tsx` — `signup_lol` / `signup_cs2` state: signup count + top-ranked (LoL) or random (CS2) players.
 - `draft-section.tsx` — `draft` state: captain badges + top non-captains; CTA to draft or season page.
 - `live-section.tsx` — `live` state: next scheduled match + top players.
@@ -195,6 +196,7 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/discord-sync.ts` — `syncSeasonDiscord`: every sync, for the admin button.
 - `src/lib/discord-admin.ts` — admin card roster (`getDiscordRoster`), `syncNicknames`, `deleteOldTeamChannels`, `emailUnmatchedPlayers`.
 - `src/lib/discord-format.ts` — pure message formatting (`discordTime`, mentions, `resultLine`, `standingsTable`).
+- `src/lib/discord-announcements.ts` — `getAnnouncements` for the home-page ticker: latest channel messages as plain text, `unstable_cache`d for 5 min, `[]` on any failure.
 - `src/lib/discord-commands.ts` — slash command handlers (`handleCommand`); `src/lib/discord-verify.ts` — Ed25519 request check.
 - `src/app/api/discord/interactions/route.ts` — Discord interactions endpoint (slash commands).
 - `src/app/api/cron/discord-reminders/route.ts` — daily Discord reminders (Vercel cron, `CRON_SECRET`).
@@ -239,7 +241,7 @@ Freelance-style (hex tokens):
 - `src/components/ui/captain-badge.tsx` — red-tinted name chip. Home draft section.
 - `src/components/ui/snake-order-strip.tsx` — 8-cell C1/C2 pick-order strip + `SNAKE_ORDER`. 10-man draft.
 - `src/components/ui/vs-divider.tsx` — "VS" separator (vertical at md+, horizontal when teams stack). 10-man ready/complete.
-- `src/components/ui/local-time.tsx` — client; `LocalTime` (formats a date in the viewer's timezone), `LocalDateTimeInput` (datetime-local that submits UTC ISO), `useHydrated`.
+- `src/components/ui/local-time.tsx` — client; `LocalTime` (formats a date in the viewer's timezone; presets incl. `month-day`), `LocalDateTimeInput` (datetime-local that submits UTC ISO), `useHydrated`.
 - `src/components/ui/confirm-submit-button.tsx` — client; `PendingSubmitButton` that `confirm()`s first. Destructive admin forms.
 - `src/components/ui/pending-submit-button.tsx` — client; submit `Button` that shows a spinner and disables itself while its form's server action runs (`useFormStatus`). Every server-component action form.
 

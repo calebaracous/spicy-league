@@ -61,3 +61,90 @@ export function standingsTable(
   });
   return [head, ...lines].join("\n");
 }
+
+/** Names for the IDs inside mentions, looked up from the server. */
+export type MentionNames = {
+  users: Map<string, string>;
+  roles: Map<string, string>;
+  channels: Map<string, string>;
+};
+
+/**
+ * A Discord message as one line of plain text for the home-page ticker:
+ * mentions resolved to names (pings like @everyone dropped), custom emoji and
+ * markdown stripped, spoilers hidden, lines joined with " · ", and cut at
+ * `max` characters on a word boundary. Dates in `<t:…>` tags are shown in the
+ * league's timezone (US Eastern), since this renders on the server.
+ */
+export function plainMessageText(content: string, names: MentionNames, max = 160): string {
+  const date = (unix: string) =>
+    new Date(Number(unix) * 1000).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      timeZone: "America/New_York",
+    });
+  let text = content
+    .replace(/```(?:[\w-]+\n)?([\s\S]*?)```/g, "$1")
+    .replace(/\|\|[\s\S]+?\|\|/g, "[spoiler]")
+    .replace(/<@!?(\d+)>/g, (_, id: string) => `@${names.users.get(id) ?? "someone"}`)
+    .replace(/<@&(\d+)>/g, (_, id: string) =>
+      names.roles.has(id) ? `@${names.roles.get(id)}` : "",
+    )
+    .replace(/<#(\d+)>/g, (_, id: string) => `#${names.channels.get(id) ?? "channel"}`)
+    .replace(/<a?:\w+:\d+>/g, "")
+    .replace(/<t:(-?\d+)(?::[tTdDfFR])?>/g, (_, unix: string) => date(unix))
+    .replace(/@(everyone|here)\b/g, "")
+    .replace(/\[([^\]]+)\]\(<?[^)\s]+>?\)/g, "$1")
+    .replace(/<(https?:\/\/[^>\s]+)>/g, "$1")
+    .replace(/`([^`]+)`/g, "$1")
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/__(.+?)__/g, "$1")
+    .replace(/~~(.+?)~~/g, "$1")
+    .replace(/(^|[^\w*])\*(?!\s)(.+?)\*(?!\w)/gm, "$1$2")
+    .replace(/(^|\W)_(?!\s)(.+?)_(?!\w)/gm, "$1$2");
+  text = text
+    .split("\n")
+    .map((line) =>
+      line
+        .replace(/^\s*(?:#{1,3}|-#|>{1,3}|[-*•]|\d+\.)\s+/, "")
+        .replace(/\s+/g, " ")
+        .trim(),
+    )
+    .filter(Boolean)
+    .join(" · ");
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max - 1);
+  const space = cut.lastIndexOf(" ");
+  return `${(space > max * 0.6 ? cut.slice(0, space) : cut).replace(/[\s·,.;:–-]+$/, "")}…`;
+}
+
+export type TickerItem = { id: string; text: string; postedAt: string };
+
+/**
+ * The newest `count` announcements worth showing, newest first: ordinary
+ * messages and replies only (no pins/joins/boosts), using the first embed's
+ * title or description when the message itself has no text, and skipping
+ * anything that ends up empty (an image on its own, a bare ping).
+ */
+export function tickerItems(
+  messages: Array<{
+    id: string;
+    type: number;
+    content: string;
+    timestamp: string;
+    embeds: Array<{ title?: string; description?: string }>;
+  }>,
+  names: MentionNames,
+  count: number,
+): TickerItem[] {
+  const items: TickerItem[] = [];
+  for (const m of messages) {
+    if (m.type !== 0 && m.type !== 19) continue;
+    const embed = m.embeds[0];
+    const source = m.content.trim() || embed?.title || embed?.description || "";
+    const text = plainMessageText(source, names);
+    if (text) items.push({ id: m.id, text, postedAt: m.timestamp });
+    if (items.length === count) break;
+  }
+  return items;
+}
