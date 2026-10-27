@@ -23,7 +23,7 @@ seasons (`e2e-` slugs) never touch Discord.
 | **Captain** | This season's captains (both of a duo) | Season → `captains_selected`; Sync | `syncCaptainRole` |
 | **Team roles** (one per team, named after it) | The team's roster | Draft finishes; team renamed; Sync | `syncTeamRoles`, `renameTeamInDiscord` |
 | **Signed up** | This season's player signups | Each signup / leave / admin removal; season → `signups_open`; draft finishes; Sync | `discord-ping-roles.ts` |
-| **Sub list** | This season's available subs (sub signups + undrafted players, minus bans) | Same as Signed up | `discord-ping-roles.ts` |
+| **Sub list** | This season's available subs, minus bans: sub signups, plus undrafted players once the draft has made teams | Same as Signed up | `discord-ping-roles.ts` |
 | **Champion** | The latest champion team's roster | Final confirmed / disputed / reset; Sync | `syncChampionRole` |
 | **10-man** | Players who ticked "Ping me in Discord when a 10-man opens" on `/profile` | The toggle; Sync (adds only) | `setTenManRole`, `syncTenManRole` |
 

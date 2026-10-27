@@ -102,9 +102,14 @@ export function describe(err: unknown): string {
     return "The bot is missing a permission. Check it has the permissions in docs/DISCORD.md and that its role sits above the league and team roles (Server Settings → Roles).";
   }
   if (err instanceof DiscordApiError && err.status === 429) {
-    return `Discord rate limit (${err.message}). Channels can only be renamed twice per 10 minutes; run Sync again later.`;
+    return `Discord rate limit (${err.message}); run Sync again later.`;
   }
   return err instanceof Error ? err.message : String(err);
+}
+
+/** Records why someone got no role, once per report (several roles hit the same people). */
+export function noteUnmatched(report: DiscordSyncReport, line: string) {
+  if (!report.unmatched.includes(line)) report.unmatched.push(line);
 }
 
 /** Discord user ID for `p`, searching the server by username the first time. */
@@ -114,13 +119,13 @@ export async function resolveDiscordId(
   report: DiscordSyncReport,
 ): Promise<string | null> {
   if (!p.discordUsername) {
-    report.unmatched.push(`${p.label}: no Discord username on their profile`);
+    noteUnmatched(report, `${p.label}: no Discord username on their profile`);
     return null;
   }
   if (p.discordUserId) return p.discordUserId;
   const member = pickExactMember(await searchMembers(cfg, p.discordUsername), p.discordUsername);
   if (!member) {
-    report.unmatched.push(`${p.label}: ${p.discordUsername} isn't in the Discord server`);
+    noteUnmatched(report, `${p.label}: ${p.discordUsername} isn't in the Discord server`);
     return null;
   }
   await db.update(users).set({ discordUserId: member.user.id }).where(eq(users.id, p.id));
@@ -144,7 +149,7 @@ export async function grant(
     if (err instanceof DiscordApiError && err.code === DISCORD_ERRORS.unknownMember) {
       // Left the server since we matched them: forget the ID so the next sync searches again.
       await db.update(users).set({ discordUserId: null }).where(eq(users.id, p.id));
-      report.unmatched.push(`${p.label}: ${p.discordUsername} isn't in the Discord server`);
+      noteUnmatched(report, `${p.label}: ${p.discordUsername} isn't in the Discord server`);
       return;
     }
     report.errors.push(`${p.label}: ${describe(err)}`);
@@ -373,7 +378,11 @@ async function ensureTeamDiscord(
         existing.name = name;
         report.renamed++;
       } catch (err) {
-        report.errors.push(`${team.name} ${kind} channel: ${describe(err)}`);
+        const note =
+          err instanceof DiscordApiError && err.status === 429
+            ? " Channels can only be renamed twice per 10 minutes."
+            : "";
+        report.errors.push(`${team.name} ${kind} channel: ${describe(err)}${note}`);
       }
     }
   }
@@ -473,7 +482,7 @@ export function mergeReports(...reports: DiscordSyncReport[]): DiscordSyncReport
     total.rolesDeleted += r.rolesDeleted;
     total.channelsCreated += r.channelsCreated;
     total.renamed += r.renamed;
-    total.unmatched.push(...r.unmatched.filter((u) => !total.unmatched.includes(u)));
+    for (const u of r.unmatched) noteUnmatched(total, u);
     total.errors.push(...r.errors);
   }
   return total;

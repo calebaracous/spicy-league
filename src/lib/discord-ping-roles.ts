@@ -25,20 +25,27 @@ import { getAvailableSubs } from "@/lib/substitutions";
  * Ping roles: Discord roles that exist so people can be @-mentioned as a
  * group. All kept in step with the site (see docs/DISCORD.md):
  *   - Signed up — this season's player signups
- *   - Sub list  — this season's available subs (sub signups + undrafted players)
+ *   - Sub list  — this season's available subs (sub signups, plus undrafted
+ *                 players once the draft has made teams)
  *   - Champion  — the most recent champion team's roster
  *   - 10-man    — players who opted in on /profile
  */
 
 async function signupHolders(seasonId: string) {
-  const [players, subs] = await Promise.all([
+  const [players, subs, team] = await Promise.all([
     db
       .select({ userId: seasonSignups.userId })
       .from(seasonSignups)
       .where(and(eq(seasonSignups.seasonId, seasonId), eq(seasonSignups.kind, "player"))),
     getAvailableSubs(seasonId),
+    db.query.teams.findFirst({ where: eq(teams.seasonId, seasonId), columns: { id: true } }),
   ]);
-  return { signedUp: players.map((p) => p.userId), subList: subs.map((s) => s.userId) };
+  // Before the draft every player is "not on a team"; they aren't subs yet.
+  const drafted = team !== undefined;
+  return {
+    signedUp: players.map((p) => p.userId),
+    subList: subs.filter((s) => drafted || s.kind === "sub").map((s) => s.userId),
+  };
 }
 
 /**
