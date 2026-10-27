@@ -172,11 +172,21 @@ Every full-width row on `/` has a muted, looping gameplay clip behind it at
 - **Loading:** the `<video>` mounts only once the row is within 200px of the
   viewport, fades in on `canplay`, and pauses when off-screen. Reduced-motion
   and Save-Data users never get the video, only the poster.
-- **Assets:** `public/videos/` (clips) and `public/videos/posters/`. Posters are
-  SVG placeholders right now and every clip has `sources: []`, so no video is
-  requested. To add a clip: encode an 8–12s seamless loop at 1280×720, no
-  audio, as AV1 WebM + H.264 MP4 (~1.5–3 MB each), replace the poster with
-  its first frame, and list both files in `sources` (WebM first).
+- **Assets:** `public/videos/` (clips) and `public/videos/posters/`. LoL has
+  three real clips (`lol-1..3`, 10s loops from our own replays: hero =
+  `lol-1`, so the three LoL rows never repeat); CS2 is still SVG
+  placeholders with `sources: []`, so no CS2 video is requested. To add a
+  clip: encode a 10s seamless loop at 1280×720/30fps, no audio, as AV1 WebM +
+  H.264 MP4 (~1.5–3 MB each), save its first frame as `posters/<id>.jpg`, and
+  set `sources: loopSources("<id>")`. The loop is made seamless by cutting
+  11s and crossfading the last 1s into the first:
+  ```bash
+  # body = 1s..11s, head = 0s..1s; xfade body's tail into head → 10s loop
+  ffmpeg -ss <start> -t 11 -i src.webm -filter_complex "[0:v]fps=30,scale=1280:720,format=yuv420p,split[a][b];[a]trim=1:11,setpts=PTS-STARTPTS[body];[b]trim=0:1,setpts=PTS-STARTPTS[head];[body][head]xfade=transition=fade:duration=1:offset=9[v]" -map "[v]" -an -c:v libsvtav1 -crf 42 -preset 4 <id>.webm
+  # same filter → -c:v libx264 -crf 28 -preset slow -movflags +faststart <id>.mp4
+  ```
+  Raise the CRF (e.g. 47 / 31) for busy teamfights that come out over 3 MB.
+  If the encode settings change, update the codec strings in `loopSources`.
 - **Licensing:** footage must be our own recordings or official Riot / Valve
   material — both publishers allow game footage on free, non-commercial fan
   sites, but not other creators' videos. The Riot "Legal Jibber Jabber"
