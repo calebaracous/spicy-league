@@ -1,8 +1,8 @@
 import { config } from "dotenv";
 
-// Same DATABASE_URL the app uses locally. E2E_DATABASE_URL overrides it, e.g.
-// to point the suite at a Neon branch instead of the live database.
-config({ path: ".env.local", quiet: true });
+// Same DATABASE_URL `next dev` uses: the staging branch. E2E_DATABASE_URL
+// overrides it.
+config({ path: ".env.development.local", quiet: true });
 
 export const DATABASE_URL = process.env.E2E_DATABASE_URL ?? process.env.DATABASE_URL ?? "";
 export const PORT = Number(process.env.E2E_PORT ?? 3100);

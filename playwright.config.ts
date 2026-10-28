@@ -30,10 +30,14 @@ export default defineConfig({
     env: {
       ...(process.env as Record<string, string>),
       DATABASE_URL,
-      // .env.local points Better Auth at production; the test server must
-      // trust and issue cookies for localhost instead.
+      // `next start` loads .env.production.local, which points Better Auth at
+      // production; the test server must trust and issue cookies for
+      // localhost instead. It also holds the real Discord bot: blank it so
+      // e2e seasons never touch the server (empty reads as unset, see env.ts).
       BETTER_AUTH_URL: BASE_URL,
       NEXT_PUBLIC_APP_URL: BASE_URL,
+      DISCORD_BOT_TOKEN: "",
+      DISCORD_GUILD_ID: "",
     },
   },
 });

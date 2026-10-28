@@ -10,8 +10,8 @@ Trivial shadcn primitives get a single entry at the bottom.
 - `PLANNING.md` — aspirational roadmap (not current state). See [ARCHITECTURE.md](ARCHITECTURE.md) for what's actually shipped.
 - `README.md` — human-facing overview + local setup.
 - `.env.example` — every env var with comments. See [ENV.md](ENV.md).
-- `drizzle.config.ts` — migration config. `schema: ./src/db/schema/index.ts`, snake_case. Loads `.env.local` for `DATABASE_URL`.
-- `vercel.json` — crons: `0 6 * * *` → `/api/cron/refresh-stats`, `0 15 * * *` → `/api/cron/discord-reminders`.
+- `drizzle.config.ts` — migration config. `schema: ./src/db/schema/index.ts`, snake_case. Loads `.env.development.local` (staging) for `DATABASE_URL`; the `:prod` npm scripts preload `.env.production.local`.
+- `vercel.json` — crons: `0 6 * * *` → `/api/cron/refresh-stats`, `0 15 * * *` → `/api/cron/discord-reminders`; `ignoreCommand` deploys only `main` and `staging` (see STAGING.md).
 - `next.config.ts` — Next config (stock, empty).
 - `eslint.config.mjs` — ESLint flat config.
 - `postcss.config.mjs` — Tailwind v4 postcss wiring.
@@ -47,10 +47,11 @@ Trivial shadcn primitives get a single entry at the bottom.
 ## Scripts
 
 - `scripts/backfill-events.mjs` — dry run / `--apply`: reconstructs events inbox rows from existing timestamps (retention window, before the first live event). See EVENTS.md.
-- `scripts/create-test-admin.mjs` — creates (or resets) the `claudius` admin test account in `DATABASE_URL`; credentials only in `.env.local` (`TEST_ADMIN_EMAIL` / `TEST_ADMIN_PASSWORD`, generated if missing). See TESTING.md.
+- `scripts/create-test-admin.mjs` — creates (or resets) the `claudius` admin test account in `DATABASE_URL`; credentials only in `.env.development.local` (`TEST_ADMIN_EMAIL` / `TEST_ADMIN_PASSWORD`, generated if missing). See TESTING.md.
 - `scripts/e2e-cleanup.mjs` — `npm run test:e2e:cleanup`: deletes e2e-tagged seasons/users; `--legacy` also removes the old seed-test-season data.
 - `scripts/season-12-setup.mjs` — one-off: deletes every season + 10-man and obvious test users (numbered bot usernames / test email domains, never admins), then creates Spicy League Season 12 (Bo2 group stage). Dry run unless `--apply`. Needs migrations 0005 and 0007.
-- `scripts/seed-test-season.ts` — refuses to run without `ALLOW_TEST_SEED=1` (it writes to the live DB from `.env.local`). Seeds `test-s1` LoL season with 4 captain + 16 bot accounts (re-runnable; cleans first). Run with `ALLOW_TEST_SEED=1 npx tsx --env-file=.env.local scripts/seed-test-season.ts`. Credentials are in the file header.
+- `scripts/seed-test-season.ts` — refuses to run without `ALLOW_TEST_SEED=1` (guards against seeding production). Seeds `test-s1` LoL season with 4 captain + 16 bot accounts (re-runnable; cleans first). Run with `ALLOW_TEST_SEED=1 npx tsx --env-file=.env.development.local scripts/seed-test-season.ts` (staging). Credentials are in the file header.
+- `scripts/staging-scrub.mjs` — `npm run staging:scrub` (also the tail of `staging:reset`): rewrites real emails to Resend's test inbox, deletes sessions/verification tokens, clears OAuth tokens on the staging DB; refuses the production endpoint. See STAGING.md.
 
 ## App root
 
@@ -281,6 +282,7 @@ shadcn (OKLCH tokens):
 - `docs/TESTING.md` — unit tests, the e2e draft suite, the `claudius` test admin.
 - `docs/DESIGN-SYSTEM.md` — two token systems, typography, animations, primitives.
 - `docs/ENV.md` — env vars + what breaks without them.
+- `docs/STAGING.md` — the staging deploy + Neon branch, local env files, big-change workflow, reset/scrub.
 - `docs/FILE-MAP.md` — this file.
 - `docs/design/10-man/` — original 10-man design handoff (README spec, IMPLEMENTATION-PLAN, HTML prototype, screenshots). Historical; [TEN-MAN.md](TEN-MAN.md) is current.
 - `docs/design/SUBSTITUTIONS.md` — substitutions design + rationale. [MATCHES.md](MATCHES.md) → Substitutions is current.

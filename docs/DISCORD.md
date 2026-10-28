@@ -261,14 +261,16 @@ account belongs to the player.
    **Interactions Endpoint URL** = `https://www.spicyleague.dev/api/discord/interactions`
    (save only after the deploy with `DISCORD_PUBLIC_KEY` is live — Discord
    tests it). Then register the commands once, with the token, application
-   ID and guild ID in `.env.local` or the environment:
+   ID and guild ID in `.env.production.local` or the environment:
    `node scripts/discord-register-commands.mjs --apply`.
 8. **Check.** `/admin/seasons/<slug>` → the Discord card no longer says the
    bot isn't set up. Click **Sync Discord** and confirm roles in Discord; try
    `/standings` in the server.
 
-Leave the env vars unset locally unless you're testing the bot: with them in
-`.env.local`, local actions (but not e2e seasons) change the real server.
+The env vars are unset in `.env.development.local` and on the staging deploy
+on purpose ([STAGING.md](STAGING.md)): staging holds real players' Discord
+IDs, so with them set, staging actions would change the real server. The
+e2e test server blanks them too.
 
 ## Not built
 

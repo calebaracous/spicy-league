@@ -53,11 +53,12 @@ future migration gets a normal, current timestamp. **Don't change the
 baseline's `when`.**
 
 Workflow:
-- Fresh DB: `npm run db:migrate` (reads `DATABASE_URL` from `.env.local`
-  via `drizzle.config.ts`). Don't use `db:push` — it can't create the
-  partial index.
+- Fresh DB: `npm run db:migrate` (reads `DATABASE_URL` from
+  `.env.development.local` — the staging branch — via `drizzle.config.ts`).
+  Don't use `db:push` — it can't create the partial index.
 - Schema change: edit `src/db/schema/*`, `npm run db:generate`, review the
-  SQL, `npm run db:migrate`. Never edit an applied migration.
+  SQL, `npm run db:migrate` (staging), then `npm run db:migrate:prod`
+  before pushing the code to `main`. Never edit an applied migration.
 - Something Drizzle can't express (partial/expression indexes, data
   backfills): `npx drizzle-kit generate --custom --name <name>` and write
   the SQL by hand.

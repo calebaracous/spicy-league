@@ -22,8 +22,11 @@
   - `npm run db:push` — skip migrations, push schema. Avoid: it can't
     create the `ten_mans_active_uniq` partial index and leaves
     `__drizzle_migrations` out of sync.
-  - `drizzle.config.ts` loads `DATABASE_URL` from `.env.local`; an
-    already-set env var wins.
+  - `drizzle.config.ts` loads `DATABASE_URL` from `.env.development.local`
+    (the staging branch); an already-set env var wins.
+    `npm run db:migrate:prod` / `db:studio:prod` target production.
+- Branches: `main` (production) and `staging` (scrubbed copy for testing
+  big changes) — see [STAGING.md](STAGING.md).
   - `npm run db:studio` — open drizzle studio UI
 
 ## Better Auth + Resend (email)
@@ -144,7 +147,9 @@ Details and setup: [DISCORD.md](DISCORD.md).
 ## Vercel
 
 - **Deployment**: main → production deploy on every push (trunk-based,
-  see [CLAUDE.md](../CLAUDE.md)).
+  see [CLAUDE.md](../CLAUDE.md)); `staging` → a Preview deploy on its own
+  database ([STAGING.md](STAGING.md)). `ignoreCommand` in `vercel.json`
+  skips every other branch.
 - **Cron jobs**: `vercel.json` → `/api/cron/refresh-stats` daily at 06:00
   UTC, `/api/cron/discord-reminders` daily at 15:00 UTC. Both check
   `CRON_SECRET`.

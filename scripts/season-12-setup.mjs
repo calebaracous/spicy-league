@@ -3,7 +3,7 @@
 //   node scripts/season-12-setup.mjs           dry run — prints what would go
 //   node scripts/season-12-setup.mjs --apply   does it, in one transaction
 //
-// Reads DATABASE_URL from .env.local or the environment. Needs migrations
+// Reads DATABASE_URL from .env.development.local or the environment. Needs migrations
 // 0005_season_schedule and 0007_group_bo2 applied first (the new season's
 // schedule columns and group_best_of).
 //
@@ -14,10 +14,10 @@
 import { config } from "dotenv";
 import { neon } from "@neondatabase/serverless";
 
-config({ path: ".env.local", quiet: true });
+config({ path: ".env.development.local", quiet: true });
 const url = process.env.DATABASE_URL;
 if (!url) {
-  console.error("DATABASE_URL is not set (.env.local or environment).");
+  console.error("DATABASE_URL is not set (.env.development.local or environment).");
   process.exit(1);
 }
 const apply = process.argv.includes("--apply");

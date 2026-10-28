@@ -53,10 +53,10 @@ cd spicy-league
 npm install
 ```
 
-Copy `.env.example` to `.env.local` and fill in the required values (see [Environment variables](#environment-variables) below).
+Copy `.env.example` to `.env.development.local` and fill in the required values (see [Environment variables](#environment-variables) below). Point it at a Neon branch, not production — see [docs/STAGING.md](docs/STAGING.md).
 
 ```bash
-npm run db:migrate   # build/upgrade the schema on your Neon branch (reads .env.local)
+npm run db:migrate   # build/upgrade the schema on your Neon branch (reads .env.development.local)
 npm run dev          # start dev server at http://localhost:3000
 ```
 
@@ -101,10 +101,10 @@ npm run db:studio     # open Drizzle Studio to browse the DB
 
 Schemas live in `src/db/schema/` — one file per domain (`auth`, `seasons`, `drafts`, `matches`, `stats`, `ten-mans`, `events`).
 
-To get a populated season locally, seed one (4 captain + 16 bot accounts; credentials are in the script header). It writes to whatever `DATABASE_URL` points at — in `.env.local` that's the live database — so prefer `npm run test:e2e` for automated testing:
+To get a populated season locally, seed one (4 captain + 16 bot accounts; credentials are in the script header). It writes to whatever `DATABASE_URL` points at, so prefer `npm run test:e2e` for automated testing:
 
 ```bash
-ALLOW_TEST_SEED=1 npx tsx --env-file=.env.local scripts/seed-test-season.ts
+ALLOW_TEST_SEED=1 npx tsx --env-file=.env.development.local scripts/seed-test-season.ts
 ```
 
 ---

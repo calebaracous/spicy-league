@@ -18,7 +18,8 @@ const {
   matchSubstitutions,
 } = schema;
 
-if (!DATABASE_URL) throw new Error("E2E: DATABASE_URL is not set (.env.local or E2E_DATABASE_URL)");
+if (!DATABASE_URL)
+  throw new Error("E2E: DATABASE_URL is not set (.env.development.local or E2E_DATABASE_URL)");
 
 export const db = drizzle(neon(DATABASE_URL), { schema, casing: "snake_case" });
 

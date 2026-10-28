@@ -7,6 +7,14 @@
 - CI runs on every push via `.github/workflows/ci.yml` (format, lint,
   typecheck, unit tests, build). Don't push if any of those would fail locally.
 - Never force-push `main`.
+- **Big changes go through `staging` first** (risky migrations, flow
+  rewrites): commit them on the `staging` branch, `npm run db:migrate`, push,
+  test on the staging URL, then fast-forward `main`. Small changes still go
+  straight to `main`. See `docs/STAGING.md`.
+- **Local env**: `.env.development.local` = staging DB (`next dev`,
+  drizzle-kit, scripts); `.env.production.local` = live. There is no
+  `.env.local`. Production migrations: `npm run db:migrate:prod` before
+  pushing the code that needs them.
 - The overall roadmap lives in `PLANNING.md`.
 
 ## Docs
@@ -41,6 +49,8 @@ source of truth for what's shipped.**
 - `docs/DESIGN-SYSTEM.md` — two coexisting token systems (freelance hex +
   shadcn OKLCH), typography, animations, primitives.
 - `docs/ENV.md` — env vars and what breaks without them.
+- `docs/STAGING.md` — the staging deploy + Neon branch, which local env
+  file points where, big-change workflow, resetting staging data.
 - `docs/TESTING.md` — unit tests (Vitest, in CI) and the end-to-end draft
   suite (Playwright, on demand, writes tagged data to `DATABASE_URL`).
 

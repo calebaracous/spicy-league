@@ -4,11 +4,11 @@
 //   node scripts/discord-register-commands.mjs --apply   registers them (replaces the set)
 //
 // Reads DISCORD_BOT_TOKEN, DISCORD_APPLICATION_ID and DISCORD_GUILD_ID from
-// .env.local or the environment. Guild commands update instantly. Handlers:
+// .env.production.local or the environment. Guild commands update instantly. Handlers:
 // src/lib/discord-commands.ts (keep names in sync). See docs/DISCORD.md.
 import { config } from "dotenv";
 
-config({ path: ".env.local", quiet: true });
+config({ path: ".env.production.local", quiet: true });
 
 const USER = 6; // option type
 

@@ -2,10 +2,11 @@
  * Seeds a mock LoL season with 16 bot players + 4 captain accounts.
  *
  * Run:
- *   ALLOW_TEST_SEED=1 npx tsx --env-file=.env.local scripts/seed-test-season.ts
+ *   ALLOW_TEST_SEED=1 npx tsx --env-file=.env.development.local scripts/seed-test-season.ts
  *
- * Writes to whatever DATABASE_URL points at — in .env.local that is the live
- * database. Prefer `npm run test:e2e` (docs/TESTING.md) for automated testing.
+ * Writes to whatever DATABASE_URL points at — in .env.development.local that
+ * is the staging database. Prefer `npm run test:e2e` (docs/TESTING.md) for
+ * automated testing.
  *
  * To reset: run again — it cleans up existing test data first.
  *
@@ -36,9 +37,9 @@ const LOL_ROLES = ["top", "jungle", "mid", "adc", "support", "fill"];
 
 async function main() {
   const dbUrl = process.env.DATABASE_URL;
-  if (!dbUrl) throw new Error("DATABASE_URL not set — run with --env-file=.env.local");
-  // .env.local points at the live database. Require an explicit opt-in so this
-  // never seeds fake accounts into production by accident.
+  if (!dbUrl) throw new Error("DATABASE_URL not set — run with --env-file=.env.development.local");
+  // Require an explicit opt-in so this never seeds fake accounts into
+  // production by accident (e.g. run with .env.production.local).
   if (process.env.ALLOW_TEST_SEED !== "1") {
     throw new Error(
       "Refusing to seed: this writes test accounts and a season to DATABASE_URL. " +

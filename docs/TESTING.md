@@ -12,13 +12,16 @@ the real UI against a real database and is run on demand.
 ## Test admin account (`claudius`)
 
 For checking signed-in and admin pages by hand (or by an agent in the
-browser) against the database in `.env.local`, which is the live one.
-`node scripts/create-test-admin.mjs` creates `claudius` (admin, verified
-email `claudius@spicyleague.test`, Discord username `spicy_claudius_test`,
-which isn't in the server, so the Discord signup gate blocks it) or resets
-its password and role. Sign in with `TEST_ADMIN_EMAIL` /
-`TEST_ADMIN_PASSWORD` from `.env.local`; the password is generated on first
-run and never printed. It's a real admin on the live site: don't sign it up
+browser). It exists on both the live database and staging (staging is a
+copy, so the password is the same). `node scripts/create-test-admin.mjs`
+creates `claudius` (admin, verified email `claudius@spicyleague.test`,
+Discord username `spicy_claudius_test`, which isn't in the server, so the
+Discord signup gate blocks it) or resets its password and role — on staging
+by default; prefix `node --env-file=.env.production.local` for live, and
+keep the two passwords in sync. Sign in with `TEST_ADMIN_EMAIL` /
+`TEST_ADMIN_PASSWORD` from `.env.development.local`; the password is
+generated on first run and never printed. It's a real admin on the live
+site: don't sign it up
 for real seasons, and delete it (`delete from users where username =
 'claudius'`) if that password ever leaks. `test:e2e:cleanup` leaves it alone.
 
@@ -59,8 +62,11 @@ CI runs `npm run test:unit` after typecheck.
 ### What it does
 
 `webServer` runs `npm run build && next start -p 3100` with `BETTER_AUTH_URL`
-and `NEXT_PUBLIC_APP_URL` overridden to `http://localhost:3100` (`.env.local`
-points Better Auth at production). `E2E_SKIP_BUILD=1` reuses the last build.
+and `NEXT_PUBLIC_APP_URL` overridden to `http://localhost:3100` (`next start`
+loads `.env.production.local`, which points Better Auth at production),
+`DATABASE_URL` set to the suite's database, and `DISCORD_BOT_TOKEN` /
+`DISCORD_GUILD_ID` blanked so no run touches the real server.
+`E2E_SKIP_BUILD=1` reuses the last build.
 
 `global-setup.ts` generates a run id and a random password (kept in
 `process.env` only — never written or logged), removes leftovers from earlier
@@ -74,11 +80,11 @@ cascade to signups, captains, draft, picks, teams, matches; users cascade to
 sessions and credential accounts.
 
 **Which database**: `E2E_DATABASE_URL`, else `DATABASE_URL` from
-`.env.local` — which is the **live** database. Running against it is
-deliberate (decided 2026-10-13, site had no users) and safe because of the
-tagging, but while the main spec runs the e2e season is the newest live
-season, so the public homepage and header pill show it. Point
-`E2E_DATABASE_URL` at a Neon branch to avoid that.
+`.env.development.local` — the **staging** branch ([STAGING.md](STAGING.md)).
+While the main spec runs, the e2e season is the newest staging season, so
+the staging homepage shows it. Running against live
+(`E2E_DATABASE_URL=<live url>`) is safe because of the tagging but puts the
+e2e season on the public homepage while it runs.
 
 Workers = 1: specs share one admin and one database.
 

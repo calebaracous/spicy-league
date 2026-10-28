@@ -1,4 +1,4 @@
-// Remove end-to-end test data from DATABASE_URL (.env.local, or E2E_DATABASE_URL).
+// Remove end-to-end test data from DATABASE_URL (.env.development.local, or E2E_DATABASE_URL).
 //
 //   npm run test:e2e:cleanup             e2e-* seasons + @e2e.spicyleague.test users
 //   npm run test:e2e:cleanup -- --legacy also the old scripts/seed-test-season.ts data
@@ -9,10 +9,10 @@
 import { config } from "dotenv";
 import { neon } from "@neondatabase/serverless";
 
-config({ path: ".env.local", quiet: true });
+config({ path: ".env.development.local", quiet: true });
 const url = process.env.E2E_DATABASE_URL ?? process.env.DATABASE_URL;
 if (!url) {
-  console.error("DATABASE_URL is not set (.env.local or E2E_DATABASE_URL).");
+  console.error("DATABASE_URL is not set (.env.development.local or E2E_DATABASE_URL).");
   process.exit(1);
 }
 const legacy = process.argv.includes("--legacy");

@@ -3,7 +3,7 @@
 //
 //   node scripts/create-test-admin.mjs
 //
-// Credentials live only in .env.local (gitignored): TEST_ADMIN_EMAIL and
+// Credentials live only in .env.development.local (gitignored): TEST_ADMIN_EMAIL and
 // TEST_ADMIN_PASSWORD. A missing password is generated and appended there;
 // it is never printed. Re-running resets the password hash, role and
 // verified flag to match. The email is on the non-routable .test TLD and
@@ -15,7 +15,7 @@ import { hashPassword } from "@better-auth/utils/password";
 import { neon } from "@neondatabase/serverless";
 import { config } from "dotenv";
 
-const ENV_FILE = ".env.local";
+const ENV_FILE = ".env.development.local";
 config({ path: ENV_FILE, quiet: true });
 
 const USERNAME = "claudius";

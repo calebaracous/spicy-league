@@ -7,13 +7,13 @@
 // Only covers what the tables still record (signups, links, picks, reports,
 // bans…); past edits and deletions are gone. Rows are flagged `backfilled`
 // and stop where live logging began, so nothing is logged twice. Re-running
-// replaces the previous backfill. Writes to DATABASE_URL (.env.local).
+// replaces the previous backfill. Writes to DATABASE_URL (.env.development.local).
 import { config } from "dotenv";
 import { neon } from "@neondatabase/serverless";
 
-config({ path: ".env.local", quiet: true });
+config({ path: ".env.development.local", quiet: true });
 if (!process.env.DATABASE_URL) {
-  console.error("DATABASE_URL is not set (.env.local).");
+  console.error("DATABASE_URL is not set (.env.development.local).");
   process.exit(1);
 }
 const apply = process.argv.includes("--apply");

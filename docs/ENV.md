@@ -13,8 +13,11 @@ and the cron / Discord interaction routes import it. `src/db/client.ts` and `src
 so a malformed auth/DB var won't be caught until one of those modules
 loads.
 
-Template: `.env.example` lists every var below with comments. Copy it to
-`.env.local`.
+Template: `.env.example` lists every var below with comments. Locally there
+are two copies and no `.env.local`: `.env.development.local` (staging DB,
+localhost, no Discord — `next dev`, drizzle-kit, scripts) and
+`.env.production.local` (live — `next build`/`start`, the `:prod` scripts).
+See [STAGING.md](STAGING.md).
 
 Set `SKIP_ENV_VALIDATION=1` to bypass the schema — useful in CI for
 builds that don't need runtime secrets.
@@ -44,7 +47,7 @@ builds that don't need runtime secrets.
 | `DISCORD_APPLICATION_ID` | Discord slash commands | Used by `scripts/discord-register-commands.mjs`. |
 | `DISCORD_PUBLIC_KEY` | Discord slash commands | 64-hex key; `/api/discord/interactions` 404s without it and rejects unsigned requests. |
 | `DISCORD_INVITE_URL` | Season signup gate + Discord nudge emails | Permanent server invite link. Shown to players blocked from signing up because they aren't in the server, and included in "add your Discord" emails. Unset → the gate says "ask an admin for an invite". |
-| `TEST_ADMIN_EMAIL`, `TEST_ADMIN_PASSWORD` | `scripts/create-test-admin.mjs` (local only) | The `claudius` test admin's sign-in. Written by the script on first run; never set on Vercel. See [TESTING.md](TESTING.md). |
+| `TEST_ADMIN_EMAIL`, `TEST_ADMIN_PASSWORD` | `scripts/create-test-admin.mjs` (local only) | The `claudius` test admin's sign-in. Written by the script (to `.env.development.local`) on first run; never set on Vercel. See [TESTING.md](TESTING.md). |
 
 ## Client-side vars
 
@@ -62,7 +65,12 @@ AUTH_RESEND_KEY=re_…
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
-**Vercel preview / production**:
+**Vercel staging** (Preview, git branch `staging` — see
+[STAGING.md](STAGING.md)): `DATABASE_URL`, `BETTER_AUTH_SECRET`,
+`BETTER_AUTH_URL`, `NEXT_PUBLIC_APP_URL`, all staging-specific; no
+`DISCORD_*`. Other branches don't deploy.
+
+**Vercel production**:
 ```
 all of the above
 CRON_SECRET=…

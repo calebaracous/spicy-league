@@ -1,9 +1,10 @@
 import { config } from "dotenv";
 import { defineConfig } from "drizzle-kit";
 
-// Local dev keeps DATABASE_URL in .env.local. Already-set env vars (CI,
-// Vercel, an explicit `DATABASE_URL=… npm run db:migrate`) win.
-config({ path: ".env.local", quiet: true });
+// Defaults to the staging database (.env.development.local). Already-set env
+// vars win, which is how the `:prod` scripts target production
+// (`node --env-file=.env.production.local …`). See docs/STAGING.md.
+config({ path: ".env.development.local", quiet: true });
 
 export default defineConfig({
   schema: "./src/db/schema/index.ts",
