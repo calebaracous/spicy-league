@@ -9,9 +9,11 @@
   --surface: #111111;
   --border: #1f1f1f;
   --text: #f5f0e8;
-  --muted: #6b6b6b;
-  --accent: #b91c1c; /* Tailwind red-700 — the single brand color */
+  --muted: #858585; /* ≥5:1 on --bg and --surface (WCAG AA body text) */
+  --accent: #b91c1c; /* Tailwind red-700 — the single brand color. Fills, borders, dots. */
   --accent-fg: #f5f0e8;
+  /* Brand red as TEXT: --accent is only 2.7:1 on --bg. */
+  --accent-text: #ef4444;
 
   /* Canonical aliases */
   --color-bg: var(--bg);

@@ -15,7 +15,8 @@ tournament series for League of Legends and Counter-Strike 2.
 > - **Phases 0–7** are built, with these gaps: no pick clock / auto-pick,
 >   no randomized captain seeding, no Discord webhooks, no `bottleneck`
 >   limiter or response cache for Riot, no
->   avatar uploads, no audit log. Riot users can link up to 3 accounts.
+>   avatar uploads. The audit log shipped as the admin events inbox
+>   ([docs/EVENTS.md](docs/EVENTS.md)). Riot users can link up to 3 accounts.
 > - **Phase 8** (polish & ops) is not started — no Sentry/PostHog or
 >   notification emails. The Discord bot is built (roles, team channels,
 >   match threads + reminders, slash commands, admin tools); channel

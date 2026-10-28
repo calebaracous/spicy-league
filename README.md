@@ -17,7 +17,7 @@ Each season follows the same lifecycle:
 5. **Playoffs** — top 4 teams, single-elimination bracket
 6. **Archive** — season is frozen and preserved in history
 
-The app handles all of it: signups, a live realtime draft, match reporting, standings with tiebreakers, and player profiles backed by Riot API stats. A Discord bot keeps league roles, private team channels and match threads in step with the site, and answers slash commands like `/standings` (see [docs/DISCORD.md](docs/DISCORD.md)).
+The app handles all of it: signups, a live realtime draft, match reporting, standings with tiebreakers, and player profiles backed by Riot API stats. A Discord bot keeps league roles, private team channels and match threads in step with the site, answers slash commands like `/standings`, and feeds the home page's announcements ticker (see [docs/DISCORD.md](docs/DISCORD.md)).
 
 It also runs **10-mans** — one-off 5v5 pickup games: the first 10 signups vote for two captains, who snake-draft the other eight live. See [docs/TEN-MAN.md](docs/TEN-MAN.md).
 
@@ -45,7 +45,7 @@ It also runs **10-mans** — one-off 5v5 pickup games: the first 10 signups vote
 
 ## Local setup
 
-**Prerequisites:** Node.js 20+, a Neon Postgres database, a Resend account.
+**Prerequisites:** Node.js 22+ (the DB driver needs Node's built-in `WebSocket`; CI uses 22), a Neon Postgres database, a Resend account.
 
 ```bash
 git clone https://github.com/calebaracous/spicy-league.git
@@ -99,7 +99,7 @@ npm run db:migrate    # apply pending migrations
 npm run db:studio     # open Drizzle Studio to browse the DB
 ```
 
-Schemas live in `src/db/schema/` — one file per domain (`auth`, `seasons`, `drafts`, `matches`, `stats`, `ten-mans`).
+Schemas live in `src/db/schema/` — one file per domain (`auth`, `seasons`, `drafts`, `matches`, `stats`, `ten-mans`, `events`).
 
 To get a populated season locally, seed one (4 captain + 16 bot accounts; credentials are in the script header). It writes to whatever `DATABASE_URL` points at — in `.env.local` that's the live database — so prefer `npm run test:e2e` for automated testing:
 
@@ -117,7 +117,7 @@ npm run build      # production build
 npm run lint       # ESLint
 npm run typecheck  # tsc --noEmit
 npm run format     # Prettier (format:check is what CI runs)
-npm run test:unit  # Vitest — pure logic: draft order, standings, schedule, subs, Discord helpers (runs in CI)
+npm run test:unit  # Vitest — pure logic: draft order, standings, schedule, subs, Discord helpers, events (runs in CI)
 npm run test:e2e   # Playwright — full season draft through the UI (see docs/TESTING.md)
 ```
 
@@ -155,6 +155,7 @@ docs/               # Architecture and domain docs (good starting point)
 - [DISCORD.md](docs/DISCORD.md) — the Discord bot and its one-time setup
 - [DESIGN-SYSTEM.md](docs/DESIGN-SYSTEM.md) — tokens, typography, component conventions
 - [ENV.md](docs/ENV.md) — all env vars with notes
+- [EVENTS.md](docs/EVENTS.md) — the admin events inbox
 - [FILE-MAP.md](docs/FILE-MAP.md) — one line per source file
 - [TESTING.md](docs/TESTING.md) — unit and end-to-end tests
 

@@ -257,8 +257,8 @@ rationale: [design/SUBSTITUTIONS.md](design/SUBSTITUTIONS.md).
 Match threads, result notes in them (reported / confirmed / disputed /
 reset), team schedules, sub-decision notes, the captains' "Ping the Sub
 list" button and daily reminders all hang off these actions in the
-background — see [DISCORD.md](DISCORD.md). A confirmed or reset final also
-moves the Discord Champion role.
+background — see [DISCORD.md](DISCORD.md). A confirmed, disputed or reset
+final also moves the Discord Champion role.
 
 ## Where to look when…
 

@@ -8,10 +8,10 @@ only bites on *malformed* values (e.g. a non-URL `DATABASE_URL`, a
 
 Note: validation runs when `src/lib/env.ts` is first imported, not at
 boot — and only `riot-api.ts`, `rate-limit.ts`, the `discord-*` modules
-(so the admin season page and every Discord sync) and the cron / Discord
-interaction routes import it. `src/db/client.ts` and `src/lib/auth.ts` read `process.env` directly,
-so a malformed auth/DB var won't be caught until one of those three
-modules loads.
+(so the admin season page and every Discord sync), the season signup page
+and the cron / Discord interaction routes import it. `src/db/client.ts` and `src/lib/auth.ts` read `process.env` directly,
+so a malformed auth/DB var won't be caught until one of those modules
+loads.
 
 Template: `.env.example` lists every var below with comments. Copy it to
 `.env.local`.
@@ -30,7 +30,7 @@ builds that don't need runtime secrets.
 | `AUTH_EMAIL_FROM` | email sending | Defaults to `no-reply@spicyleague.dev`. Must be a domain Resend has verified. |
 | `RIOT_PERSONAL_API_KEY` | LoL stats refresh | Preferred over developer key (doesn't expire). |
 | `RIOT_DEVELOPER_API_KEY` | LoL stats refresh (fallback) | Expires every 24h; only for dev. |
-| `CRON_SECRET` | daily stats cron | Bearer check in `/api/cron/refresh-stats`. Vercel Cron sends this. |
+| `CRON_SECRET` | both daily crons | Bearer check in `/api/cron/refresh-stats` and `/api/cron/discord-reminders`. Vercel Cron sends this. Unset → both return 401. |
 | `BLOB_READ_WRITE_TOKEN` | planned uploads | Declared, unused — Vercel Blob isn't wired yet. |
 | `UPSTASH_REDIS_REST_URL` | rate limiting | Missing → `checkRateLimit` fails open (allows all). |
 | `UPSTASH_REDIS_REST_TOKEN` | rate limiting | Paired with the URL. |
@@ -71,6 +71,7 @@ UPSTASH_REDIS_REST_URL=…
 UPSTASH_REDIS_REST_TOKEN=…
 DISCORD_BOT_TOKEN=…
 DISCORD_GUILD_ID=…
+DISCORD_*            # channels, slash commands, invite — see DISCORD.md → Setup
 ```
 
 ## Where to look when…

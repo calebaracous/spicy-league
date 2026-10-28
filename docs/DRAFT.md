@@ -145,7 +145,7 @@ Order of checks:
    `not-your-turn`. The pick is stored under the team's primary captain.
 9. Picked user is not themselves a captain → `cant-pick-captain`.
 10. Picked user not already picked → `already-picked`.
-11. Picked user is in `seasonSignups` → `not-in-pool`.
+11. Picked user is a draft-pool signup (`seasonSignups`, `kind = 'player'`) → `not-in-pool`.
 12. `expectedPickNumber !== nextPickNumber` → `stale-pick`. The live board
     sends `snap.picks.length + 1` — the pick the clicker was looking at.
 13. **Insert the pick.** A unique violation (lost a simultaneous race) →

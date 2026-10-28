@@ -5,7 +5,7 @@ the real UI against a real database and is run on demand.
 
 | Command | What | Needs |
 |---|---|---|
-| `npm run test:unit` | Vitest — pure logic (draft, standings, schedule, subs, Discord helpers) | nothing |
+| `npm run test:unit` | Vitest — pure logic (draft, standings, schedule, subs, Discord helpers, events, prize pool) | nothing |
 | `npm run test:e2e` | Playwright — full season draft through the UI | `DATABASE_URL`, Chromium |
 | `npm run test:e2e:cleanup` | Delete leftover e2e data (add `-- --legacy` for the old seed data) | `DATABASE_URL` |
 
@@ -37,7 +37,10 @@ for real seasons, and delete it (`delete from users where username =
   lock, cross-team flag, per-team sub limit
 - `standings.test.ts` — `rankStandings`: Bo2 points, head-to-head mini-tables, series wins, tiebreaker games, shared ranks, which ties need a tiebreaker
 - `opgg.test.ts` — `opggUrlForRiotId`
-- `discord.test.ts` — `normalizeDiscordUsername`
+- `discord.test.ts` — `normalizeDiscordUsername`, `normalizeDiscordUserId`
+- `riot-id.test.ts` — `parseRiotId` (`GameName#TAG`)
+- `event-format.test.ts` — every `EVENT_TYPES` entry has a sentence; `describeEvent`, `diffFields` / `describeDetails`
+- `prize-pool.test.ts` — `parsePrizeSplit`, `prizePayouts`, `formatUsd`
 - `team-name.test.ts` — `normalizeTeamName`, `teamTextChannelName`
 - `discord-plan.test.ts` — `pickExactMember`, `roleHolderChanges`, `staleTeamRoles`
 - `discord-format.test.ts` — Discord timestamps, thread names, result lines, the standings table

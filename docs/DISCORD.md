@@ -210,7 +210,8 @@ account belongs to the player.
 - `src/app/api/cron/discord-reminders/route.ts` — daily reminders.
 - `scripts/discord-register-commands.mjs` — registers slash commands.
 - Tests: `tests/unit/discord-{plan,format,verify,ticker}.test.ts`,
-  `tests/unit/team-name.test.ts`.
+  `tests/unit/discord.test.ts`, `tests/unit/team-name.test.ts`.
+- `src/lib/signup-gate.ts` — the "must be in the server" signup check.
 - DB: `users.discord_user_id`, `users.ten_man_pings`,
   `teams.discord_role_id`, `teams.discord_text_channel_id`,
   `teams.discord_voice_channel_id`, `seasons.discord_category_id`,
@@ -246,10 +247,13 @@ account belongs to the player.
    - `DISCORD_MATCHES_CHANNEL_ID`, `DISCORD_TEN_MAN_CHANNEL_ID`,
      `DISCORD_ANNOUNCEMENTS_CHANNEL_ID` — match threads / 10-man pings /
      home-page ticker.
+   - `DISCORD_ANNOUNCEMENTS_AUTHOR_IDS` — optional, comma-separated user IDs
+     whose posts the ticker shows (unset → everyone's).
    - `DISCORD_APPLICATION_ID`, `DISCORD_PUBLIC_KEY` — slash commands.
    - `DISCORD_INVITE_URL` — a permanent invite (Invite People → Edit invite
      link → Expire after: Never). The signup gate links it to players who
-     aren't in the server yet.
+     aren't in the server yet, and the "Email unmatched players" nudge
+     includes it.
    - `DISCORD_CAPTAIN_ROLE_ID` — optional.
    Redeploy. Keep the token out of chat, git and screenshots; if it leaks,
    reset it on the Bot tab.

@@ -49,7 +49,7 @@ src/
     site-footer.tsx     # Footer: nav + legal links.
   db/
     client.ts           # drizzle(Pool) instance (neon-serverless). Exports `db` and `schema`.
-    schema/             # One file per domain — auth, seasons, drafts, matches, stats, ten-mans.
+    schema/             # One file per domain — auth, seasons, drafts, matches, stats, ten-mans, events.
   lib/
     auth.ts             # Better Auth config. Drizzle adapter, Resend email, session cookies.
     auth-client.ts      # Client-side better-auth/react — signIn, signUp, useSession.
@@ -68,8 +68,8 @@ src/
     rate-limit.ts       # Upstash sliding-window limiter (optional).
     env.ts              # Zod-validated env via @t3-oss/env-nextjs.
     utils.ts            # cn() — clsx + tailwind-merge.
-drizzle/                # Migrations: squashed 0000_baseline, then 0001–0012 in order. See DATA-MODEL.md.
-scripts/                # Dev + one-off scripts (test-season seeder, e2e cleanup, Season 12 setup, Discord command registration).
+drizzle/                # Migrations: squashed 0000_baseline, then 0001–0014 in order. See DATA-MODEL.md.
+scripts/                # Dev + one-off scripts (test-season seeder, e2e cleanup, test admin, events backfill, Season 12 setup, Discord command registration).
 tests/                  # unit/ (Vitest) and e2e/ (Playwright). See TESTING.md.
 docs/                   # You are here. docs/design/ holds design handoffs (not source of truth).
 .agents/                # Agent skills: Spicy League design-system reference, Neon skill.
@@ -82,8 +82,10 @@ the root layout renders `SiteHeader`, which calls `auth()` (reads
 `headers()`), so even `/history`, `/terms` and `/privacy` render per
 request. Most DB-backed pages also export
 `export const dynamic = "force-dynamic"` explicitly. There is no ISR, no route-level cache, no
-`fetch` caching for app data (`riotFetch` uses `next: { revalidate: 0 }`;
-only Data Dragon is cached for 24h).
+`fetch` caching for app data (`riotFetch` uses `next: { revalidate: 0 }`).
+The two exceptions are external reads: Data Dragon (24h fetch cache) and the
+home-page Discord announcements ticker (`unstable_cache`, 5 min — see
+[DISCORD.md](DISCORD.md)).
 
 A typical authenticated server component:
 
@@ -175,11 +177,12 @@ again" via `unstable_retry`); `notFound()` and unmatched URLs render
 ## Routing map
 
 Public:
-- `/` — home. State-aware: signup (LoL/CS2), draft, live, upcoming, or
-  off-season layout, chosen by `getHomepageData()` in `src/lib/homepage.ts`.
+- `/` — home. Discord announcements ticker under the nav, then a
+  state-aware layout: signup (LoL/CS2), draft, live, upcoming, or
+  off-season, chosen by `getHomepageData()` in `src/lib/homepage.ts`.
 - `/seasons` — list of public (non-draft) seasons
-- `/seasons/[slug]` — season detail, UI adapts to state via `StatusPanel`
-- `/seasons/[slug]/signup` — signup form (gated by state + window)
+- `/seasons/[slug]` — season detail, UI adapts to state via `StatusPanel`; prize pool tiles when the season has one
+- `/seasons/[slug]/signup` — signup form (gated by state + window, a Discord username in the league server, and a Riot link for LoL — `missingSignupRequirements`)
 - `/seasons/[slug]/captains` — announced captain list
 - `/seasons/[slug]/draft` — live draft viewer (SSE-fed)
 - `/seasons/[slug]/teams` — rosters per team (captain + picks, primary role, record), viewer's team highlighted; captains rename their team here
@@ -198,7 +201,9 @@ card (team + next scheduled match) for signed-in players once teams exist.
   solo rank) — `getPlayerDirectory` in `src/lib/players.ts`. "Players" in
   the header + footer nav.
 - `/users/[username]` — public profile + match history (confirmed matches,
-  tagged Sub / Sat out — `getPlayerMatchHistory`)
+  tagged Sub / Sat out — `getPlayerMatchHistory`). Admins also get an
+  "Admin tools" card there: edit the player's Discord username / matched ID,
+  Riot links, refresh stats (`src/app/users/[username]/admin-actions.ts`).
 - `/terms`, `/privacy` — static legal docs. Required by the Discord
   Developer Portal for app creation. Shared chrome in
   `src/components/legal-page.tsx`; prose styling is the `.legal-prose`
@@ -207,7 +212,7 @@ card (team + next scheduled match) for signed-in players once teams exist.
 Auth flow:
 - `/signin` (username + password), `/signup`, `/signin/check-email`,
   `/forgot-password`, `/reset-password`
-- `/profile` — private profile + account linking (up to 3 Riot accounts, Steam + Leetify)
+- `/profile` — private profile + account linking (up to 3 Riot accounts, Steam + Leetify), Discord username, 10-man ping and captain-interest opt-ins
 
 Admin (requires `role === "admin"`):
 - `/admin` — overview: stat tiles, "needs attention" (results to confirm,
@@ -220,9 +225,9 @@ Admin (requires `role === "admin"`):
   [EVENTS.md](EVENTS.md).
 - `/admin/users` — player search + filters (banned / unverified / admins),
   ban (reason + 1/7/30 days or permanent) and unban
-- `/admin/seasons/new` — create season
-- `/admin/seasons/[slug]` — edit (incl. group series length) + state transition + Discord card (match status, Sync, nudge emails, nicknames, old-channel cleanup)
-- `/admin/seasons/[slug]/signups` — promote/demote captains, reorder, remove a player (pre-draft only), CSV export (`/signups/export`)
+- `/admin/seasons/new` — create season (incl. prize pool + payout split)
+- `/admin/seasons/[slug]` — edit (incl. group series length, prize pool) + state transition + Discord card (match status, Sync, nudge emails, nicknames, old-channel cleanup)
+- `/admin/seasons/[slug]/signups` — roster (Discord match, rank, "Wants captain"), promote/demote captains, pair/split duos, reorder, remove a player (pre-draft only), CSV export (`/signups/export`)
 - `/admin/seasons/[slug]/draft` — start/pause/resume/undo controls
 - `/admin/seasons/[slug]/matches` — generate schedule, create tiebreaker games, seed playoffs, confirm results
 - 10-man admin controls (start, cancel, report result) are inline on the
@@ -259,7 +264,7 @@ API:
 ## What NOT to expect
 
 - No `middleware.ts` / `proxy.ts`. Auth is enforced in RSCs and actions, not at the edge.
-- No `fetch` cache for app data. Every DB read is per-request.
+- No `fetch` cache for app data. Every DB read is per-request (only the Discord ticker and Data Dragon are cached).
 - No Pusher / Ably / Socket.io / LISTEN-NOTIFY. Realtime is SSE polling the DB.
 - No pick clock / auto-pick in either draft.
 - Unit tests (in CI) cover pure logic only — draft order, standings, schedule,
@@ -269,6 +274,7 @@ API:
 - No Vercel Blob usage yet (user avatars referenced in `users.image` but no
   upload flow).
 - No Discord gateway connection or separate bot process — the bot is REST +
-  HTTP interactions from the app ([DISCORD.md](DISCORD.md)), and posts no
-  channel announcements.
+  HTTP interactions from the app ([DISCORD.md](DISCORD.md)). It reads
+  `#announcements` for the home-page ticker but posts no channel
+  announcements of its own.
 - No Leetify or Steam API calls — only ID/URL storage in `account_links`.

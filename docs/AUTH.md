@@ -45,7 +45,11 @@ endpoints; we write it from our own signup server action (see
 `src/app/signup/actions.ts`). `bio`, `pronouns`, `opggUrl`, `discordUsername` are also
 `input: false` and mutated via inline server actions in
 `src/app/profile/page.tsx` (`saveProfile`, `saveOpggUrl`,
-`saveDiscordUsername`).
+`saveDiscordUsername`). `discordUsername` goes through
+`setDiscordUsername` in `src/lib/account-edits.ts`, which admins also use
+from the "Admin tools" card on `/users/[username]`. The other custom
+columns (`discordUserId`, `tenManPings`, `captainInterest`, ban fields,
+`eventsSeenAt`) are Drizzle-only — not Better Auth fields at all.
 
 ## Username vs display name
 

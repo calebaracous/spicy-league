@@ -40,6 +40,8 @@ files are in git history before the squash commit):
   `users.ten_man_pings` (boolean, default false).
 - `0012_events.sql` — `events` table + `users.events_seen_at`.
 - `0013_captain_interest.sql` — `users.captain_interest` (boolean, default false).
+- `0014_prize_pool.sql` — nullable `seasons.prize_pool` (int) and
+  `seasons.prize_split` (int[]).
 
 **Why the baseline's `when` is old.** Drizzle's migrator applies a journal
 entry only if its `when` is greater than the newest `created_at` in
@@ -327,6 +329,8 @@ their derived rows. Exceptions:
 - `ten_mans.createdBy`, `ten_mans.winnerCaptainUserId` → set null (both
   nullable since `0001_reconcile_live_schema`).
 - `events.actorId`, `events.subjectUserId`, `events.seasonId` → set null.
+- `match_substitutions.replacedUserId`, `requestedBy`, `decidedBy` → set
+  null (`subUserId` cascades).
 
 Deleting a **user** cascades to sessions, accounts, signups, captains, team
 memberships, teams they captain (and therefore those teams' matches), draft

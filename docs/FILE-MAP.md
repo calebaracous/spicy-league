@@ -11,14 +11,14 @@ Trivial shadcn primitives get a single entry at the bottom.
 - `README.md` — human-facing overview + local setup.
 - `.env.example` — every env var with comments. See [ENV.md](ENV.md).
 - `drizzle.config.ts` — migration config. `schema: ./src/db/schema/index.ts`, snake_case. Loads `.env.local` for `DATABASE_URL`.
-- `vercel.json` — cron: `0 6 * * *` → `/api/cron/refresh-stats`.
+- `vercel.json` — crons: `0 6 * * *` → `/api/cron/refresh-stats`, `0 15 * * *` → `/api/cron/discord-reminders`.
 - `next.config.ts` — Next config (stock, empty).
 - `eslint.config.mjs` — ESLint flat config.
 - `postcss.config.mjs` — Tailwind v4 postcss wiring.
 - `components.json` — shadcn generator config.
 - `.prettierrc.json` / `.prettierignore` — Prettier (+ tailwind class sorting plugin).
 - `.husky/pre-commit` + `.lintstagedrc.json` — pre-commit runs `eslint --fix` + `prettier --write` on staged files.
-- `.github/workflows/ci.yml` — CI on push/PR to main: `format:check`, `lint`, `typecheck`, `build` (Node 22, `SKIP_ENV_VALIDATION=1`).
+- `.github/workflows/ci.yml` — CI on push/PR to main: `format:check`, `lint`, `typecheck`, `test:unit`, `build` (Node 22, `SKIP_ENV_VALIDATION=1`).
 - `.claude/settings.json` — shared Claude Code settings. `.claude/launch.json` (untracked) — dev-server preview config.
 - `.agents/design-system/` — design-system skill for agents: token CSS, logo assets, HTML previews, marketing-site UI kit.
 - `.agents/skills/neon-postgres/SKILL.md` — Neon reference skill. `skills-lock.json` pins it.
@@ -58,13 +58,13 @@ Trivial shadcn primitives get a single entry at the bottom.
 - `src/app/error.tsx` — root error boundary (client). "Try again" calls `unstable_retry()`.
 - `src/app/not-found.tsx` — 404 for `notFound()` and unmatched URLs.
 - `src/app/template.tsx` — per-route `animate-page` fade wrapper.
-- `src/app/page.tsx` — home; calls `getHomepageData()` and renders Hero + exactly one state section + `PastSeasonsStrip`. Hero label: `LIVE_STATE_COPY` for live states, `HERO_LABELS` (upcoming / off-season) otherwise.
+- `src/app/page.tsx` — home; calls `getHomepageData()` + `getAnnouncements()` and renders the announcements ticker, Hero, exactly one state section and `PastSeasonsStrip`. Hero label: `LIVE_STATE_COPY` for live states, `HERO_LABELS` (upcoming / off-season) otherwise.
 - `src/app/globals.css` — design tokens (freelance hex + shadcn OKLCH), typography, animations, `.tint-subtle-warm`, `.legal-prose`. See [DESIGN-SYSTEM.md](DESIGN-SYSTEM.md).
 
 ## Home-page sections (`src/app/_sections/`)
 
 Rendered by `src/app/page.tsx`:
-- `hero.tsx` — headline, CTA, stats row. Accepts `liveLabel` + `liveHref` overrides.
+- `hero.tsx` — headline (hard-coded "Spicy League Season 12: League of Legends"), tagline, CTAs, backdrop clip for `game`. Accepts `liveLabel` + `liveHref` overrides.
 - `announcements-ticker.tsx` — full-width band between the nav and the hero scrolling the latest 6 Discord #announcements messages (CSS marquee, `.ticker-*` in `globals.css`); renders nothing when there are none.
 - `signup-section.tsx` — `signup_lol` / `signup_cs2` state: signup count + top-ranked (LoL) or random (CS2) players.
 - `draft-section.tsx` — `draft` state: captain badges + top non-captains; CTA to draft or season page.
@@ -79,12 +79,12 @@ Rendered by `src/app/page.tsx`:
 - `src/app/seasons/page.tsx` — list of non-draft seasons (active + past split); active cards show the prize pool.
 - `src/app/seasons/[slug]/page.tsx` — season detail. `StatusPanel` renders per-state CTA. Prize pool tiles (pool + each place's payout) above the schedule. Looks up champion from `matches` when complete.
 - `src/app/seasons/[slug]/signup/page.tsx` — signup form (LoL: roles, CS2: maps; "interested in being a captain" checkbox, pre-filled from `users.captainInterest`, hidden for sub signups). Not in the league Discord server → a "join the Discord" notice with `DISCORD_INVITE_URL`; missing a Discord username or (LoL) a Riot link → a notice listing what to add on `/profile`; either replaces the form.
-- `src/app/seasons/[slug]/signup/actions.ts` — `submitSignup`. Validates state + window + one-per-user + Discord username + in the Discord server + Riot link (LoL) + required quandary answer. Draft-pool signups also save the captain checkbox to `users.captainInterest`.
+- `src/app/seasons/[slug]/signup/actions.ts` — `submitSignup`, `leaveSubList` (sub signups only; refused while booked in an unplayed match). `submitSignup` validates state + window + one-per-user + Discord username + in the Discord server + Riot link (LoL) + required quandary answer. Draft-pool signups also save the captain checkbox to `users.captainInterest`.
 - `src/app/seasons/[slug]/captains/page.tsx` — announced captain list (duos grouped on one line).
 - `src/app/seasons/[slug]/draft/page.tsx` — live draft viewer. Fetches initial snapshot, renders `<LiveBoard>`.
 - `src/app/seasons/[slug]/draft/live-board.tsx` — client component; SSE-subscribes to `/api/draft/[slug]/stream`; shows solo-queue rank per pool player (LoL).
 - `src/app/seasons/[slug]/draft/actions.ts` — `submitPick`, `startDraft`, `pauseDraft`, `resumeDraft`, `undoLastPick`. Full validation chain in `submitPick` — see [DRAFT.md](DRAFT.md).
-- `src/app/seasons/[slug]/matches/sub-actions.ts` — `requestSub`, `withdrawSub`, `decideSub` (approve / reject / revoke).
+- `src/app/seasons/[slug]/matches/sub-actions.ts` — `requestSub`, `withdrawSub`, `decideSub` (approve / reject / revoke), `pingSubListAction` (Discord Sub list ping).
 - `src/app/seasons/[slug]/matches/[matchId]/_components/lineups.tsx` — `MatchLineups`: rosters with subs, sub requests, request form.
 - `src/app/users/[username]/_components/match-history.tsx` — profile match history list (Sub / Sat out tags).
 - `src/app/seasons/[slug]/teams/page.tsx` — team rosters with roles, record, "Your team" highlight. Captains (and admins) get a "Rename team" form on their card.
@@ -111,14 +111,14 @@ Rendered by `src/app/page.tsx`:
 - `src/app/admin/events/page.tsx` — events inbox: filters, unread highlight, paging. `actions.ts` — `markAllEventsRead`.
 - `src/app/admin/users/page.tsx` — player search/filters, ban + unban forms. `actions.ts` — `banUserAction`, `unbanUserAction`.
 - `src/app/admin/seasons/new/page.tsx` — create season form (incl. prize pool + payout split, also on the edit form).
-- `src/app/admin/seasons/actions.ts` — `createSeason`, `updateSeason`, `transitionSeasonState` (→ `captains_selected` schedules the Discord Captain role sync), `syncDiscordRoles`. zod-validated.
+- `src/app/admin/seasons/actions.ts` — `createSeason`, `updateSeason`, `transitionSeasonState` (→ `captains_selected` schedules the Discord Captain role sync), and the Discord card's `syncDiscordRoles`, `setDiscordNicknames`, `deleteOldDiscordChannels`, `emailDiscordUnmatched`. zod-validated.
 - `src/app/admin/seasons/[slug]/page.tsx` — edit metadata + state transition buttons + "Discord roles" card (match status per player, Sync button).
 - `src/app/admin/seasons/[slug]/signups/page.tsx` — signup roster (draft pool vs sub only, Discord username + matched ID, LoL best solo rank + Riot ID or "No Riot account linked"), "Wants captain" badge + filter (`?captain=1`) and an "Interested in captaining" list in the Captains card (`users.captainInterest`), captain promotion UI, captains grouped by team with Pair with… / Split for duo captains.
 - `src/app/admin/seasons/[slug]/signups/actions.ts` — `promoteCaptain`, `demoteCaptain`, `moveCaptain` (whole team; swap via a `-1` placeholder), `pairCaptain` / `splitCaptain` (duo captains), `removeSignup` (pre-draft only; drops captain spot + renumbers), `getSignupStats`. Captain changes lock once the draft starts; `renumberCaptains` keeps duos on one order.
 - `src/app/admin/seasons/[slug]/signups/export/route.ts` — CSV download of signup roster (incl. "Wants Captain").
 - `src/app/admin/seasons/[slug]/draft/page.tsx` — admin draft board with start/pause/resume/undo controls.
 - `src/app/admin/seasons/[slug]/matches/page.tsx` — schedule generation + playoff seeding + confirm/dispute/reset buttons.
-- `src/app/admin/seasons/[slug]/matches/actions.ts` — `generateMatchSchedule`, `seedPlayoffsAction`.
+- `src/app/admin/seasons/[slug]/matches/actions.ts` — `generateMatchSchedule`, `seedPlayoffsAction`, `createTiebreakersAction`.
 
 ## Auth pages
 
@@ -173,7 +173,7 @@ Rendered by `src/app/page.tsx`:
 - `src/db/schema/events.ts` — `events` (admin events inbox).
 - `src/db/schema/ten-mans.ts` — `tenMans`, `tenManSignups`, `tenManVotes`, `tenManCaptains`, `tenManPicks`. `ten_man_state` enum.
 
-Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/0001_reconcile_live_schema.sql` (idempotent fix-up for DBs from the pre-squash history), `drizzle/0002_user_bans.sql` (ban columns), `drizzle/0003_match_substitutions.sql` (subs table), `drizzle/0004_sub_signups.sql` (signup kind), `drizzle/0005_season_schedule.sql` (schedule dates), `drizzle/0006_signup_quandary.sql` (signup answer), `drizzle/0007_group_bo2.sql` (group series length + tiebreaker stage), `drizzle/0008_discord_username.sql` (Discord username), `drizzle/0009_discord_roles.sql` (Discord user ID + team role ID), `drizzle/0010_discord_team_channels.sql` (team channel + season category IDs), `drizzle/0011_discord_threads_pings.sql` (match thread ID + 10-man ping opt-in), `drizzle/0012_events.sql` (events inbox), `drizzle/0013_captain_interest.sql` (captain interest flag), plus `drizzle/meta/`. See [DATA-MODEL.md](DATA-MODEL.md) → Migrations.
+Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/0001_reconcile_live_schema.sql` (idempotent fix-up for DBs from the pre-squash history), `drizzle/0002_user_bans.sql` (ban columns), `drizzle/0003_match_substitutions.sql` (subs table), `drizzle/0004_sub_signups.sql` (signup kind), `drizzle/0005_season_schedule.sql` (schedule dates), `drizzle/0006_signup_quandary.sql` (signup answer), `drizzle/0007_group_bo2.sql` (group series length + tiebreaker stage), `drizzle/0008_discord_username.sql` (Discord username), `drizzle/0009_discord_roles.sql` (Discord user ID + team role ID), `drizzle/0010_discord_team_channels.sql` (team channel + season category IDs), `drizzle/0011_discord_threads_pings.sql` (match thread ID + 10-man ping opt-in), `drizzle/0012_events.sql` (events inbox), `drizzle/0013_captain_interest.sql` (captain interest flag), `drizzle/0014_prize_pool.sql` (prize pool + split), plus `drizzle/meta/`. See [DATA-MODEL.md](DATA-MODEL.md) → Migrations.
 
 ## Business logic (`src/lib`)
 
@@ -197,15 +197,15 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/account-edits.ts` — `setDiscordUsername`, `setDiscordUserId`, `addRiotLink`, `removeRiotLink` for any user + actor; shared by `/profile` and the admin tools on `/users/[username]`. Admin edits log the player as `subjectUserId`.
 - `src/lib/signup-gate.ts` — `missingSignupRequirements(userId, season)`: the season signup gate (Discord username + membership in the league server always, Riot link for LoL). The server check fails open.
 - `src/lib/discord.ts` — pure `normalizeDiscordUsername` + `DISCORD_USERNAME_HELP`; shared by account signup and the profile form. `normalizeDiscordUserId` (17–20 digit snowflake) for the admin override.
-- `src/lib/discord-api.ts` — Discord REST client for the bot (`discordConfig`, member search, roles); retries 429s. See [DISCORD.md](DISCORD.md).
-- `src/lib/discord-plan.ts` — pure role-sync decisions: `pickExactMember`, `captainRoleChanges`, `staleTeamRoles`.
+- `src/lib/discord-api.ts` — Discord REST client for the bot (`discordConfig`, members, roles, channels, threads, messages, nicknames); sits through short 429s (5s, 15s for member role adds/removes). See [DISCORD.md](DISCORD.md).
+- `src/lib/discord-plan.ts` — pure role-sync decisions: `pickExactMember`, `roleHolderChanges`, `staleTeamRoles`.
 - `src/lib/discord-roles.ts` — shared bot plumbing (`grant`, `revoke`, `leagueRoleId`, `syncExclusiveRole`, `syncInBackground` via `after()`, `mergeReports`), `syncCaptainRole`, `syncTeamRoles` (team roles + private text/voice channels), `renameTeamInDiscord`.
 - `src/lib/discord-ping-roles.ts` — Signed up / Sub list (`syncSignupRoles`, `updateSignupRolesForUser`), Champion (`syncChampionRole`), 10-man (`setTenManRole`, `syncTenManRole`).
-- `src/lib/discord-notify.ts` — match threads (`ensureMatchThreads`), team schedules, result / sub-decision notes, sub-list and 10-man pings, `sendDailyReminders`.
+- `src/lib/discord-notify.ts` — match threads (`ensureMatchThreads`), team schedules (`postTeamSchedules`), result / sub-decision notes (`notifyMatchEvent`, `notifySubDecision`), sub-list and 10-man pings (`pingSubList`, `pingTenMan`), `sendDailyReminders`.
 - `src/lib/discord-sync.ts` — `syncSeasonDiscord`: every sync, for the admin button.
 - `src/lib/discord-admin.ts` — admin card roster (`getDiscordRoster`), `syncNicknames`, `deleteOldTeamChannels`, `emailUnmatchedPlayers`.
-- `src/lib/discord-format.ts` — pure message formatting (`discordTime`, mentions, `resultLine`, `standingsTable`).
-- `src/lib/discord-announcements.ts` — `getAnnouncements` for the home-page ticker: latest channel messages as plain text, `unstable_cache`d for 5 min, `[]` on any failure.
+- `src/lib/discord-format.ts` — pure message formatting (`discordTime`, mentions, `resultLine`, `standingsTable`) and ticker text (`plainMessageText`, `tickerItems`).
+- `src/lib/discord-announcements.ts` — `getAnnouncements` for the home-page ticker: latest channel messages (optionally only `DISCORD_ANNOUNCEMENTS_AUTHOR_IDS`' posts) as plain text, `unstable_cache`d for 5 min, `[]` on any failure.
 - `src/lib/discord-commands.ts` — slash command handlers (`handleCommand`); `src/lib/discord-verify.ts` — Ed25519 request check.
 - `src/app/api/discord/interactions/route.ts` — Discord interactions endpoint (slash commands).
 - `src/app/api/cron/discord-reminders/route.ts` — daily Discord reminders (Vercel cron, `CRON_SECRET`).
@@ -214,7 +214,7 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/opgg.ts` — pure `opggUrlForRiotId(handle)`: NA OP.GG URL from a stored `gameName#tagLine`.
 - `src/lib/riot-api.ts` — Riot API client. `getAccountByRiotId`, `getRankEntries`, `getTopChampions`, `getChampionName` (Data Dragon).
 - `src/lib/stat-refresh.ts` — `refreshRiotStats(userId)` (all of a user's Riot links), `refreshAllRiotStats` (every Riot link); per-link delete-then-insert, 1200ms sleep between links.
-- `src/lib/rate-limit.ts` — Upstash sliding-window. Specs: `magicLink` (unused), `statRefresh`. Fails open if Upstash env missing.
+- `src/lib/rate-limit.ts` — Upstash sliding-window. Specs: `magicLink` (unused), `statRefresh`, `subPing`. Fails open if Upstash env missing.
 - `src/lib/substitution-rules.ts` — pure sub eligibility rules (`evaluateSubRequest`, `MAX_SUBS_PER_TEAM`, error messages).
 - `src/lib/substitutions.ts` — sub DB helpers: eligibility check, derived lineups, candidates, player match history, pending requests.
 - `src/lib/bans.ts` — `isBanActive`, `getActiveBan` (DB read), `banUser` (also deletes sessions), `unbanUser`, `banMessage`.
@@ -276,8 +276,12 @@ shadcn (OKLCH tokens):
 - `docs/DRAFT.md` — snake math, SSE realtime, submit-pick validation chain.
 - `docs/MATCHES.md` — scheduling, lifecycle, standings, playoff seeding.
 - `docs/TEN-MAN.md` — 10-man pickup flow: lifecycle, actions, election, realtime.
-- `docs/INTEGRATIONS.md` — Neon, Better Auth + Resend, Riot, Upstash, Vercel Cron.
+- `docs/INTEGRATIONS.md` — Neon, Better Auth + Resend, Riot, Upstash, Discord, Vercel Cron.
+- `docs/DISCORD.md` — the Discord bot: roles, team channels, match threads, slash commands, announcements ticker, signup gate, setup.
+- `docs/EVENTS.md` — admin events inbox: `logEvent` call sites, unread, retention, backfill.
+- `docs/TESTING.md` — unit tests, the e2e draft suite, the `claudius` test admin.
 - `docs/DESIGN-SYSTEM.md` — two token systems, typography, animations, primitives.
 - `docs/ENV.md` — env vars + what breaks without them.
 - `docs/FILE-MAP.md` — this file.
 - `docs/design/10-man/` — original 10-man design handoff (README spec, IMPLEMENTATION-PLAN, HTML prototype, screenshots). Historical; [TEN-MAN.md](TEN-MAN.md) is current.
+- `docs/design/SUBSTITUTIONS.md` — substitutions design + rationale. [MATCHES.md](MATCHES.md) → Substitutions is current.

@@ -66,8 +66,9 @@ All surfaces share the same dark, minimal aesthetic with careful attention to an
 - `--surface: #111111` — Slightly lighter black for cards/elevated surfaces
 - `--border: #1F1F1F` — Subtle borders, barely visible
 - `--text: #F5F0E8` — Warm cream for all body text
-- `--muted: #6B6B6B` — Secondary text, de-emphasized UI
-- `--accent: #B91C1C` — Dark red (Tailwind red-700), the ONLY brand color
+- `--muted: #858585` — Secondary text, de-emphasized UI (≥5:1 on `--bg`/`--surface`)
+- `--accent: #B91C1C` — Dark red (Tailwind red-700), the ONLY brand color. Fills, borders, dots — never text (2.7:1 on `--bg`)
+- `--accent-text: #EF4444` — the brand red **as text** (labels, links, highlights)
 
 **Typography**: Geist Sans (via `next/font/google`) for all UI. Fluid type scale using `clamp()` for responsive sizing. All headings use `font-weight: 500` and tight letter-spacing (`-0.025em` to `-0.03em`). Body text is generous: `1rem / 1.65 line-height`.
 

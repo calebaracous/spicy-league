@@ -50,7 +50,8 @@ every 24h).
   mastery go to `na1.api.riotgames.com`. Non-NA players are not supported.
 - **Endpoints in use**:
   - `/riot/account/v1/accounts/by-riot-id/{gameName}/{tagLine}` — PUUID
-    resolution on account link (`linkRiotAccount`; returns a "not found"
+    resolution on account link (`addRiotLink` in `src/lib/account-edits.ts`,
+    behind `linkRiotAccount` and the admin tools; returns a "not found"
     `{ error }` to the form if null).
   - `/lol/league/v4/entries/by-puuid/{puuid}` — ranked solo / flex.
   - `/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}/top` —
@@ -86,8 +87,9 @@ link shows a derived OP.GG link (`opggUrlForRiotId`, `src/lib/opgg.ts`) on
   existing rows. Otherwise deletes that link's snapshots and inserts solo
   and/or flex rows (or one all-null `solo` placeholder if unranked).
 - `refreshRiotStats(userId)` — runs `refreshRiotLink` for each of the
-  user's Riot links, 1200ms apart. Called after `linkRiotAccount` and by the
-  manual refresh button.
+  user's Riot links, 1200ms apart. Called after every Riot link
+  (`addRiotLink`), by the manual refresh button, and by the admin "Refresh
+  stats" button on `/users/[username]` (no rate limit).
 - `refreshAllRiotStats()` — iterates **every** riot `accountLink` (not just
   active-season players), 1200ms apart. Returns the count refreshed. At
   ~1.2s per link, `maxDuration = 300` caps a single cron run at roughly
@@ -107,7 +109,8 @@ link shows a derived OP.GG link (`opggUrlForRiotId`, `src/lib/opgg.ts`) on
 
 Manual refresh UI: the "Refresh stats" button on `/profile` calls
 `manualRefreshStats` (in `src/app/profile/account-actions.ts`), which
-wraps `refreshRiotStats(userId)` with a 1-per-hour rate limit.
+wraps `refreshRiotStats(userId)` with a 1-per-hour rate limit. Admins'
+refresh on a player's page (`adminRefreshStats`) isn't limited.
 
 ## Upstash Redis (rate limiting)
 
@@ -120,6 +123,7 @@ Defined specs:
 |---|---|---|---|
 | `magicLink` | 3 | 1h | historical (magic link flow was scrapped) |
 | `statRefresh` | 1 | 1h | manual `/profile` refresh button |
+| `subPing` | 1 | 30m | captains' "Ping the Sub list" (per match + team) |
 
 The `magicLink` spec is declared but currently unused — we ship
 username + password (Better Auth credential provider), not magic links.
@@ -127,13 +131,14 @@ username + password (Better Auth credential provider), not magic links.
 Identifier pattern: user ID for per-user limits, email for pre-login
 limits.
 
-## Discord (bot v1: roles)
+## Discord
 
 REST-only bot driven by the app — no separate process. Roles (Captain,
 teams, Signed up, Sub list, Champion, 10-man), private team channels, a
 thread per match with result/sub notes, daily reminders (second Vercel cron,
 `/api/cron/discord-reminders`), slash commands over the HTTP interactions
-endpoint, and admin tools. Needs `DISCORD_BOT_TOKEN` + `DISCORD_GUILD_ID` (no-op without them).
+endpoint, the home-page announcements ticker (reads `#announcements`), the
+season signup gate (must be in the server), and admin tools. Needs `DISCORD_BOT_TOKEN` + `DISCORD_GUILD_ID` (no-op without them).
 Details and setup: [DISCORD.md](DISCORD.md).
 
 ## Vercel
@@ -159,8 +164,9 @@ Details and setup: [DISCORD.md](DISCORD.md).
   calls Leetify or Steam Web API. Users paste a Steam64 ID (validated
   `^7656\d{13}$`) and optionally a leetify.com URL; we store them and
   link out from the public profile.
-- **Discord announcements** (pick-by-pick, standings posts) — planned in
-  PLANNING.md, deliberately skipped. Everything else the bot does is in
+- **Discord channel posts** (pick-by-pick, standings posts) — planned in
+  PLANNING.md, deliberately skipped (the bot only *reads* `#announcements`
+  for the ticker). Everything else the bot does is in
   [DISCORD.md](DISCORD.md).
 - **Sentry / PostHog** — planned, not wired.
 - **Avatar uploads** — `users.image` column exists, no upload flow.
