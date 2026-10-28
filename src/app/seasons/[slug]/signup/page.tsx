@@ -206,7 +206,11 @@ export default async function SignupPage({
         {profileFixes ? (
           <Alert>
             <AlertDescription className="space-y-2">
-              <p>Before signing up for {season.name}, add these on your profile:</p>
+              <p>
+                {missing.server
+                  ? "Also add these on your profile:"
+                  : `Before signing up for ${season.name}, add these on your profile:`}
+              </p>
               <ul className="list-disc space-y-1 pl-5">
                 {missing.discord ? (
                   <li>Your Discord username, so admins and captains can reach you.</li>
