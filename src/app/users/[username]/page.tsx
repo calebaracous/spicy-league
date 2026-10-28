@@ -230,7 +230,7 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
       <MatchHistory matches={history} />
 
       {isOwner ? (
-        <Card id="delete-account" className="border-destructive/40">
+        <Card id="delete-account" className="border-destructive/40 scroll-mt-24">
           <CardHeader>
             <CardTitle>Delete account</CardTitle>
             <CardDescription>
