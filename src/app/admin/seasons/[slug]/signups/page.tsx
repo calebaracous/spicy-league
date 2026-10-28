@@ -218,15 +218,7 @@ export default async function AdminSignupsPage({
         >
           ← Back to {season.name}
         </Link>
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-heading">Signups</h1>
-          <a
-            href={`/admin/seasons/${slug}/signups/export`}
-            className="text-muted-foreground hover:text-foreground text-sm underline underline-offset-2"
-          >
-            Export CSV
-          </a>
-        </div>
+        <h1 className="text-heading">Signups</h1>
         <p className="text-muted-foreground text-sm">
           {season.name} · {GAME_LABELS[season.game]} · {total} signup{total !== 1 ? "s" : ""}
         </p>

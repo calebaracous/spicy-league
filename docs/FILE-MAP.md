@@ -115,7 +115,6 @@ Rendered by `src/app/page.tsx`:
 - `src/app/admin/seasons/[slug]/page.tsx` — edit metadata + state transition buttons + "Discord roles" card (match status per player, Sync button).
 - `src/app/admin/seasons/[slug]/signups/page.tsx` — signup roster (draft pool vs sub only, Discord username + matched ID, LoL best solo rank + Riot ID or "No Riot account linked"), "Wants captain" badge + filter (`?captain=1`) and an "Interested in captaining" list in the Captains card (`users.captainInterest`), captain promotion UI, captains grouped by team with Pair with… / Split for duo captains.
 - `src/app/admin/seasons/[slug]/signups/actions.ts` — `promoteCaptain`, `demoteCaptain`, `moveCaptain` (whole team; swap via a `-1` placeholder), `pairCaptain` / `splitCaptain` (duo captains), `removeSignup` (pre-draft only; drops captain spot + renumbers), `getSignupStats`. Captain changes lock once the draft starts; `renumberCaptains` keeps duos on one order.
-- `src/app/admin/seasons/[slug]/signups/export/route.ts` — CSV download of signup roster (incl. "Wants Captain").
 - `src/app/admin/seasons/[slug]/draft/page.tsx` — admin draft board with start/pause/resume/undo controls.
 - `src/app/admin/seasons/[slug]/matches/page.tsx` — schedule generation + playoff seeding + confirm/dispute/reset buttons.
 - `src/app/admin/seasons/[slug]/matches/actions.ts` — `generateMatchSchedule`, `seedPlayoffsAction`, `createTiebreakersAction`.

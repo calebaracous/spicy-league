@@ -138,7 +138,7 @@ See `submitSignup`, `submitPick`, `reportMatch`, and everything in
   that username is in the league Discord server
   (`missingSignupRequirements`, see [SEASON-LIFECYCLE.md](SEASON-LIFECYCLE.md)).
 - Discord usernames are self-reported, not verified with Discord (no OAuth).
-  Visible to admins (signups page + CSV) and to signed-in visitors on
+  Visible to admins (signups page) and to signed-in visitors on
   `/users/[username]`; never to signed-out visitors.
 
 ## Cookies + sessions

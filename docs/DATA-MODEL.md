@@ -102,7 +102,7 @@ wiring in `src/lib/auth.ts`).
     in being a captain". A standing per-user preference, **not** per season:
     set on `/profile` and by the season signup form's checkbox
     (`submitSignup` writes it for draft-pool signups; sub signups leave it
-    alone). Admin-only signal on the admin signups page and CSV export;
+    alone). Admin-only signal on the admin signups page;
     nothing gates on it and captains are still promoted by hand.
   - `bannedAt`, `banReason`, `banExpiresAt`, `bannedBy` — league ban
     (migration `0002_user_bans`). Active while `bannedAt` is set and
@@ -178,7 +178,7 @@ One row per (season, user). Enforced by a unique constraint
 - `notes` — free text (for subs: when they're available)
 - `quandary` — free-text answer to the signup form's moral quandary (`SIGNUP_QUANDARY` in
   `src/lib/seasons.ts`; migration `0006_signup_quandary`). Shown wherever `notes` is: admin
-  signups table, CSV export, Teams page subs list. Required on new signups
+  signups table, Teams page subs list. Required on new signups
   (`submitSignup`); the column stays nullable because older rows predate it.
 - `kind` enum `signup_kind` (`player | sub`, default `player`; migration
   `0004_sub_signups`). `sub` = chose "Sub only" on the signup form, or joined after regular

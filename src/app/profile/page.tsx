@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, ne } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -154,11 +154,16 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
     "use server";
     const session = await requireOnboarded();
     const on = formData.get("tenManPings") === "on";
-    await db
+    // Log only real changes; the role sync is idempotent, so re-saving also
+    // retries one that failed.
+    const updated = await db
       .update(users)
       .set({ tenManPings: on, updatedAt: new Date() })
-      .where(eq(users.id, session.user.id));
-    await logEvent("profile.ten_man_pings", { actorId: session.user.id, data: { enabled: on } });
+      .where(and(eq(users.id, session.user.id), ne(users.tenManPings, on)))
+      .returning({ id: users.id });
+    if (updated.length) {
+      await logEvent("profile.ten_man_pings", { actorId: session.user.id, data: { enabled: on } });
+    }
     syncInBackground("10-man role", () => setTenManRole(session.user.id, on));
     redirect("/profile?saved=1");
   }
@@ -168,14 +173,17 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
     "use server";
     const session = await requireOnboarded();
     const on = formData.get("captainInterest") === "on";
-    await db
+    const updated = await db
       .update(users)
       .set({ captainInterest: on, updatedAt: new Date() })
-      .where(eq(users.id, session.user.id));
-    await logEvent("profile.captain_interest", {
-      actorId: session.user.id,
-      data: { enabled: on },
-    });
+      .where(and(eq(users.id, session.user.id), ne(users.captainInterest, on)))
+      .returning({ id: users.id });
+    if (updated.length) {
+      await logEvent("profile.captain_interest", {
+        actorId: session.user.id,
+        data: { enabled: on },
+      });
+    }
     redirect("/profile?saved=1");
   }
 

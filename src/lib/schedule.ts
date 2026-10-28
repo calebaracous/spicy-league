@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, or } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { teams, teamMembers } from "@/db/schema/drafts";
@@ -49,10 +49,14 @@ export async function generateSchedule(seasonId: string): Promise<number> {
   });
   if (existing) return 0;
 
+  // Draft order (finalizeDraft inserts teams one by one in captain order), so
+  // the pairings and home/away sides are stable rather than whatever order
+  // Postgres returns.
   const seasonTeams = await db
     .select({ id: teams.id })
     .from(teams)
-    .where(eq(teams.seasonId, seasonId));
+    .where(eq(teams.seasonId, seasonId))
+    .orderBy(asc(teams.createdAt), asc(teams.id));
 
   if (seasonTeams.length < 2) return 0;
 

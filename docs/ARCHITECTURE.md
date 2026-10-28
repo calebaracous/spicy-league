@@ -227,7 +227,7 @@ Admin (requires `role === "admin"`):
   ban (reason + 1/7/30 days or permanent) and unban
 - `/admin/seasons/new` — create season (incl. prize pool + payout split)
 - `/admin/seasons/[slug]` — edit (incl. group series length, prize pool) + state transition + Discord card (match status, Sync, nudge emails, nicknames, old-channel cleanup)
-- `/admin/seasons/[slug]/signups` — roster (Discord match, rank, "Wants captain"), promote/demote captains, pair/split duos, reorder, remove a player (pre-draft only), CSV export (`/signups/export`)
+- `/admin/seasons/[slug]/signups` — roster (Discord match, rank, "Wants captain"), promote/demote captains, pair/split duos, reorder, remove a player (pre-draft only). No CSV export (removed 2026-10-28).
 - `/admin/seasons/[slug]/draft` — start/pause/resume/undo controls
 - `/admin/seasons/[slug]/matches` — generate schedule, create tiebreaker games, seed playoffs, confirm results
 - 10-man admin controls (start, cancel, report result) are inline on the

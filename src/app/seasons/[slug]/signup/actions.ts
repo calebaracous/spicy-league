@@ -86,14 +86,21 @@ export async function submitSignup(slug: string, formData: FormData) {
   const quandary = (formData.get("quandary") as string | null)?.trim() ?? "";
   if (!quandary) redirect(`/seasons/${slug}/signup?error=quandary`);
 
-  await db.insert(seasonSignups).values({
-    seasonId: season.id,
-    userId: session.user.id,
-    rolePrefs,
-    notes,
-    quandary,
-    kind,
-  });
+  // A double submit can pass the `existing` check above twice (the Discord
+  // gate sits between it and here); the unique constraint lets one through.
+  const inserted = await db
+    .insert(seasonSignups)
+    .values({
+      seasonId: season.id,
+      userId: session.user.id,
+      rolePrefs,
+      notes,
+      quandary,
+      kind,
+    })
+    .onConflictDoNothing({ target: [seasonSignups.seasonId, seasonSignups.userId] })
+    .returning({ id: seasonSignups.id });
+  if (!inserted.length) redirect(`/seasons/${slug}?error=already-signed-up`);
   await logEvent("signup.created", {
     actorId: session.user.id,
     seasonId: season.id,

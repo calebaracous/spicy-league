@@ -42,7 +42,8 @@ and ranked. Copy that describes the format comes from `formatStructure()`
 `generateSchedule(seasonId)` in `src/lib/schedule.ts`:
 
 1. Bail if any match already exists for this season (idempotent guard).
-2. Fetch teams, build round-robin pairings via **circle method**.
+2. Fetch teams in draft order (`createdAt`), build round-robin pairings via
+   **circle method**.
 3. If team count is odd, inject a phantom "bye" and drop those pairings.
 4. Bulk-insert a `matches` row per pairing.
 
