@@ -16,7 +16,7 @@ import { SeasonNav } from "@/components/season-nav";
 import { FlashToast } from "@/components/flash-toast";
 import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { leaveSubList } from "./signup/actions";
-import { formatStructure, roundLabel } from "@/lib/match-format";
+import { FEARLESS_DRAFT_RULE, formatStructure, roundLabel } from "@/lib/match-format";
 import { formatUsd, prizePayouts } from "@/lib/prize-pool";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { getCaptainedTeamId, getTeamForCaptain } from "@/lib/schedule";
@@ -303,6 +303,12 @@ export default async function SeasonDetailPage({
           <span className="text-muted-foreground">Format: </span>
           {formatStructure(season.groupBestOf)}.
         </p>
+        {season.fearlessDraft ? (
+          <p className="text-sm">
+            <span className="text-muted-foreground">Fearless draft: </span>
+            {FEARLESS_DRAFT_RULE}.
+          </p>
+        ) : null}
       </header>
 
       <SeasonNav slug={season.slug} state={season.state} current="overview" />

@@ -135,7 +135,7 @@ export default function TermsPage() {
       <h2>10. Suspension and termination</h2>
       <p>
         We may suspend or terminate your account if you breach these Terms or the rules of a season.
-        You may stop using Spicy League at any time and request deletion of your account as
+        You may stop using Spicy League at any time and delete your account from your profile, as
         described in our <Link href="/privacy">Privacy Policy</Link>. Removing a player mid-season
         may affect their team, so we will generally resolve competitive matters at a season boundary
         where practical.

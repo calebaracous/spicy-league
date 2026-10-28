@@ -7,6 +7,7 @@ import { redirect } from "next/navigation";
 import type { LinkFormState } from "@/app/profile/account-actions";
 import { db } from "@/db/client";
 import { users } from "@/db/schema/auth";
+import { deleteAccount } from "@/lib/account-deletion";
 import {
   addRiotLink,
   removeRiotLink,
@@ -18,7 +19,8 @@ import { refreshRiotStats } from "@/lib/stat-refresh";
 
 /**
  * Admin tools on a player's public page: fix their Discord username / matched
- * ID and Riot links. Same rules as the player's own /profile forms
+ * ID and Riot links, or delete the account. Same rules as the player's own
+ * /profile and /users/[username] forms
  * (src/lib/account-edits.ts); the events name the admin as actor.
  */
 
@@ -32,7 +34,12 @@ async function target(formData: FormData) {
       })
     : null;
   if (!user?.username) redirect("/admin/users");
-  return { adminId: session.user.id, userId: user.id, path: `/users/${user.username}` };
+  return {
+    adminId: session.user.id,
+    userId: user.id,
+    username: user.username,
+    path: `/users/${user.username}`,
+  };
 }
 
 function done(path: string): never {
@@ -73,6 +80,20 @@ export async function adminUnlinkRiot(formData: FormData) {
   const linkId = String(formData.get("linkId") ?? "");
   if (linkId) await removeRiotLink(userId, linkId, adminId);
   done(path);
+}
+
+export async function adminDeleteAccount(
+  _prev: LinkFormState,
+  formData: FormData,
+): Promise<LinkFormState> {
+  const { adminId, userId, username, path } = await target(formData);
+  const typed = (formData.get("confirm") as string | null)?.trim().toLowerCase() ?? "";
+  if (typed !== username) return { error: "Type their username exactly to confirm." };
+  if (userId === adminId) return { error: "Delete your own account from your profile." };
+  const result = await deleteAccount(userId, adminId);
+  if ("error" in result) return result;
+  revalidatePath(path);
+  redirect("/admin/users?saved=deleted");
 }
 
 // No rate limit: the player's own refresh is limited to once an hour.

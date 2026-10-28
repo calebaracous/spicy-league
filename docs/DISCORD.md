@@ -27,6 +27,10 @@ seasons (`e2e-` slugs) never touch Discord.
 | **Champion** | The latest champion team's roster | Final confirmed / disputed / reset; Sync | `syncChampionRole` |
 | **10-man** | Players who ticked "Ping me in Discord when a 10-man opens" on `/profile` | The toggle; Sync (adds only) | `setTenManRole`, `syncTenManRole` |
 
+Deleting an account takes Signed up, Sub list and 10-man off them right away
+(`removeLeagueRoles`, from a snapshot of their Discord ID taken before the
+row changes); Champion is left alone.
+
 Captain, Signed up, Sub list and Champion are **exclusive**: holders from
 other seasons lose them (`syncExclusiveRole` / `roleHolderChanges`). League
 roles are found **by name** (`LEAGUE_ROLES`), or created if missing; only

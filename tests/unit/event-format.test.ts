@@ -45,6 +45,21 @@ describe("event catalogue", () => {
 });
 
 describe("describeEvent", () => {
+  it("names a deleted account from the event data", () => {
+    const self = { username: "jahwn1", self: true, anonymized: false };
+    expect(text(describeEvent(view("user.deleted", { actor: null, data: self })))).toBe(
+      "jahwn1 deleted their account",
+    );
+    const byAdmin = view("user.deleted", {
+      subject: { username: null, name: "Deleted player" },
+      data: { username: "jahwn1", self: false, anonymized: true },
+    });
+    expect(text(describeEvent(byAdmin))).toBe("Captain One deleted the account of jahwn1");
+    expect(describeDetails(byAdmin)).toEqual([
+      'Kept as "Deleted player" on past rosters and results',
+    ]);
+  });
+
   it("names the player when an admin edits their accounts", () => {
     expect(text(describeEvent(view("riot.linked", { data: { riotId: "Bot#NA1" } })))).toBe(
       "Captain One linked Riot account Bot#NA1 to Bot 3",

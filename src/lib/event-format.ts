@@ -22,6 +22,7 @@ export const EVENT_TYPES = {
   "user.registered": "accounts",
   "user.email_verified": "accounts",
   "user.password_reset": "accounts",
+  "user.deleted": "accounts",
   "profile.updated": "accounts",
   "profile.opgg_updated": "accounts",
   "profile.discord_updated": "accounts",
@@ -159,6 +160,7 @@ const FIELD_LABELS: Record<string, string> = {
   semisAt: "Semis",
   finalAt: "Final",
   groupBestOf: "Group best-of",
+  fearlessDraft: "Fearless draft",
   prizePool: "Prize pool ($)",
   prizeSplit: "Payout split (%)",
 };
@@ -192,6 +194,11 @@ export function describeEvent(e: EventView): Segment[] {
       return [actor, " verified their email"];
     case "user.password_reset":
       return [actor, " reset their password"];
+    // The account is gone by the time this renders, so name it from `data`.
+    case "user.deleted":
+      return d.self
+        ? [`${str(d.username)} deleted their account`]
+        : [actor, ` deleted the account of ${str(d.username)}`];
     case "profile.updated":
       return [actor, " edited their profile"];
     case "profile.opgg_updated":
@@ -354,6 +361,9 @@ export function describeDetails(e: EventView): string[] {
   const d = e.data;
   const lines = describeChanges(d);
   if (e.type === "user.banned" && d.reason) lines.push(`Reason: ${String(d.reason)}`);
+  if (e.type === "user.deleted" && d.anonymized) {
+    lines.push('Kept as "Deleted player" on past rosters and results');
+  }
   if (e.type === "match.reported" && d.score) lines.push(`Score: ${String(d.score)}`);
   if (e.type === "sub.requested" && d.reason) lines.push(`Reason: ${String(d.reason)}`);
   if (e.type.startsWith("discord.") && d.note) lines.push(String(d.note));

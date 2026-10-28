@@ -8,6 +8,7 @@ import { seasonCaptains } from "@/db/schema/seasons";
 import { users } from "@/db/schema/auth";
 import { Badge } from "@/components/ui/badge";
 import { SeasonNav } from "@/components/season-nav";
+import { PlayerLink } from "@/components/player-link";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { GAME_LABELS } from "@/lib/seasons";
 
@@ -84,12 +85,12 @@ export default async function CaptainsPage({ params }: { params: Params }) {
                 {team.captains.map((c, i) => (
                   <span key={c.id}>
                     {i > 0 ? <span className="text-muted-foreground">&amp; </span> : null}
-                    <Link
-                      href={`/users/${c.username}`}
+                    <PlayerLink
+                      username={c.username}
                       className="font-medium underline-offset-2 hover:underline"
                     >
                       {c.name ?? c.username}
-                    </Link>
+                    </PlayerLink>
                   </span>
                 ))}
               </span>

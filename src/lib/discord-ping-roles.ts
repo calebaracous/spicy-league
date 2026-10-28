@@ -18,6 +18,7 @@ import {
   syncExclusiveRole,
   describe,
   type DiscordSyncReport,
+  type Person,
 } from "@/lib/discord-roles";
 import { getAvailableSubs } from "@/lib/substitutions";
 
@@ -161,6 +162,26 @@ export async function setTenManRole(userId: string, on: boolean): Promise<Discor
     const reason = "Spicy League: 10-man pings";
     if (on) await grant(cfg, person, roleId, reason, report);
     else await revoke(cfg, person, roleId, reason, report);
+  } catch (err) {
+    report.errors.push(describe(err));
+  }
+  return report;
+}
+
+/**
+ * After an account is deleted: take the Signed up, Sub list and 10-man roles
+ * off them. `person` is a snapshot from before the row was removed. Captain
+ * and team roles can't apply (deletion is refused mid-season); Champion stays.
+ */
+export async function removeLeagueRoles(person: Person): Promise<DiscordSyncReport> {
+  const report = emptyReport();
+  const cfg = discordConfig();
+  if (!cfg) return report;
+  const reason = "Spicy League: account deleted";
+  try {
+    for (const name of [LEAGUE_ROLES.signedUp, LEAGUE_ROLES.subList, LEAGUE_ROLES.tenMan]) {
+      await revoke(cfg, person, await leagueRoleId(cfg, name, report), reason, report);
+    }
   } catch (err) {
     report.errors.push(describe(err));
   }

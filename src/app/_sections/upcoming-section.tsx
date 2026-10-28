@@ -7,7 +7,7 @@ import { TintedSection } from "@/components/ui/tinted-section";
 import { backdropClip } from "@/lib/backdrop-clips";
 import type { Season } from "@/db/schema/seasons";
 import { GAME_LABELS, seasonSchedule } from "@/lib/seasons";
-import { formatStructure } from "@/lib/match-format";
+import { FEARLESS_DRAFT_RULE, formatStructure } from "@/lib/match-format";
 
 interface UpcomingSectionProps {
   season: Season;
@@ -52,6 +52,12 @@ export function UpcomingSection({ season }: UpcomingSectionProps) {
                     {formatStructure(season.groupBestOf)}
                   </span>
                 </div>
+                {season.fearlessDraft && (
+                  <div>
+                    <span style={{ color: "var(--muted)" }}>Fearless draft: </span>
+                    <span style={{ color: "var(--text)" }}>{FEARLESS_DRAFT_RULE}</span>
+                  </div>
+                )}
               </div>
             </div>
           </Reveal>

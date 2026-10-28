@@ -7,6 +7,7 @@ import {
   text,
   timestamp,
   unique,
+  boolean,
 } from "drizzle-orm/pg-core";
 
 import { users } from "./auth";
@@ -47,6 +48,10 @@ export const seasons = pgTable(
     // Group-stage series length. 1 = report a winner (+ optional score);
     // 2 = Bo2 series, reported as 2–0 / 1–1 / 0–2, and a 1–1 is a draw.
     groupBestOf: integer("group_best_of").notNull().default(1),
+    // Fearless draft: a champion picked in one game of a series can't be
+    // picked again by either team in that series. Display only (the site
+    // doesn't run champ select); shown wherever the series format is.
+    fearlessDraft: boolean("fearless_draft").notNull().default(false),
     // Prize pool in whole dollars, and its payout split in percent per
     // place (1st first, sums to 100). Both null = no prize pool.
     prizePool: integer("prize_pool"),

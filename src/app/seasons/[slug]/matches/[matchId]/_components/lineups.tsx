@@ -1,5 +1,3 @@
-import Link from "next/link";
-
 import { decideSub, pingSubListAction, requestSub, withdrawSub } from "../../sub-actions";
 import { Badge } from "@/components/ui/badge";
 import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
@@ -7,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PlayerLink } from "@/components/player-link";
 import { MAX_SUBS_PER_TEAM } from "@/lib/substitution-rules";
 import type { LineupPlayer, SubCandidate, SubRequestView } from "@/lib/substitutions";
 
@@ -56,8 +55,8 @@ function LineupCard({
                   #{m.pickNumber}
                 </span>
               )}
-              <Link
-                href={`/users/${m.username}`}
+              <PlayerLink
+                username={m.username}
                 className={
                   m.satOut
                     ? "text-muted-foreground line-through underline-offset-2 hover:underline"
@@ -65,7 +64,7 @@ function LineupCard({
                 }
               >
                 {m.name ?? m.username}
-              </Link>
+              </PlayerLink>
               {m.satOut ? <span className="text-muted-foreground text-xs">sat out</span> : null}
               {m.sub ? (
                 <span className="text-muted-foreground truncate text-xs">

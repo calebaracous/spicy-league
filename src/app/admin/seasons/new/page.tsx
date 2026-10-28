@@ -115,6 +115,21 @@ export default async function NewSeasonPage({ searchParams }: { searchParams: Se
                 Set before group results come in: it changes how matches are reported and ranked.
               </p>
             </div>
+            <label className="flex items-start gap-2 text-sm">
+              <input
+                type="checkbox"
+                name="fearlessDraft"
+                defaultChecked={false}
+                className="mt-0.5"
+              />
+              <span>
+                Fearless draft
+                <span className="text-muted-foreground block text-xs">
+                  Once a champion is picked in a series, neither team can pick it again in that
+                  series. Shown on the season, match pages and Discord match threads.
+                </span>
+              </span>
+            </label>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="prizePool">Prize pool ($)</Label>

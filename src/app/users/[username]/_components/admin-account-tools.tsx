@@ -1,10 +1,12 @@
 import {
+  adminDeleteAccount,
   adminLinkRiot,
   adminRefreshStats,
   adminSaveDiscordUserId,
   adminSaveDiscordUsername,
   adminUnlinkRiot,
 } from "../admin-actions";
+import { DeleteAccountForm } from "./delete-account-form";
 import { RiotLinkForm } from "@/app/profile/_components/link-forms";
 import { MAX_RIOT_ACCOUNTS } from "@/app/profile/constants";
 import { DISCORD_USERNAME_HELP } from "@/lib/discord";
@@ -22,13 +24,28 @@ export const ADMIN_ERROR_MESSAGES: Record<string, string> = {
 };
 
 type Props = {
-  user: { id: string; discordUsername: string | null; discordUserId: string | null };
+  user: {
+    id: string;
+    username: string;
+    discordUsername: string | null;
+    discordUserId: string | null;
+  };
   riotLinks: { id: string; externalHandle: string | null }[];
   lastRefreshed: Date | null;
+  /** Why the account can't be deleted right now (src/lib/account-deletion.ts). */
+  deletionBlocker: string | null;
+  /** An admin's own page: they delete from their own card, not here. */
+  isSelf: boolean;
 };
 
-/** Admin-only: fix a player's Discord and Riot details from their public page. */
-export function AdminAccountTools({ user, riotLinks, lastRefreshed }: Props) {
+/** Admin-only: fix a player's Discord and Riot details, or delete the account, from their public page. */
+export function AdminAccountTools({
+  user,
+  riotLinks,
+  lastRefreshed,
+  deletionBlocker,
+  isSelf,
+}: Props) {
   const slotsLeft = MAX_RIOT_ACCOUNTS - riotLinks.length;
   const userIdField = <input type="hidden" name="userId" value={user.id} />;
 
@@ -137,6 +154,26 @@ export function AdminAccountTools({ user, riotLinks, lastRefreshed }: Props) {
             </p>
           )}
         </section>
+
+        {isSelf ? null : (
+          <section className="space-y-3 border-t pt-4">
+            <h2 className="text-sm font-semibold">Delete account</h2>
+            <p className="text-muted-foreground text-xs">
+              Same as the player deleting it themselves: a player with past seasons or 10-mans is
+              kept as &ldquo;Deleted player&rdquo; on those rosters, everyone else is removed
+              outright. Can&apos;t be undone.
+            </p>
+            {deletionBlocker ? (
+              <p className="text-muted-foreground text-sm">{deletionBlocker}</p>
+            ) : (
+              <DeleteAccountForm
+                username={user.username}
+                deleteAction={adminDeleteAccount}
+                userId={user.id}
+              />
+            )}
+          </section>
+        )}
       </CardContent>
     </Card>
   );

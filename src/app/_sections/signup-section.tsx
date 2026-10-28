@@ -9,6 +9,7 @@ import { VideoBackdrop } from "@/components/ui/video-backdrop";
 import { backdropClip, placeholderBackdrop } from "@/lib/backdrop-clips";
 import type { PlayerInfo } from "@/lib/homepage";
 import type { Season } from "@/db/schema/seasons";
+import { FEARLESS_DRAFT_RULE } from "@/lib/match-format";
 import { PrizePoolLine } from "./prize-pool-line";
 
 interface SignupSectionProps {
@@ -74,6 +75,13 @@ export function SignupSection({ season, signupCount, topPlayers }: SignupSection
               </h2>
 
               <PrizePoolLine season={season} className="text-lg" />
+
+              {season.fearlessDraft && (
+                <p className="text-sm leading-relaxed" style={{ color: "var(--muted)" }}>
+                  <span style={{ color: "var(--text)" }}>Fearless draft:</span>{" "}
+                  {FEARLESS_DRAFT_RULE}.
+                </p>
+              )}
 
               <p className="text-base leading-relaxed" style={{ color: "var(--muted)" }}>
                 {season.signupClosesAt && (

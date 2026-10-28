@@ -36,7 +36,8 @@ Where each type is logged:
 
 | Area | Types | Written in |
 | --- | --- | --- |
-| Accounts | `user.registered` | `src/app/signup/actions.ts` (needs the username, which Better Auth's create hook doesn't have yet) |
+| Accounts | `user.deleted` (`username`, `self`, `anonymized` in `data` — the account may be gone, so the sentence names it from there) | `src/lib/account-deletion.ts` |
+| | `user.registered` | `src/app/signup/actions.ts` (needs the username, which Better Auth's create hook doesn't have yet) |
 | | `user.email_verified`, `user.password_reset` | Better Auth `databaseHooks` in `src/lib/auth.ts` (by endpoint path) |
 | | `profile.updated` / `opgg_updated` / `discord_updated` (with `changes`), `profile.ten_man_pings`, `profile.captain_interest` (also from `submitSignup`) — toggles log only when the value actually changes | `src/app/profile/page.tsx`, `src/app/seasons/[slug]/signup/actions.ts`; `discord_updated` via `src/lib/account-edits.ts` |
 | | `riot.linked/unlinked`, `cs2.linked/unlinked` | `src/app/profile/account-actions.ts` (Riot via `src/lib/account-edits.ts`) |

@@ -4,8 +4,10 @@ import { and, eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
+import { signOut } from "@/auth";
 import { db } from "@/db/client";
 import { accountLinks } from "@/db/schema/stats";
+import { deleteAccount, deletionBlocker } from "@/lib/account-deletion";
 import { addRiotLink, removeRiotLink } from "@/lib/account-edits";
 import { requireOnboarded } from "@/lib/auth-helpers";
 import { logEvent } from "@/lib/events";
@@ -131,6 +133,28 @@ export async function unlinkCs2Account() {
   revalidatePath("/profile");
   revalidatePath(`/users/${session.user.username}`);
   redirect("/profile?saved=1");
+}
+
+// ── Account deletion ───────────────────────────────────────────────────────
+
+export async function deleteOwnAccount(
+  _prev: LinkFormState,
+  formData: FormData,
+): Promise<LinkFormState> {
+  const session = await requireOnboarded();
+  const typed = (formData.get("confirm") as string | null)?.trim().toLowerCase() ?? "";
+  if (typed !== session.user.username) {
+    return { error: "Type your username exactly to confirm." };
+  }
+  const blocker = await deletionBlocker(session.user.id);
+  if (blocker) return { error: blocker };
+
+  // Sign out first so this response clears the session cookies; otherwise
+  // the 5-minute cookie cache would keep showing them as signed in.
+  await signOut();
+  const result = await deleteAccount(session.user.id, session.user.id);
+  if ("error" in result) return result;
+  redirect("/?account-deleted=1");
 }
 
 // ── Manual stat refresh ────────────────────────────────────────────────────

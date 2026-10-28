@@ -506,6 +506,16 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
           )}
         </CardContent>
       </Card>
+
+      <p className="text-muted-foreground text-sm">
+        Want to leave for good?{" "}
+        <Link
+          href={`/users/${user.username}#delete-account`}
+          className="text-destructive underline-offset-4 hover:underline"
+        >
+          Delete your account
+        </Link>
+      </p>
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { getHomepageData } from "@/lib/homepage";
 import { LIVE_STATE_COPY, liveSeasonHref } from "@/lib/live-season";
 import { otherGame } from "@/lib/backdrop-clips";
 import { Divider } from "@/components/ui/divider";
+import { FlashToast } from "@/components/flash-toast";
 import { AnnouncementsTicker } from "./_sections/announcements-ticker";
 import { Hero } from "./_sections/hero";
 import { SignupSection } from "./_sections/signup-section";
@@ -19,8 +20,16 @@ const HERO_LABELS: Record<string, string> = {
   off_season: "OFF-SEASON",
 };
 
-export default async function Home() {
-  const [data, announcements] = await Promise.all([getHomepageData(), getAnnouncements()]);
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: Promise<{ "account-deleted"?: string }>;
+}) {
+  const [data, announcements, params] = await Promise.all([
+    getHomepageData(),
+    getAnnouncements(),
+    searchParams,
+  ]);
 
   const heroLabel =
     data.state === "upcoming" || data.state === "off_season"
@@ -38,6 +47,9 @@ export default async function Home() {
 
   return (
     <>
+      {params["account-deleted"] ? (
+        <FlashToast message="Your account has been deleted." param="account-deleted" />
+      ) : null}
       <AnnouncementsTicker items={announcements} />
       <Hero liveHref={liveHref} liveLabel={heroLabel} game={game} />
       <Divider />

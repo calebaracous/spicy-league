@@ -24,7 +24,7 @@ import {
   type DiscordSyncReport,
 } from "@/lib/discord-roles";
 import { env } from "@/lib/env";
-import { roundLabel } from "@/lib/match-format";
+import { FEARLESS_DRAFT_RULE, fearlessApplies, roundLabel } from "@/lib/match-format";
 
 /**
  * The bot's match coordination posts (see docs/DISCORD.md):
@@ -67,6 +67,15 @@ async function liveSeason(seasonId: string): Promise<Season | null> {
   return season && !isTestSeason(season.slug) ? season : null;
 }
 
+/** " (best-of-2 series, fearless draft)" for the team schedule post, or "". */
+function scheduleFormat(season: Season): string {
+  const parts = [
+    season.groupBestOf === 2 ? "best-of-2 series" : "",
+    season.fearlessDraft ? "fearless draft" : "",
+  ].filter(Boolean);
+  return parts.length ? ` (${parts.join(", ")})` : "";
+}
+
 const mentionOf = (t: TeamInfo | undefined) =>
   t?.discordRoleId ? roleMention(t.discordRoleId) : `**${t?.name ?? "?"}**`;
 const rolesOf = (...ts: Array<TeamInfo | undefined>) =>
@@ -107,12 +116,16 @@ export async function ensureMatchThreads(seasonId: string): Promise<DiscordSyncR
       );
       await db.update(matches).set({ discordThreadId: thread.id }).where(eq(matches.id, m.id));
       report.channelsCreated++;
-      const format =
+      const format = [
         m.stage === "group" && season.groupBestOf === 2
           ? "Best of 2 (2–0, 1–1 or 0–2)."
           : m.stage === "tiebreaker"
             ? "Best of 1 tiebreaker."
-            : "";
+            : "",
+        fearlessApplies(season, m.stage) ? `Fearless draft: ${FEARLESS_DRAFT_RULE}.` : "",
+      ]
+        .filter(Boolean)
+        .join(" ");
       await postMessage(
         cfg,
         thread.id,
@@ -166,7 +179,7 @@ export async function postTeamSchedules(seasonId: string): Promise<DiscordSyncRe
         cfg,
         team.discordTextChannelId,
         [
-          `**Your ${season.name} group stage schedule**${season.groupBestOf === 2 ? " (each match is best of 2)" : ""}:`,
+          `**Your ${season.name} group stage schedule**${scheduleFormat(season)}:`,
           ...lines,
           `Agree on times with the other captain in each match thread.${when}`,
         ].join("\n"),
