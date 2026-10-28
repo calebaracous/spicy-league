@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { LocalTime } from "@/components/ui/local-time";
 import { Textarea } from "@/components/ui/textarea";
+import { env } from "@/lib/env";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { GAME_LABELS, SIGNUP_QUANDARY, openSignupKind } from "@/lib/seasons";
 import { missingSignupRequirements } from "@/lib/signup-gate";
@@ -150,43 +151,81 @@ export default async function SignupPage({
     );
   }
 
+  const profile = await db.query.users.findFirst({
+    where: eq(users.id, session.user.id),
+    columns: { captainInterest: true, discordUsername: true },
+  });
   // Pre-fills the captain checkbox; the same flag is editable on /profile.
-  const captainInterest =
-    (
-      await db.query.users.findFirst({
-        where: eq(users.id, session.user.id),
-        columns: { captainInterest: true },
-      })
-    )?.captainInterest ?? false;
+  const captainInterest = profile?.captainInterest ?? false;
+  const discordUsername = profile?.discordUsername ?? null;
 
   const missing = isOpen
-    ? await missingSignupRequirements(session.user.id, season.game)
-    : { discord: false, riot: false };
-  if (missing.discord || missing.riot) {
+    ? await missingSignupRequirements(session.user.id, season)
+    : { discord: false, riot: false, server: false };
+  const profileFixes = missing.discord || missing.riot;
+  if (profileFixes || missing.server) {
     return (
       <div className="page flex-1 space-y-4 [--page-max:36rem]">
         <Link href={`/seasons/${slug}`} className="text-muted-foreground text-xs hover:underline">
           ← Back to season
         </Link>
-        <Alert>
-          <AlertDescription className="space-y-2">
-            <p>Before signing up for {season.name}, add these on your profile:</p>
-            <ul className="list-disc space-y-1 pl-5">
-              {missing.discord ? (
-                <li>Your Discord username, so admins and captains can reach you.</li>
-              ) : null}
-              {missing.riot ? (
-                <li>A linked Riot account. Captains use your rank and OP.GG to scout the draft.</li>
-              ) : null}
-            </ul>
-            <p>
-              <Link href="/profile" className="underline underline-offset-2">
-                Go to your profile
-              </Link>
-              , then come back here.
-            </p>
-          </AlertDescription>
-        </Alert>
+        {missing.server ? (
+          <Alert>
+            <AlertDescription className="space-y-2">
+              <p>
+                Before signing up for {season.name}, join the Spicy League Discord. Teams, match
+                threads and announcements all live there.
+              </p>
+              <p>
+                We couldn&apos;t find <span className="font-medium">{discordUsername}</span> in the
+                server.{" "}
+                {env.DISCORD_INVITE_URL ? (
+                  <a
+                    href={env.DISCORD_INVITE_URL}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="underline underline-offset-2"
+                  >
+                    Join the Discord
+                  </a>
+                ) : (
+                  "Ask an admin for an invite"
+                )}
+                , then come back here and refresh.
+              </p>
+              <p className="text-muted-foreground text-xs">
+                Already in it? Check that the username on your{" "}
+                <Link href="/profile" className="underline underline-offset-2">
+                  profile
+                </Link>{" "}
+                is your Discord username (not your display name).
+              </p>
+            </AlertDescription>
+          </Alert>
+        ) : null}
+        {profileFixes ? (
+          <Alert>
+            <AlertDescription className="space-y-2">
+              <p>Before signing up for {season.name}, add these on your profile:</p>
+              <ul className="list-disc space-y-1 pl-5">
+                {missing.discord ? (
+                  <li>Your Discord username, so admins and captains can reach you.</li>
+                ) : null}
+                {missing.riot ? (
+                  <li>
+                    A linked Riot account. Captains use your rank and OP.GG to scout the draft.
+                  </li>
+                ) : null}
+              </ul>
+              <p>
+                <Link href="/profile" className="underline underline-offset-2">
+                  Go to your profile
+                </Link>
+                , then come back here.
+              </p>
+            </AlertDescription>
+          </Alert>
+        ) : null}
       </div>
     );
   }

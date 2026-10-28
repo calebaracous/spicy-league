@@ -9,6 +9,19 @@ the real UI against a real database and is run on demand.
 | `npm run test:e2e` | Playwright — full season draft through the UI | `DATABASE_URL`, Chromium |
 | `npm run test:e2e:cleanup` | Delete leftover e2e data (add `-- --legacy` for the old seed data) | `DATABASE_URL` |
 
+## Test admin account (`claudius`)
+
+For checking signed-in and admin pages by hand (or by an agent in the
+browser) against the database in `.env.local`, which is the live one.
+`node scripts/create-test-admin.mjs` creates `claudius` (admin, verified
+email `claudius@spicyleague.test`, Discord username `spicy_claudius_test`,
+which isn't in the server, so the Discord signup gate blocks it) or resets
+its password and role. Sign in with `TEST_ADMIN_EMAIL` /
+`TEST_ADMIN_PASSWORD` from `.env.local`; the password is generated on first
+run and never printed. It's a real admin on the live site: don't sign it up
+for real seasons, and delete it (`delete from users where username =
+'claudius'`) if that password ever leaks. `test:e2e:cleanup` leaves it alone.
+
 ## Unit tests (`tests/unit/`, `vitest.config.mts`)
 
 - `draft-order.test.ts` — `snakeOrder` for 2–8 solo captains (unchanged

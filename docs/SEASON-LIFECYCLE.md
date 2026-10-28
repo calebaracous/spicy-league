@@ -165,11 +165,13 @@ server actions to find them. Examples:
   `player` signup during `signups_open` inside the
   `signupOpensAt..signupClosesAt` window, a `sub` signup after that until the
   season completes, nothing otherwise. Every signup needs a Discord username
-  on the account (`users.discordUsername`), and LoL signups (player and sub)
-  also need at least one linked Riot account — both checked by
-  `missingSignupRequirements` (`src/lib/signup-gate.ts`), on the page (a
-  notice listing what to add on `/profile`, instead of the form) and again in
-  the action. Every signup needs a non-empty moral-quandary answer. These
+  on the account (`users.discordUsername`) and that account in the Spicy
+  League Discord server, and LoL signups (player and sub) also need at least
+  one linked Riot account — all checked by `missingSignupRequirements`
+  (`src/lib/signup-gate.ts`), on the page (notices instead of the form: join
+  the Discord via `DISCORD_INVITE_URL`, and/or what to add on `/profile`) and
+  again in the action. The Discord check is in
+  [DISCORD.md](DISCORD.md#signup-gate-must-be-in-the-server). Every signup needs a non-empty moral-quandary answer. These
   rules only gate *new* signups; existing rows are never revisited, so
   unlinking later doesn't affect a signup.
 - `submitPick` — requires `drafts.state = 'in_progress'`.

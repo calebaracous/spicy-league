@@ -43,7 +43,8 @@ builds that don't need runtime secrets.
 | `DISCORD_ANNOUNCEMENTS_CHANNEL_ID` | Home-page announcements ticker | Channel whose latest 6 messages scroll in a band under the nav on the home page. Unset → no ticker. Needs the bot's Message Content intent, or every message reads as empty and the ticker hides. |
 | `DISCORD_APPLICATION_ID` | Discord slash commands | Used by `scripts/discord-register-commands.mjs`. |
 | `DISCORD_PUBLIC_KEY` | Discord slash commands | 64-hex key; `/api/discord/interactions` 404s without it and rejects unsigned requests. |
-| `DISCORD_INVITE_URL` | Discord nudge emails (optional) | Server invite link included in "add your Discord" emails. |
+| `DISCORD_INVITE_URL` | Season signup gate + Discord nudge emails | Permanent server invite link. Shown to players blocked from signing up because they aren't in the server, and included in "add your Discord" emails. Unset → the gate says "ask an admin for an invite". |
+| `TEST_ADMIN_EMAIL`, `TEST_ADMIN_PASSWORD` | `scripts/create-test-admin.mjs` (local only) | The `claudius` test admin's sign-in. Written by the script on first run; never set on Vercel. See [TESTING.md](TESTING.md). |
 
 ## Client-side vars
 

@@ -47,6 +47,7 @@ Trivial shadcn primitives get a single entry at the bottom.
 ## Scripts
 
 - `scripts/backfill-events.mjs` — dry run / `--apply`: reconstructs events inbox rows from existing timestamps (retention window, before the first live event). See EVENTS.md.
+- `scripts/create-test-admin.mjs` — creates (or resets) the `claudius` admin test account in `DATABASE_URL`; credentials only in `.env.local` (`TEST_ADMIN_EMAIL` / `TEST_ADMIN_PASSWORD`, generated if missing). See TESTING.md.
 - `scripts/e2e-cleanup.mjs` — `npm run test:e2e:cleanup`: deletes e2e-tagged seasons/users; `--legacy` also removes the old seed-test-season data.
 - `scripts/season-12-setup.mjs` — one-off: deletes every season + 10-man and obvious test users (numbered bot usernames / test email domains, never admins), then creates Spicy League Season 12 (Bo2 group stage). Dry run unless `--apply`. Needs migrations 0005 and 0007.
 - `scripts/seed-test-season.ts` — refuses to run without `ALLOW_TEST_SEED=1` (it writes to the live DB from `.env.local`). Seeds `test-s1` LoL season with 4 captain + 16 bot accounts (re-runnable; cleans first). Run with `ALLOW_TEST_SEED=1 npx tsx --env-file=.env.local scripts/seed-test-season.ts`. Credentials are in the file header.
@@ -77,8 +78,8 @@ Rendered by `src/app/page.tsx`:
 
 - `src/app/seasons/page.tsx` — list of non-draft seasons (active + past split); active cards show the prize pool.
 - `src/app/seasons/[slug]/page.tsx` — season detail. `StatusPanel` renders per-state CTA. Prize pool tiles (pool + each place's payout) above the schedule. Looks up champion from `matches` when complete.
-- `src/app/seasons/[slug]/signup/page.tsx` — signup form (LoL: roles, CS2: maps; "interested in being a captain" checkbox, pre-filled from `users.captainInterest`, hidden for sub signups). Missing a Discord username or (LoL) a Riot link → a notice listing what to add on `/profile` instead of the form.
-- `src/app/seasons/[slug]/signup/actions.ts` — `submitSignup`. Validates state + window + one-per-user + Discord username + Riot link (LoL) + required quandary answer. Draft-pool signups also save the captain checkbox to `users.captainInterest`.
+- `src/app/seasons/[slug]/signup/page.tsx` — signup form (LoL: roles, CS2: maps; "interested in being a captain" checkbox, pre-filled from `users.captainInterest`, hidden for sub signups). Not in the league Discord server → a "join the Discord" notice with `DISCORD_INVITE_URL`; missing a Discord username or (LoL) a Riot link → a notice listing what to add on `/profile`; either replaces the form.
+- `src/app/seasons/[slug]/signup/actions.ts` — `submitSignup`. Validates state + window + one-per-user + Discord username + in the Discord server + Riot link (LoL) + required quandary answer. Draft-pool signups also save the captain checkbox to `users.captainInterest`.
 - `src/app/seasons/[slug]/captains/page.tsx` — announced captain list (duos grouped on one line).
 - `src/app/seasons/[slug]/draft/page.tsx` — live draft viewer. Fetches initial snapshot, renders `<LiveBoard>`.
 - `src/app/seasons/[slug]/draft/live-board.tsx` — client component; SSE-subscribes to `/api/draft/[slug]/stream`; shows solo-queue rank per pool player (LoL).
@@ -194,7 +195,7 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/riot-links.ts` — `hasRiotLink(userId)`: whether a user has a linked Riot account.
 - `src/lib/riot-id.ts` — pure `parseRiotId(raw)`: `GameName#TAG` → parts or null.
 - `src/lib/account-edits.ts` — `setDiscordUsername`, `setDiscordUserId`, `addRiotLink`, `removeRiotLink` for any user + actor; shared by `/profile` and the admin tools on `/users/[username]`. Admin edits log the player as `subjectUserId`.
-- `src/lib/signup-gate.ts` — `missingSignupRequirements(userId, game)`: the season signup gate (Discord username always, Riot link for LoL).
+- `src/lib/signup-gate.ts` — `missingSignupRequirements(userId, season)`: the season signup gate (Discord username + membership in the league server always, Riot link for LoL). The server check fails open.
 - `src/lib/discord.ts` — pure `normalizeDiscordUsername` + `DISCORD_USERNAME_HELP`; shared by account signup and the profile form. `normalizeDiscordUserId` (17–20 digit snowflake) for the admin override.
 - `src/lib/discord-api.ts` — Discord REST client for the bot (`discordConfig`, member search, roles); retries 429s. See [DISCORD.md](DISCORD.md).
 - `src/lib/discord-plan.ts` — pure role-sync decisions: `pickExactMember`, `captainRoleChanges`, `staleTeamRoles`.

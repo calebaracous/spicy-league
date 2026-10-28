@@ -55,11 +55,12 @@ export async function submitSignup(slug: string, formData: FormData) {
     redirect(`/seasons/${slug}?error=already-signed-up`);
   }
 
-  // Every signup needs a Discord username; LoL ones also a linked Riot account
-  // (captains scout via rank/OP.GG). Only gates new signups; existing ones are
-  // never revisited. The signup page explains what's missing.
-  const missing = await missingSignupRequirements(session.user.id, season.game);
-  if (missing.discord || missing.riot) redirect(`/seasons/${slug}/signup`);
+  // Every signup needs a Discord username and membership in the league
+  // server; LoL ones also a linked Riot account (captains scout via rank/OP.GG).
+  // Only gates new signups; existing ones are never revisited. The signup page
+  // explains what's missing.
+  const missing = await missingSignupRequirements(session.user.id, season);
+  if (missing.discord || missing.server || missing.riot) redirect(`/seasons/${slug}/signup`);
 
   let rolePrefs: unknown;
 

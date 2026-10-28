@@ -130,7 +130,8 @@ See `submitSignup`, `submitPick`, `reportMatch`, and everything in
 - There is no `/onboarding` page — username is captured during signup.
 - Accounts created before the Discord field (October 2026) have
   `discordUsername = null`. `/profile` shows a highlighted Discord card until
-  they add one, and season signups are blocked until they do
+  they add one, and season signups are blocked until they do — and until
+  that username is in the league Discord server
   (`missingSignupRequirements`, see [SEASON-LIFECYCLE.md](SEASON-LIFECYCLE.md)).
 - Discord usernames are self-reported, not verified with Discord (no OAuth).
   Visible to admins (signups page + CSV) and to signed-in visitors on

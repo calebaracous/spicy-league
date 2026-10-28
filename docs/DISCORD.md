@@ -137,6 +137,25 @@ The card lists everyone in the season (signups, captains, rosters) as
   every season created before this one (`deleteOldTeamChannels`).
   Irreversible.
 
+## Signup gate: must be in the server
+
+A new season signup (player or sub) is refused until the player's Discord
+username belongs to a member of the server (`missingSignupRequirements`,
+`src/lib/signup-gate.ts`, run by the signup page and again by
+`submitSignup`). The page then shows "join the Spicy League Discord" with
+the `DISCORD_INVITE_URL` link (or "ask an admin for an invite" if it's
+unset) and a hint to check their username on `/profile`; they join and
+refresh.
+
+- Already matched (`users.discordUserId`) → `GET /guilds/{id}/members/{user}`
+  (`getMember`). Not a member → the ID is cleared and it falls back to the
+  username search.
+- Otherwise the same exact-username search as the role sync; a hit saves
+  `discordUserId` (unless another account holds it).
+- **Fails open**: without the bot configured, or if Discord errors (logged
+  as `[discord] signup gate:`), nobody is blocked. Skipped for e2e seasons.
+- Only gates new signups; existing ones are never revisited.
+
 ## Team names
 
 Captains (either of a duo) rename their team on `/seasons/[slug]/teams`
@@ -228,7 +247,10 @@ account belongs to the player.
      `DISCORD_ANNOUNCEMENTS_CHANNEL_ID` — match threads / 10-man pings /
      home-page ticker.
    - `DISCORD_APPLICATION_ID`, `DISCORD_PUBLIC_KEY` — slash commands.
-   - `DISCORD_CAPTAIN_ROLE_ID`, `DISCORD_INVITE_URL` — optional.
+   - `DISCORD_INVITE_URL` — a permanent invite (Invite People → Edit invite
+     link → Expire after: Never). The signup gate links it to players who
+     aren't in the server yet.
+   - `DISCORD_CAPTAIN_ROLE_ID` — optional.
    Redeploy. Keep the token out of chat, git and screenshots; if it leaks,
    reset it on the Bot tab.
 7. **Slash commands.** In the developer portal, *General Information* →

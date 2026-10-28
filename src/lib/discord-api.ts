@@ -55,6 +55,7 @@ export function discordConfig(): DiscordConfig | null {
 export const DISCORD_ERRORS = {
   unknownChannel: 10003,
   unknownMember: 10007,
+  unknownUser: 10013,
   unknownRole: 10011,
   missingPermissions: 50013,
 } as const;
@@ -156,6 +157,21 @@ export async function searchMembers(cfg: DiscordConfig, query: string): Promise<
   return (
     (await call<DiscordMember[]>(cfg, "GET", `/guilds/${cfg.guildId}/members/search?${q}`)) ?? []
   );
+}
+
+/** The server member with this user ID, or null if they aren't in the server. */
+export async function getMember(cfg: DiscordConfig, userId: string): Promise<DiscordMember | null> {
+  try {
+    return await call<DiscordMember>(cfg, "GET", `/guilds/${cfg.guildId}/members/${userId}`);
+  } catch (err) {
+    if (
+      err instanceof DiscordApiError &&
+      (err.code === DISCORD_ERRORS.unknownMember || err.code === DISCORD_ERRORS.unknownUser)
+    ) {
+      return null;
+    }
+    throw err;
+  }
 }
 
 export async function listRoles(cfg: DiscordConfig): Promise<DiscordRole[]> {
