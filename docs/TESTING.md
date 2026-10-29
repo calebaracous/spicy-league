@@ -59,6 +59,7 @@ for real seasons, and delete it (`delete from users where username =
 - `rps.test.ts` — RPS outcomes and the lazy state machine (reveal, void replay + AFK reset, catch-up)
 - `draft-clock.test.ts` — draft room clock: ready → countdown → steps, timeout locks the hover / skips a ban / random pick, completion, lazy catch-up
 - `champions.test.ts` — `resolveChampionKeys` for the admin disabled-champions field
+- `champion-stats.test.ts` — `championStats` (presence, W–L, blue/red, team filter + bans against), `sideStats`, `playerChampions`
 - `series.test.ts` — `bestOfFor` per stage, `seriesScore` (Bo1, Bo2 draw, Bo3/Bo5 majority), `loserOf`
 - `draft-room.test.ts` — 20-step draft order, fearless availability, timeout resolution, Data Dragon parsing
 
@@ -212,6 +213,9 @@ as duo captains, away = P2) and drives [MATCH-DAY.md](MATCH-DAY.md):
 - Draft recap (completed draft seeded): home's captain sees one "Assign
   players" (blue only), assigns Garen → P01 and Lux → P03; the red pick
   stays unassigned.
+- Champion stats (confirmed match, seeded draft + assignment): the season
+  champions page shows Garen 1–0 and Jinx 0–1; the away-team filter hides
+  Garen and lists bans against them; P01's profile lists Garen.
 - A late admin pick (admin board frozen at pick 1 after the captain has
   picked) is rejected with `stale-pick`, not credited to the next captain.
 - Two picks at the same moment (captain + admin): exactly one lands as

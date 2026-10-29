@@ -66,7 +66,9 @@ export default async function DraftPage({
         </div>
       </header>
 
-      {season ? <SeasonNav slug={slug} state={season.state} current="draft" /> : null}
+      {season ? (
+        <SeasonNav slug={slug} state={season.state} game={season.game} current="draft" />
+      ) : null}
 
       {errorMessage ? (
         <Alert variant="destructive">

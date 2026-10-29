@@ -31,7 +31,25 @@ CronDelete.
    page, and it confirms immediately. Fine, or should admins also keep the
    plain report form?
 
+7. **Per-player champions on profiles are public for everyone** (phase 5).
+   They come from captains assigning picks in our own draft room, not from
+   Riot, so I didn't gate them on the stats opt-in. Gate them too?
+8. **Who assigns picks to players**: the team's captains (or an admin),
+   any time after the draft, even after the match is confirmed. Should
+   players be able to set their own champion instead?
+
 ## FYI (no action unless you disagree)
+
+- **Flaky e2e (not match day):** in full-suite runs tonight the season-draft
+  specs flaked twice at the admin's on-behalf pick (`draft.spec.ts` "admin
+  makes pick 9", once `draft-duo.spec.ts`): the spectator didn't see the pick
+  within 10s. Both pass when run alone, and season-draft code is unchanged on
+  `staging` apart from the `SeasonNav` prop. Worth a look if it shows up in
+  your runs too.
+
+- Stats count completed drafts in **confirmed** matches only, like
+  standings. The side-win cards on the Champions page stay season-wide when
+  you filter to a team.
 
 - Draft room, tested in the browser: ready-up, countdown, ban, a hover locking
   on timeout, admin acting for a side, and the phone layout (teams side by

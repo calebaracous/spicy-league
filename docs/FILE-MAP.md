@@ -34,6 +34,7 @@ Trivial shadcn primitives get a single entry at the bottom.
 - `tests/unit/season-schedule.test.ts` — `seasonSchedule` ordering, skipping unset dates, group stage range.
 - `tests/unit/draft-clock.test.ts` — draft clock: ready/countdown/steps, hover lock vs skipped ban vs random pick on timeout, completion.
 - `tests/unit/champions.test.ts` — `resolveChampionKeys` (names/keys, punctuation, unknowns).
+- `tests/unit/champion-stats.test.ts` — champion/side/player aggregation, team filter, unrecorded results.
 - `tests/unit/series.test.ts` — `bestOfFor`, `seriesScore`, `loserOf`.
 - `tests/unit/rps.test.ts` — RPS outcomes and the lazy state machine (reveal, void replay, AFK reset, catch-up).
 - `tests/unit/draft-room.test.ts` — draft sequence, fearless availability, timeouts, Data Dragon parsing.
@@ -93,11 +94,13 @@ Rendered by `src/app/page.tsx`:
 - `src/app/seasons/[slug]/matches/sub-actions.ts` — `requestSub`, `withdrawSub`, `decideSub` (approve / reject / revoke), `pingSubListAction` (Discord Sub list ping).
 - `src/app/seasons/[slug]/matches/[matchId]/_components/lineups.tsx` — `MatchLineups`: rosters with subs, sub requests, request form.
 - `src/app/seasons/[slug]/matches/[matchId]/_components/match-day.tsx` — `MatchDayCard`: live RPS side select (ready up, throws + countdown, reveal/roast, blue/red pick). See [MATCH-DAY.md](MATCH-DAY.md).
+- `src/app/seasons/[slug]/champions/page.tsx` — season champion stats (side win rates, per-champion table, `?team=` scouting filter).
 - `src/app/seasons/[slug]/matches/[matchId]/games/[n]/page.tsx` — the match-day draft room for game n (snapshot + champion catalogue → `DraftRoom`).
 - `src/app/seasons/[slug]/matches/[matchId]/_components/draft-recap.tsx` — `DraftRecap`: a drafted game's picks (with players) and bans on the match-day card, plus the Assign players form.
 - `src/app/seasons/[slug]/matches/[matchId]/_components/draft-room.tsx` — `DraftRoom`: ready boxes, countdown, step banner + timer, blue/red ban and pick slots, champion grid with search, Lock in / Skip ban, admin Undo / Skip / Restart.
 - `src/app/seasons/[slug]/matches/match-day-actions.ts` — `readyRps`, `unreadyRps`, `throwRps`, `pickSide`, `reportGameWinner` (auto-confirms a decided series; waits for the draft), `flagGameResult`, `readyDraft`, `hoverChampion`, `lockChampion`, `adminUndoDraftStep`, `adminSetDraft`, `assignPicks`, `adminResetMatchDay` (return `{ error, snap }`, lock the match row, settle deadlines first).
 - `src/app/api/matches/[matchId]/stream/route.ts` — match-day SSE stream (1s live / 2s idle, per-viewer snapshot).
+- `src/app/users/[username]/_components/league-champions.tsx` — `LeagueChampions`: champions a player was assigned in league drafts, with W–L.
 - `src/app/users/[username]/_components/match-history.tsx` — profile match history list (Sub / Sat out tags).
 - `src/app/seasons/[slug]/teams/page.tsx` — team rosters with roles, record, "Your team" highlight. Captains (and admins) get a "Rename team" form on their card.
 - `src/app/seasons/[slug]/teams/actions.ts` — `renameTeam`: captain of that team (until complete) or admin; name rules + per-season uniqueness; renames the Discord role/channels in the background.
@@ -203,6 +206,8 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/players.ts` — `getPlayerDirectory()`: onboarded users A–Z with career stats, from whole-table queries tallied in memory.
 - `src/lib/backdrop-clips.ts` — home-row backdrop clip registry (`backdropClip(game, index)`, `placeholderBackdrop(game)` for the still-art "Signups open" row, `otherGame`). LoL clips `lol-1..3` are live (`loopSources(id)` → WebM + MP4); CS2 clips still have `sources: []`.
 - `src/lib/live-season.ts` — `getLiveSeason`, `LIVE_STATE_COPY`, `liveSeasonHref`. Used by header pill + home hero.
+- `src/lib/champion-stats.ts` — pure: `championStats` (picks/bans/presence/W–L per champion, optional team filter + bans against), `sideStats` (blue/red, RPS winner game 1), `playerChampions`, `percent`.
+- `src/lib/season-stats.ts` — loads completed drafts of confirmed matches for the stats pages (`loadSeasonDraftGames`, `loadPlayerDraftGames`).
 - `src/lib/series.ts` — pure: `bestOfFor(season, stage)`, `seriesScore` (Bo2 plays both; odd lengths stop at a majority), `loserOf`.
 - `src/lib/match-results.ts` — `applyConfirmEffects` (final after both semis, re-teams an unplayed final, champion, Discord, revalidation) and `confirmWithResult` (set + confirm in one go); used by `confirmMatch`, match day's auto-confirm and `adminEditResult`.
 - `src/lib/rps.ts` — pure RPS rules: `roundOutcome`, `advanceRps` / `settleRps` (lazy deadline state machine), timings, `griefLine`, `randomSide`.
@@ -252,7 +257,7 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/components/legal-page.tsx` — `LegalPage` chrome for `/terms` + `/privacy`.
 - `src/components/player-link.tsx` — `PlayerLink`: profile link, or plain text for a deleted (username-less) player. Rosters, lineups, captains.
 - `src/components/flash-toast.tsx` — client; turns a `?saved=` flag into a sonner toast and removes it from the URL.
-- `src/components/season-nav.tsx` — `SeasonNav` tabs for `/seasons/[slug]/*`, gated by season state.
+- `src/components/season-nav.tsx` — `SeasonNav` tabs for `/seasons/[slug]/*`, gated by season state (and `game`: the Champions tab is LoL-only).
 - `src/components/use-turn-alert.ts` — client hooks: `useSnapshotStream` (SSE + connection status), `useTurnAlert` (title flash + chime on your pick), `useTurnSoundPref`.
 - `src/components/live-status.tsx` — `LiveStatusDot` ("Live" / "Reconnecting…") and `TurnSoundToggle`.
 

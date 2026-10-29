@@ -311,7 +311,7 @@ export default async function SeasonDetailPage({
         ) : null}
       </header>
 
-      <SeasonNav slug={season.slug} state={season.state} current="overview" />
+      <SeasonNav slug={season.slug} state={season.state} game={season.game} current="overview" />
 
       {leftSubs ? <FlashToast param="left-subs" message="You've left the sub list." /> : null}
       {signedUp ? (

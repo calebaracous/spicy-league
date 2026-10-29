@@ -281,7 +281,7 @@ test("Draft room: ready, countdown, lock, timeout locks the hover, skipped ban, 
   test.setTimeout(150_000);
   // Fearless Bo3 semi; game 1 is done with Ahri picked, game 2 (home blue)
   // is the one we draft.
-  const { url, matchId, homeId, awayId } = await seedMatch("draft", {
+  const { url, matchId, homeId, awayId } = await seedMatch("draft-room", {
     stage: "semis",
     game1Sides: true,
     fearless: true,
@@ -412,4 +412,47 @@ test("Draft recap: a captain assigns their picks to lineup players", async ({ br
   expect(by(7)).toBe(ids.get(P(1).username));
   expect(by(10)).toBe(ids.get(P(3).username));
   expect(by(8)).toBeNull();
+});
+
+test("Champion stats: season page, team filter and the player's profile", async ({ browser }) => {
+  const { url, matchId, homeId } = await seedMatch("stats", { game1Sides: true });
+  const slug = url.split("/")[2];
+  const ids = await userIdsByUsername([P(1).username]);
+  await db
+    .update(schema.matches)
+    .set({ state: "confirmed", winnerTeamId: homeId, homeScore: 1, awayScore: 0 })
+    .where(eq(schema.matches.id, matchId));
+  const [game] = await db
+    .update(schema.matchGames)
+    .set({ draftState: "complete", winnerTeamId: homeId })
+    .where(eq(schema.matchGames.matchId, matchId))
+    .returning();
+  await db.insert(schema.matchDraftActions).values([
+    { gameId: game.id, step: 1, side: "blue", kind: "ban", championKey: "Zed" },
+    {
+      gameId: game.id,
+      step: 7,
+      side: "blue",
+      kind: "pick",
+      championKey: "Garen",
+      assignedUserId: ids.get(P(1).username),
+    },
+    { gameId: game.id, step: 8, side: "red", kind: "pick", championKey: "Jinx" },
+  ]);
+
+  const page = await anonymousPage(browser);
+  await page.goto(`/seasons/${slug}/champions`);
+  await expect(page.getByText("Blue side wins")).toBeVisible();
+  const garen = page.getByRole("row").filter({ hasText: "Garen" });
+  await expect(garen).toContainText("1–0");
+  await expect(page.getByRole("row").filter({ hasText: "Jinx" })).toContainText("0–1");
+
+  await page.getByRole("link", { name: AWAY }).click();
+  await expect(page.getByText(`${AWAY}: picks and bans`)).toBeVisible();
+  await expect(page.getByRole("row").filter({ hasText: "Garen" })).toHaveCount(0);
+  await expect(page.getByText(`Banned against ${AWAY}`)).toBeVisible();
+
+  await page.goto(`/users/${P(1).username}`);
+  await expect(page.getByText("League champions")).toBeVisible();
+  await expect(page.getByText("Garen")).toBeVisible();
 });

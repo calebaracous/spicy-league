@@ -8,7 +8,8 @@ Shipped: **phase 1** — rock paper scissors decides who picks game 1's side,
 plus the stats opt-in; **phase 2** — per-game results, the loser picks the
 next side, the match confirms itself when the series is decided, and the
 admin Edit result tool; **phase 3** — our own pick/ban draft room per game;
-**phase 4** — draft recaps (card + Discord) and who-played-what per pick. LoL seasons only (`matchDayApplies(season)`); CS2
+**phase 4** — draft recaps (card + Discord) and who-played-what per pick;
+**phase 5** — champion / side stats and per-player champions. LoL seasons only (`matchDayApplies(season)`); CS2
 match pages are unchanged.
 
 ## Flow
@@ -144,6 +145,25 @@ and captains can only record that game's winner once the draft is
 - **Discord**: when a draft completes (last step by hand in `lockChampion`,
   or by the clock in `resolveExpired`), `notifyDraftRecap` posts both
   sides' picks and bans in the match thread.
+
+## Stats (phase 5)
+
+Our own data only (drafts, game winners, pick assignments) — not Riot match
+history. Completed drafts in **confirmed** matches only, like standings
+(`src/lib/season-stats.ts`: `loadSeasonDraftGames`, `loadPlayerDraftGames`).
+Aggregation is pure (`src/lib/champion-stats.ts`,
+`tests/unit/champion-stats.test.ts`).
+
+- **`/seasons/[slug]/champions`** (LoL; "Champions" tab in `SeasonNav`,
+  which now takes `game`): blue / red win rate, how often the RPS winner won
+  game 1, and a per-champion table — presence (games picked or banned),
+  picks, bans, W–L, win %, blue / red picks. `?team=` narrows the table to
+  that team's picks and bans and adds "Banned against {team}" (scouting);
+  the side cards stay season-wide.
+- **Profiles** (`/users/[username]`): "League champions" — champions the
+  player was assigned in confirmed matches, with games and W–L
+  (`playerChampions`, `_components/league-champions.tsx`). Shown for
+  everyone (our data); Riot per-player stats will be the opt-in ones.
 
 ## State + deadlines
 

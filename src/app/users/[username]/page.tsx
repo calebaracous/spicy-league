@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 
 import { ADMIN_ERROR_MESSAGES, AdminAccountTools } from "./_components/admin-account-tools";
 import { DeleteAccountForm } from "./_components/delete-account-form";
+import { LeagueChampions } from "./_components/league-champions";
 import { MatchHistory } from "./_components/match-history";
 import { StatsTabs } from "./_components/stats-tabs";
 import { db } from "@/db/client";
@@ -16,6 +17,9 @@ import { formatRank } from "@/lib/rank";
 import { opggUrlForRiotId } from "@/lib/opgg";
 import { getChampionName } from "@/lib/riot-api";
 import { getPlayerMatchHistory } from "@/lib/substitutions";
+import { playerChampions } from "@/lib/champion-stats";
+import { getChampionCatalog } from "@/lib/champions";
+import { loadPlayerDraftGames } from "@/lib/season-stats";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FlashToast } from "@/components/flash-toast";
@@ -82,7 +86,14 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
     }),
   );
 
-  const [history, viewer] = await Promise.all([getPlayerMatchHistory(user.id), auth()]);
+  const [history, viewer, draftGames] = await Promise.all([
+    getPlayerMatchHistory(user.id),
+    auth(),
+    loadPlayerDraftGames(user.id),
+  ]);
+  // Champions played in league games (match-day draft assignments).
+  const leagueChamps = playerChampions(draftGames, user.id);
+  const catalog = leagueChamps.length ? await getChampionCatalog() : null;
   // Discord is for contacting players, so only signed-in visitors see it.
   const discordUsername = viewer?.user ? user.discordUsername : null;
   const isAdmin = viewer?.user.role === "admin";
@@ -226,6 +237,12 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
           </CardContent>
         </Card>
       ) : null}
+
+      <LeagueChampions
+        champions={leagueChamps}
+        version={catalog?.version ?? null}
+        names={new Map(catalog?.champions.map((c) => [c.key, c.name]) ?? [])}
+      />
 
       <MatchHistory matches={history} />
 

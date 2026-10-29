@@ -198,7 +198,7 @@ export default async function MatchesPage({ params }: { params: Params }) {
         <p className="text-muted-foreground text-sm">{season.name}</p>
       </header>
 
-      <SeasonNav slug={slug} state={season.state} current="matches" />
+      <SeasonNav slug={slug} state={season.state} game={season.game} current="matches" />
 
       {standings ? (
         <section className="space-y-3">

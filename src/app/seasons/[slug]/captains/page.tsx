@@ -70,7 +70,7 @@ export default async function CaptainsPage({ params }: { params: Params }) {
         </p>
       </header>
 
-      <SeasonNav slug={slug} state={season.state} current="captains" />
+      <SeasonNav slug={slug} state={season.state} game={season.game} current="captains" />
 
       {captains.length === 0 ? (
         <p className="text-muted-foreground text-sm">No captains have been announced yet.</p>

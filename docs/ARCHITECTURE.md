@@ -194,6 +194,7 @@ reaches the state where it has content. The overview also shows a "Your team"
 card (team + next scheduled match) for signed-in players once teams exist.
 - `/seasons/[slug]/matches/[matchId]` — match detail + report form (2–0 / 1–1 / 0–2 for Bo2 group matches), lineups, sub requests, "Ping the Sub list"
 - `/seasons/[slug]/matches/[matchId]/games/[n]` — match-day draft room for game n (LoL; public, captains act) — [MATCH-DAY.md](MATCH-DAY.md)
+- `/seasons/[slug]/champions` — champion pick/ban/win and side stats from match-day drafts (LoL; `?team=` filter) — [MATCH-DAY.md](MATCH-DAY.md)
 - `/10-man` — 10-man landing (redirects to the active session if any)
 - `/10-man/[id]` — live 10-man board (SSE-fed). See [TEN-MAN.md](TEN-MAN.md).
 - `/history` — static season archive (hard-coded in the page)

@@ -4,15 +4,23 @@ import type { SeasonState } from "@/db/schema/seasons";
 import { SEASON_STATES } from "@/lib/seasons";
 import { cn } from "@/lib/utils";
 
-export type SeasonTab = "overview" | "captains" | "draft" | "teams" | "matches";
+export type SeasonTab = "overview" | "captains" | "draft" | "teams" | "matches" | "champions";
 
 /** Tabs appear once the season reaches the state where they have content. */
-const TABS: { id: SeasonTab; label: string; path: string; from: SeasonState }[] = [
+const TABS: {
+  id: SeasonTab;
+  label: string;
+  path: string;
+  from: SeasonState;
+  /** Only for this game (champion stats come from LoL draft rooms). */
+  game?: string;
+}[] = [
   { id: "overview", label: "Overview", path: "", from: "signups_open" },
   { id: "captains", label: "Captains", path: "/captains", from: "captains_selected" },
   { id: "draft", label: "Draft", path: "/draft", from: "drafting" },
   { id: "teams", label: "Teams", path: "/teams", from: "group_stage" },
   { id: "matches", label: "Matches", path: "/matches", from: "group_stage" },
+  { id: "champions", label: "Champions", path: "/champions", from: "group_stage", game: "lol" },
 ];
 
 function reached(state: SeasonState, from: SeasonState): boolean {
@@ -26,13 +34,17 @@ function reached(state: SeasonState, from: SeasonState): boolean {
 export function SeasonNav({
   slug,
   state,
+  game,
   current,
 }: {
   slug: string;
   state: SeasonState;
+  game: string;
   current: SeasonTab;
 }) {
-  const tabs = TABS.filter((t) => t.id === current || reached(state, t.from));
+  const tabs = TABS.filter(
+    (t) => t.id === current || (reached(state, t.from) && (!t.game || t.game === game)),
+  );
   if (tabs.length < 2) return null;
 
   return (

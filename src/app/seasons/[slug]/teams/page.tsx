@@ -118,7 +118,7 @@ export default async function TeamsPage({
         </p>
       </header>
 
-      <SeasonNav slug={slug} state={season.state} current="teams" />
+      <SeasonNav slug={slug} state={season.state} game={season.game} current="teams" />
 
       {saved === "renamed" ? <FlashToast message="Team name saved." /> : null}
       {errorMessage ? (
