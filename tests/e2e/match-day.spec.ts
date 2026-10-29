@@ -4,12 +4,13 @@ import { eq } from "drizzle-orm";
 import * as schema from "../../src/db/schema";
 import { db, userIdsByUsername } from "./support/db";
 import { anonymousPage, closeContexts, signedInPage, SSE_TIMEOUT } from "./support/pages";
-import { player, run, seasonSlug } from "./support/seed";
+import { admin, player, run, seasonSlug } from "./support/seed";
 
 /**
- * Match day phase 1 (docs/MATCH-DAY.md): rock paper scissors decides who picks
- * game 1's side. Each test seeds a LoL season in group stage with one
- * scheduled match: home = P1 + P3 (duo captains), away = P2.
+ * Match day (docs/MATCH-DAY.md): rock paper scissors decides who picks game
+ * 1's side, then per-game results, the loser's side pick and the automatic
+ * confirm. Each test seeds a LoL season with one scheduled match: home = P1 +
+ * P3 (duo captains), away = P2.
  */
 
 test.afterEach(closeContexts);
@@ -18,11 +19,19 @@ const P = player;
 const HOME = "Home Hounds";
 const AWAY = "Away Antelopes";
 
-async function seedMatch(suffix: string): Promise<{ url: string; matchId: string }> {
+async function seedMatch(
+  suffix: string,
+  opts: { stage?: "group" | "semis"; game1Sides?: boolean } = {},
+): Promise<{ url: string; matchId: string; homeId: string; awayId: string }> {
   const slug = seasonSlug(suffix);
   const [season] = await db
     .insert(schema.seasons)
-    .values({ name: `E2E ${run().id} ${suffix}`, slug, game: "lol", state: "group_stage" })
+    .values({
+      name: `E2E ${run().id} ${suffix}`,
+      slug,
+      game: "lol",
+      state: opts.stage === "semis" ? "playoffs" : "group_stage",
+    })
     .returning({ id: schema.seasons.id });
   const ids = await userIdsByUsername([1, 2, 3].map((n) => P(n).username));
   const id = (n: number) => ids.get(P(n).username)!;
@@ -41,14 +50,37 @@ async function seedMatch(suffix: string): Promise<{ url: string; matchId: string
     { teamId: home.id, userId: id(3), pickNumber: null },
     { teamId: away.id, userId: id(2), pickNumber: null },
   ]);
+  const stage = opts.stage ?? "group";
   const [match] = await db
     .insert(schema.matches)
-    .values({ seasonId: season.id, round: 1, homeTeamId: home.id, awayTeamId: away.id })
+    .values({
+      seasonId: season.id,
+      round: stage === "semis" ? 101 : 1,
+      stage,
+      homeTeamId: home.id,
+      awayTeamId: away.id,
+    })
     .returning({ id: schema.matches.id });
-  return { url: `/seasons/${slug}/matches/${match.id}`, matchId: match.id };
+  // Skip RPS: game 1 already has sides (home won RPS and took blue).
+  if (opts.game1Sides) {
+    await db.insert(schema.matchGames).values({
+      matchId: match.id,
+      gameNumber: 1,
+      sideChooserTeamId: home.id,
+      sideChosenVia: "rps",
+      blueTeamId: home.id,
+      redTeamId: away.id,
+    });
+  }
+  return {
+    url: `/seasons/${slug}/matches/${match.id}`,
+    matchId: match.id,
+    homeId: home.id,
+    awayId: away.id,
+  };
 }
 
-const card = (page: Page) => page.locator("[data-slot=card]").filter({ hasText: "Side selection" });
+const card = (page: Page) => page.locator("[data-slot=card]").filter({ hasText: "Match day" });
 const readyButton = (page: Page) =>
   card(page).getByRole("button", { name: "Ready up for rock paper scissors" });
 const throwButton = (page: Page, name: "Rock" | "Paper" | "Scissors") =>
@@ -143,4 +175,86 @@ test("RPS: a captain who doesn't throw gets roasted and the round replays", asyn
   await expect(card(p1)).toContainText(P(2).name);
   await expect(card(p2)).toContainText("Round 2", { timeout: 15_000 });
   await expect(throwButton(p2, "Rock")).toBeVisible();
+});
+
+test("Bo3 semi: results, loser's side pick, a correction, auto-confirm, flag, admin edit", async ({
+  browser,
+}) => {
+  test.setTimeout(120_000);
+  const { url, matchId, homeId, awayId } = await seedMatch("bo3", {
+    stage: "semis",
+    game1Sides: true,
+  });
+  const [p1, p2] = await Promise.all([
+    signedInPage(browser, P(1).username),
+    signedInPage(browser, P(2).username),
+  ]);
+  await Promise.all([p1, p2].map((p) => p.goto(url)));
+  const won = (p: Page, team: string) => card(p).getByRole("button", { name: `${team} won` });
+  const match = async () =>
+    (await db.select().from(schema.matches).where(eq(schema.matches.id, matchId)))[0];
+  const games = () =>
+    db.select().from(schema.matchGames).where(eq(schema.matchGames.matchId, matchId));
+
+  await test.step("game 1 to away → home (the loser) picks game 2's side", async () => {
+    await won(p2, AWAY).click();
+    await expect(card(p2)).toContainText(`${HOME} is choosing a side for game 2`);
+    await expect(card(p1)).toContainText("Pick your side for game 2", { timeout: SSE_TIMEOUT });
+    await expect(card(p1)).toContainText("Best of 3");
+    await card(p1).getByRole("button", { name: "Blue side" }).click();
+    await expect(card(p1)).toContainText("Game 2 is on");
+  });
+
+  await test.step("a wrong game 2 result is corrected; 0–2 confirms the match", async () => {
+    await won(p1, HOME).click();
+    await expect(card(p1)).toContainText(`${AWAY} is choosing a side for game 3`);
+    await expect(card(p2)).toContainText("Pick your side for game 3", { timeout: SSE_TIMEOUT });
+    // Game 3's side isn't picked yet, so a captain can still fix game 2.
+    await card(p2)
+      .getByRole("button", { name: `Wrong? ${AWAY} won` })
+      .click();
+    await expect(card(p2)).toContainText(`${AWAY} win the series.`);
+    await expect(card(p1)).toContainText("Result confirmed.", { timeout: SSE_TIMEOUT });
+    // The rest of the page refreshes itself once the match closes.
+    await expect(p1.getByText("Confirmed", { exact: true })).toBeVisible({ timeout: SSE_TIMEOUT });
+    expect(await match()).toMatchObject({
+      state: "confirmed",
+      winnerTeamId: awayId,
+      homeScore: 0,
+      awayScore: 2,
+    });
+    expect((await games()).map((g) => g.gameNumber).sort()).toEqual([1, 2]);
+  });
+
+  await test.step("the losing captain flags game 2 after the confirm", async () => {
+    p1.once("dialog", (d) => d.accept());
+    await card(p1)
+      .locator("li")
+      .filter({ hasText: "Game 2" })
+      .getByRole("button", { name: "Flag as wrong" })
+      .click();
+    await expect(card(p1)).toContainText("Flagged for an admin");
+    const g2 = (await games()).find((g) => g.gameNumber === 2)!;
+    expect(g2.resultFlaggedAt).not.toBeNull();
+  });
+
+  await test.step("admin Edit result: game 2 to home, series 2–1 home", async () => {
+    const adminPage = await signedInPage(browser, admin().username);
+    await adminPage.goto(url);
+    const form = adminPage.locator("[data-slot=card]").filter({ hasText: "Edit result" });
+    await form.getByLabel(/Game 2/).selectOption(homeId);
+    await form.getByLabel("Winner").selectOption(homeId);
+    await form.getByLabel(`${HOME} score`).fill("2");
+    await form.getByLabel(`${AWAY} score`).fill("1");
+    await form.getByRole("button", { name: "Save and confirm" }).click();
+    await adminPage.waitForURL(/saved=result-edited/);
+    expect(await match()).toMatchObject({
+      state: "confirmed",
+      winnerTeamId: homeId,
+      homeScore: 2,
+      awayScore: 1,
+    });
+    const g2 = (await games()).find((g) => g.gameNumber === 2)!;
+    expect(g2).toMatchObject({ winnerTeamId: homeId, resultFlaggedAt: null });
+  });
 });

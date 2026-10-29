@@ -25,7 +25,8 @@ import {
   type DiscordSyncReport,
 } from "@/lib/discord-roles";
 import { env } from "@/lib/env";
-import { FEARLESS_DRAFT_RULE, fearlessApplies, roundLabel } from "@/lib/match-format";
+import { bestOfLabel, FEARLESS_DRAFT_RULE, fearlessApplies, roundLabel } from "@/lib/match-format";
+import { bestOfFor } from "@/lib/series";
 
 /**
  * The bot's match coordination posts (see docs/DISCORD.md):
@@ -122,7 +123,9 @@ export async function ensureMatchThreads(seasonId: string): Promise<DiscordSyncR
           ? "Best of 2 (2–0, 1–1 or 0–2)."
           : m.stage === "tiebreaker"
             ? "Best of 1 tiebreaker."
-            : "",
+            : m.stage === "semis" || m.stage === "final"
+              ? `${bestOfLabel(bestOfFor(season, m.stage))}.`
+              : "",
         fearlessApplies(season, m.stage) ? `Fearless draft: ${FEARLESS_DRAFT_RULE}.` : "",
       ]
         .filter(Boolean)
@@ -272,6 +275,40 @@ export async function notifyMatchSides(
       match.discordThreadId,
       `🔵 Game ${gameNumber}: **${blue}** on blue, 🔴 **${red}** on red${how}.`,
     );
+  } catch (err) {
+    report.errors.push(describe(err));
+  }
+  return report;
+}
+
+/**
+ * A note in the match thread when a game's winner is recorded: the running
+ * series score and who picks the next side (when the series goes on).
+ */
+export async function notifyGameResult(
+  matchId: string,
+  gameNumber: number,
+): Promise<DiscordSyncReport> {
+  const report = emptyReport();
+  const cfg = discordConfig();
+  if (!cfg) return report;
+  const match = await db.query.matches.findFirst({ where: eq(matches.id, matchId) });
+  if (!match?.discordThreadId) return report;
+  const games = await db.query.matchGames.findMany({ where: eq(matchGames.matchId, matchId) });
+  const game = games.find((g) => g.gameNumber === gameNumber);
+  if (!game?.winnerTeamId) return report;
+  const byId = await teamsById(match.seasonId);
+  const name = (id: string | null) => (id ? (byId.get(id)?.name ?? "?") : "?");
+  const homeWins = games.filter((g) => g.winnerTeamId === match.homeTeamId).length;
+  const awayWins = games.filter((g) => g.winnerTeamId === match.awayTeamId).length;
+  const next = games.find((g) => g.gameNumber === gameNumber + 1 && !g.blueTeamId);
+  const lines = [
+    `🏁 Game ${gameNumber}: **${name(game.winnerTeamId)}** won. Series: ${name(match.homeTeamId)} ${homeWins}–${awayWins} ${name(match.awayTeamId)}.`,
+  ];
+  if (next)
+    lines.push(`${name(next.sideChooserTeamId)} picks the side for game ${gameNumber + 1}.`);
+  try {
+    await postMessage(cfg, match.discordThreadId, lines.join(" "));
   } catch (err) {
     report.errors.push(describe(err));
   }

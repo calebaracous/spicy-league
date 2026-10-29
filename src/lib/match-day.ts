@@ -8,9 +8,11 @@ import { users } from "@/db/schema/auth";
 import { teams } from "@/db/schema/drafts";
 import { matchGames, matchRps, type MatchRps } from "@/db/schema/match-day";
 import { matches, type Match } from "@/db/schema/matches";
+import { seasons } from "@/db/schema/seasons";
 import { notifyMatchSides } from "@/lib/discord-notify";
 import { syncInBackground } from "@/lib/discord-roles";
 import { getCaptainedTeamId } from "@/lib/schedule";
+import { bestOfFor, seriesScore, type SeriesScore } from "@/lib/series";
 import {
   advanceRps,
   randomSide,
@@ -182,7 +184,14 @@ export type MatchDaySnapshot = {
     sideChosenVia: "rps" | "loser" | "auto" | "admin" | null;
     blueTeamId: string | null;
     redTeamId: string | null;
+    winnerTeamId: string | null;
+    /** Who recorded the winner (display name). */
+    resultReportedBy: string | null;
+    resultFlagged: boolean;
   }[];
+  /** Series length and the running score from game results. */
+  bestOf: number;
+  series: SeriesScore;
   viewer: MatchDayViewer & { myThrow: RpsThrow | null };
 };
 
@@ -215,7 +224,8 @@ export async function getMatchDaySnapshot(
   if (!match) return null;
   if (match.state === "scheduled") await resolveExpired(match);
 
-  const [teamRows, rps, games] = await Promise.all([
+  const [season, teamRows, rps, games] = await Promise.all([
+    db.query.seasons.findFirst({ where: eq(seasons.id, match.seasonId) }),
     db
       .select({ id: teams.id, name: teams.name })
       .from(teams)
@@ -228,7 +238,12 @@ export async function getMatchDaySnapshot(
   ]);
   const teamName = (id: string) => teamRows.find((t) => t.id === id)?.name ?? "?";
 
-  const seatIds = [rps?.homeUserId, rps?.awayUserId].filter((id): id is string => !!id);
+  // Seat holders and game-result reporters, for display names.
+  const seatIds = [
+    rps?.homeUserId,
+    rps?.awayUserId,
+    ...games.map((g) => g.resultReportedBy),
+  ].filter((id): id is string => !!id);
   const seatUsers = seatIds.length
     ? await db
         .select({ id: users.id, name: users.name, username: users.username })
@@ -241,6 +256,7 @@ export async function getMatchDaySnapshot(
     return { userId: id, name: u?.name ?? u?.username ?? "?" };
   };
 
+  const bestOf = season ? bestOfFor(season, match.stage) : 1;
   const revealed = rps?.state === "revealed" || rps?.state === "done";
   const myThrow =
     rps && viewer.userId
@@ -286,7 +302,12 @@ export async function getMatchDaySnapshot(
       sideChosenVia: g.sideChosenVia,
       blueTeamId: g.blueTeamId,
       redTeamId: g.redTeamId,
+      winnerTeamId: g.winnerTeamId,
+      resultReportedBy: seat(g.resultReportedBy)?.name ?? null,
+      resultFlagged: g.resultFlaggedAt !== null,
     })),
+    bestOf,
+    series: seriesScore(bestOf, games, match),
     viewer: { ...viewer, myThrow },
   };
 }

@@ -68,6 +68,8 @@ mentionable, which the pings below rely on.
 - **Sides**: once a game's sides are set (RPS winner's pick, or random when
   the clock ran out), the match thread gets "🔵 Game 1: X on blue, 🔴 Y on
   red" (`notifyMatchSides`, [MATCH-DAY.md](MATCH-DAY.md)).
+- **Game results**: "🏁 Game 1: X won. Series: A 1–0 B." plus who picks the
+  next side (`notifyGameResult`); a decided series then gets *confirmed*.
 - **Sub decisions**: approved / rejected / revoked, in the requesting team's
   channel.
 - **Ping the Sub list**: a button for captains (and admins) on the match

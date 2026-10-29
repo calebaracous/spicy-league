@@ -5,14 +5,16 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 
 import { db } from "@/db/client";
+import { matchGames } from "@/db/schema/match-day";
 import { matches } from "@/db/schema/matches";
 import { seasons } from "@/db/schema/seasons";
 import { requireAdmin, requireOnboarded } from "@/lib/auth-helpers";
 import { BO2_RESULTS, hasResult, type Bo2Result } from "@/lib/match-format";
-import { ensureMatchThreads, notifyMatchEvent } from "@/lib/discord-notify";
+import { notifyMatchEvent } from "@/lib/discord-notify";
 import { syncChampionRole } from "@/lib/discord-ping-roles";
-import { mergeReports, syncInBackground } from "@/lib/discord-roles";
+import { syncInBackground } from "@/lib/discord-roles";
 import { logEvent, matchEventData } from "@/lib/events";
+import { applyConfirmEffects, confirmWithResult } from "@/lib/match-results";
 import { getTeamForCaptain } from "@/lib/schedule";
 
 async function getSeasonOrFail(slug: string) {
@@ -165,52 +167,8 @@ export async function confirmMatch(slug: string, matchId: string) {
     data: await matchEventData(matchId),
   });
 
-  if (match.stage === "semis") {
-    // Check if both semis are now confirmed — if so, create the final
-    const allSemis = await db
-      .select()
-      .from(matches)
-      .where(and(eq(matches.seasonId, season.id), eq(matches.stage, "semis")));
-
-    const bothConfirmed =
-      allSemis.length === 2 && allSemis.every((m) => m.state === "confirmed" && m.winnerTeamId);
-
-    if (bothConfirmed) {
-      const existingFinal = await db.query.matches.findFirst({
-        where: and(eq(matches.seasonId, season.id), eq(matches.stage, "final")),
-      });
-      if (!existingFinal) {
-        const [s1, s2] = allSemis;
-        await db.insert(matches).values({
-          seasonId: season.id,
-          round: 201,
-          stage: "final",
-          homeTeamId: s1.winnerTeamId!,
-          awayTeamId: s2.winnerTeamId!,
-        });
-      }
-    }
-  } else if (match.stage === "final") {
-    // Final confirmed → season is complete, winner is champion
-    await db
-      .update(seasons)
-      .set({ state: "complete", championTeamId: match.winnerTeamId, updatedAt: new Date() })
-      .where(eq(seasons.id, season.id));
-    revalidatePath(`/seasons/${slug}`);
-  }
-
-  // Discord: note it in the thread; a just-created final gets its thread; a
-  // confirmed final hands out the Champion role.
-  syncInBackground(`${slug} result confirmed`, async () => {
-    const reports = [await notifyMatchEvent(matchId, "confirmed")];
-    if (match.stage === "semis") reports.push(await ensureMatchThreads(season.id));
-    if (match.stage === "final") reports.push(await syncChampionRole(season.id));
-    return mergeReports(...reports);
-  });
-
-  revalidatePath(`/seasons/${slug}/matches/${matchId}`);
-  revalidatePath(`/seasons/${slug}`);
-  revalidatePath(`/admin/seasons/${slug}/matches`);
+  // Final after both semis, champion on the final, Discord, revalidation.
+  await applyConfirmEffects(season, { ...match, state: "confirmed" });
   redirect(`/admin/seasons/${slug}/matches?saved=confirmed`);
 }
 
@@ -262,4 +220,60 @@ export async function resetMatch(slug: string, matchId: string) {
   revalidatePath(`/seasons/${slug}/matches/${matchId}`);
   revalidatePath(`/admin/seasons/${slug}/matches`);
   redirect(`/admin/seasons/${slug}/matches?saved=reset`);
+}
+
+/**
+ * Admin Edit result (match page): set each match-day game's winner and the
+ * series result, confirmed at once — whatever state the match was in. Re-runs
+ * the confirm effects, so a changed semi updates an unplayed final and a
+ * changed final re-crowns the champion. Also the fix for a wrong automatic
+ * confirm or a flagged game.
+ */
+export async function adminEditResult(slug: string, matchId: string, formData: FormData) {
+  const session = await requireAdmin();
+  const season = await getSeasonOrFail(slug);
+  const match = await db.query.matches.findFirst({
+    where: and(eq(matches.id, matchId), eq(matches.seasonId, season.id)),
+  });
+  if (!match) redirect(`/seasons/${slug}/matches?error=not-found`);
+
+  const result =
+    match.stage === "group" && season.groupBestOf === 2
+      ? readBo2Result(match, formData)
+      : readWinnerResult(match, formData);
+  if (typeof result === "string") redirect(`/seasons/${slug}/matches/${matchId}?error=${result}`);
+
+  const now = new Date();
+  const games = await db.query.matchGames.findMany({ where: eq(matchGames.matchId, matchId) });
+  for (const game of games) {
+    const key = `game-${game.gameNumber}`;
+    if (!formData.has(key)) continue;
+    const v = formData.get(key)?.toString() ?? "";
+    const winnerTeamId = v === match.homeTeamId || v === match.awayTeamId ? v : null;
+    if (winnerTeamId === game.winnerTeamId) continue;
+    await db
+      .update(matchGames)
+      .set({
+        winnerTeamId,
+        resultReportedBy: winnerTeamId ? session.user.id : null,
+        resultReportedAt: winnerTeamId ? now : null,
+        resultFlaggedBy: null,
+        resultFlaggedAt: null,
+      })
+      .where(eq(matchGames.id, game.id));
+  }
+
+  await confirmWithResult({ season, matchId, ...result, actorId: session.user.id });
+  await logEvent("match.result_edited", {
+    actorId: session.user.id,
+    seasonId: season.id,
+    data: {
+      ...(await matchEventData(matchId)),
+      score:
+        result.homeScore !== null && result.awayScore !== null
+          ? `${result.homeScore}–${result.awayScore}`
+          : null,
+    },
+  });
+  redirect(`/seasons/${slug}/matches/${matchId}?saved=result-edited`);
 }

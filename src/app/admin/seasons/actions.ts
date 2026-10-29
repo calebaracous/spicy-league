@@ -36,6 +36,9 @@ const seasonInputSchema = z
     game: gameSchema,
     // See seasons.groupBestOf. Only 1 and 2 have a reporting flow.
     groupBestOf: z.enum(["1", "2"]).transform(Number),
+    // Semifinal / final series length (PLAYOFF_BEST_OF_OPTIONS). Odd: a winner.
+    playoffBestOf: z.enum(["1", "3", "5"]).transform(Number),
+    finalBestOf: z.enum(["1", "3", "5"]).transform(Number),
     // Checkbox: "on" when ticked, absent otherwise.
     fearlessDraft: z
       .string()
@@ -78,6 +81,8 @@ function parseSeasonInput(formData: FormData) {
     slug: formData.get("slug"),
     game: formData.get("game"),
     groupBestOf: formData.get("groupBestOf"),
+    playoffBestOf: formData.get("playoffBestOf"),
+    finalBestOf: formData.get("finalBestOf"),
     fearlessDraft: formData.get("fearlessDraft"),
     description: formData.get("description"),
     rules: formData.get("rules"),

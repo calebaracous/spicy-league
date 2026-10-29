@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { users } from "@/db/schema/auth";
@@ -8,9 +8,9 @@ import { matchGames, matchRps } from "@/db/schema/match-day";
 import { matches } from "@/db/schema/matches";
 import { seasons } from "@/db/schema/seasons";
 import { requireAdmin, requireAuth } from "@/lib/auth-helpers";
-import { notifyMatchSides } from "@/lib/discord-notify";
+import { notifyGameResult, notifyMatchSides } from "@/lib/discord-notify";
 import { syncInBackground } from "@/lib/discord-roles";
-import { logEvent } from "@/lib/events";
+import { logEvent, matchEventData } from "@/lib/events";
 import {
   getMatchDaySnapshot,
   getMatchDayViewer,
@@ -18,8 +18,10 @@ import {
   settleMatchDay,
   type MatchDaySnapshot,
 } from "@/lib/match-day";
-import { isRpsThrow } from "@/lib/rps";
+import { confirmWithResult } from "@/lib/match-results";
+import { isRpsThrow, SIDE_PICK_MS } from "@/lib/rps";
 import { getCaptainedTeamId } from "@/lib/schedule";
+import { bestOfFor, loserOf, seriesScore } from "@/lib/series";
 
 // Match day actions (docs/MATCH-DAY.md). Like the 10-man actions they return
 // `{ error }` for expected failures — they're called from a client component,
@@ -51,7 +53,8 @@ async function run(matchId: string, fn: () => Promise<void>): Promise<MatchDayAc
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
-async function lockMatch(tx: Tx, slug: string, matchId: string) {
+/** Locks the match row. Only a scheduled match is open, unless `finished` is allowed. */
+async function lockMatch(tx: Tx, slug: string, matchId: string, opts = { finished: false }) {
   const season = await tx.query.seasons.findFirst({ where: eq(seasons.slug, slug) });
   if (!season) throw new MatchDayError("Season not found.");
   if (!matchDayApplies(season)) {
@@ -63,7 +66,9 @@ async function lockMatch(tx: Tx, slug: string, matchId: string) {
     .where(and(eq(matches.id, matchId), eq(matches.seasonId, season.id)))
     .for("update");
   if (!match) throw new MatchDayError("Match not found.");
-  if (match.state !== "scheduled") throw new MatchDayError("This match already has a result.");
+  if (match.state !== "scheduled" && !opts.finished) {
+    throw new MatchDayError("This match already has a result.");
+  }
   return { season, match };
 }
 
@@ -227,6 +232,138 @@ export async function pickSide(
         .where(eq(matchGames.id, game.id));
     });
     syncInBackground("match sides", () => notifyMatchSides(matchId, gameNumber));
+  });
+}
+
+/**
+ * A captain of either team (or an admin) records who won a game. Not over →
+ * the loser gets the next game's side pick (60s). Over → the match is
+ * reported and confirmed with the series score, running every confirm effect.
+ * Captains can correct a winner until the next game's sides are set; after
+ * that only an admin can (Edit result on the match page).
+ */
+export async function reportGameWinner(
+  slug: string,
+  matchId: string,
+  gameNumber: number,
+  winnerTeamId: string,
+): Promise<MatchDayActionResult> {
+  const session = await requireAuth();
+  const userId = session.user.id;
+  const isAdmin = session.user.role === "admin";
+  return run(matchId, async () => {
+    const now = new Date();
+    const finished = await db.transaction(async (tx) => {
+      const { season, match } = await lockMatch(tx, slug, matchId);
+      if (!isAdmin && !(await captainSide(season.id, match, userId))) {
+        throw new MatchDayError("Only the two teams' captains can record results.");
+      }
+      if (winnerTeamId !== match.homeTeamId && winnerTeamId !== match.awayTeamId) {
+        throw new MatchDayError("Pick one of the two teams.");
+      }
+      await settleMatchDay(tx, match, now);
+      const games = await tx
+        .select()
+        .from(matchGames)
+        .where(eq(matchGames.matchId, matchId))
+        .orderBy(asc(matchGames.gameNumber));
+      const game = games.find((g) => g.gameNumber === gameNumber);
+      if (!game?.blueTeamId) throw new MatchDayError("That game's sides aren't set yet.");
+      if (game.winnerTeamId === winnerTeamId) return null;
+      const next = games.find((g) => g.gameNumber === gameNumber + 1);
+      if (game.winnerTeamId && next?.blueTeamId && !isAdmin) {
+        throw new MatchDayError(
+          `Game ${gameNumber + 1} has started, so ask an admin to correct game ${gameNumber}.`,
+        );
+      }
+      // A corrected result moves the next side pick to the new loser.
+      if (next && !next.blueTeamId) await tx.delete(matchGames).where(eq(matchGames.id, next.id));
+
+      await tx
+        .update(matchGames)
+        .set({
+          winnerTeamId,
+          resultReportedBy: userId,
+          resultReportedAt: now,
+          resultFlaggedBy: null,
+          resultFlaggedAt: null,
+        })
+        .where(eq(matchGames.id, game.id));
+      const results = games.map((g) => (g.id === game.id ? { ...g, winnerTeamId } : g));
+      const score = seriesScore(bestOfFor(season, match.stage), results, match);
+      if (!score.over && !(next && next.blueTeamId)) {
+        await tx.insert(matchGames).values({
+          matchId,
+          gameNumber: gameNumber + 1,
+          sideChooserTeamId: loserOf(winnerTeamId, match),
+          sideDeadline: new Date(now.getTime() + SIDE_PICK_MS),
+        });
+      }
+      return { season, score };
+    });
+    if (!finished) return;
+    const { season, score } = finished;
+    await logEvent("match.game_result", {
+      actorId: userId,
+      seasonId: season.id,
+      data: { ...(await matchEventData(matchId)), gameNumber },
+    });
+    syncInBackground("game result", () => notifyGameResult(matchId, gameNumber));
+    if (score.over) {
+      // The series is decided: report + confirm it with the game count.
+      await confirmWithResult({
+        season,
+        matchId,
+        winnerTeamId: score.winnerTeamId,
+        homeScore: score.homeWins,
+        awayScore: score.awayWins,
+        actorId: userId,
+      });
+      await logEvent("match.confirmed", {
+        actorId: userId,
+        seasonId: season.id,
+        data: { ...(await matchEventData(matchId)), auto: true },
+      });
+    }
+  });
+}
+
+/**
+ * A captain disputes a recorded game result. It stays in place; admins see
+ * the flag (events inbox, match page) and fix it with Edit result. Works after
+ * the match was confirmed too — that's when it matters most.
+ */
+export async function flagGameResult(
+  slug: string,
+  matchId: string,
+  gameNumber: number,
+): Promise<MatchDayActionResult> {
+  const session = await requireAuth();
+  const userId = session.user.id;
+  return run(matchId, async () => {
+    const seasonId = await db.transaction(async (tx) => {
+      const { season, match } = await lockMatch(tx, slug, matchId, { finished: true });
+      if (!(await captainSide(season.id, match, userId))) {
+        throw new MatchDayError("Only the two teams' captains can flag a result.");
+      }
+      const [game] = await tx
+        .select()
+        .from(matchGames)
+        .where(and(eq(matchGames.matchId, matchId), eq(matchGames.gameNumber, gameNumber)));
+      if (!game?.winnerTeamId) throw new MatchDayError("That game has no result to flag.");
+      if (game.resultFlaggedAt) return null;
+      await tx
+        .update(matchGames)
+        .set({ resultFlaggedBy: userId, resultFlaggedAt: new Date() })
+        .where(eq(matchGames.id, game.id));
+      return season.id;
+    });
+    if (!seasonId) return;
+    await logEvent("match.game_result_flagged", {
+      actorId: userId,
+      seasonId,
+      data: { ...(await matchEventData(matchId)), gameNumber },
+    });
   });
 }
 

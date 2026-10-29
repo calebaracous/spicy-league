@@ -52,11 +52,33 @@ export const GROUP_BEST_OF_OPTIONS = [
   { value: 2, label: "Best of 2 (2–0, 1–1 draw or 0–2)" },
 ] as const;
 
+/** "Best of 3". */
+export function bestOfLabel(n: number): string {
+  return `Best of ${n}`;
+}
+
+/**
+ * Admin season form options for `seasons.playoffBestOf` (semis) and
+ * `seasons.finalBestOf`. Odd only: a playoff series needs a winner.
+ */
+export const PLAYOFF_BEST_OF_OPTIONS = [1, 3, 5].map((value) => ({
+  value,
+  label: bestOfLabel(value),
+}));
+
+type SeasonFormat = { groupBestOf: number; playoffBestOf: number; finalBestOf: number };
+
 /** One-line season format, for the home page and season page. */
-export function formatStructure(groupBestOf: number): string {
-  return groupBestOf === 2
-    ? "Round-robin group stage of best-of-2 series (1–1 draws count), then the top 4 play single-elimination playoffs"
-    : "Round-robin group stage, then the top 4 play single-elimination playoffs";
+export function formatStructure(season: SeasonFormat): string {
+  const group =
+    season.groupBestOf === 2
+      ? "Round-robin group stage of best-of-2 series (1–1 draws count)"
+      : "Round-robin group stage";
+  const playoffs =
+    season.playoffBestOf === season.finalBestOf
+      ? `best-of-${season.finalBestOf} semifinals and final`
+      : `best-of-${season.playoffBestOf} semifinals, best-of-${season.finalBestOf} final`;
+  return `${group}, then the top 4 play single-elimination playoffs (${playoffs})`;
 }
 
 /**

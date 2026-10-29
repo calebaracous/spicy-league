@@ -68,6 +68,17 @@ export const matchGames = pgTable(
     sideChosenAt: timestamp("side_chosen_at", { mode: "date" }),
     blueTeamId: text("blue_team_id").references(() => teams.id, { onDelete: "set null" }),
     redTeamId: text("red_team_id").references(() => teams.id, { onDelete: "set null" }),
+    // Game result (phase 2): any captain of either team or an admin records
+    // it; the other team can flag it for an admin.
+    winnerTeamId: text("winner_team_id").references(() => teams.id, { onDelete: "set null" }),
+    resultReportedBy: text("result_reported_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    resultReportedAt: timestamp("result_reported_at", { mode: "date" }),
+    resultFlaggedBy: text("result_flagged_by").references(() => users.id, {
+      onDelete: "set null",
+    }),
+    resultFlaggedAt: timestamp("result_flagged_at", { mode: "date" }),
     // Riot Tournament API (phase 6).
     tournamentCode: text("tournament_code"),
     riotMatchId: text("riot_match_id"),

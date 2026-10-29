@@ -57,6 +57,7 @@ for real seasons, and delete it (`delete from users where username =
 - `discord-ticker.test.ts` — `plainMessageText` (mentions, markdown, spoilers, timestamps, truncation) and `tickerItems` (which messages the home-page ticker shows)
 - `discord-verify.test.ts` — Ed25519 interaction signatures (real key pair)
 - `rps.test.ts` — RPS outcomes and the lazy state machine (reveal, void replay + AFK reset, catch-up)
+- `series.test.ts` — `bestOfFor` per stage, `seriesScore` (Bo1, Bo2 draw, Bo3/Bo5 majority), `loserOf`
 - `draft-room.test.ts` — 20-step draft order, fearless availability, timeout resolution, Data Dragon parsing
 
 `src/lib/draft.ts`, `schedule.ts` and other server modules import `server-only`, which throws
@@ -194,6 +195,12 @@ as duo captains, away = P2) and drives [MATCH-DAY.md](MATCH-DAY.md):
   `sideChosenVia = 'rps'`.
 - A captain who doesn't throw: the 10s clock runs out, the round is void
   ("No throw", roast naming them) and round 2 starts. ~25s of real waiting.
+- Bo3 semi (game 1 sides seeded, RPS skipped): away wins game 1 → home (the
+  loser) picks game 2's side; game 2 recorded wrong, corrected by the other
+  captain while game 3's side pick is open → 0–2 confirms the match
+  (`state`, winner, scores, game 3 row gone); the losing captain flags game
+  2 after the confirm; the admin's Edit result sets game 2 + series 2–1,
+  confirms and clears the flag.
 - A late admin pick (admin board frozen at pick 1 after the captain has
   picked) is rejected with `stale-pick`, not credited to the next captain.
 - Two picks at the same moment (captain + admin): exactly one lands as

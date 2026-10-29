@@ -32,6 +32,7 @@ Trivial shadcn primitives get a single entry at the bottom.
 - `tests/unit/opgg.test.ts` — OP.GG URL derivation from Riot IDs.
 - `tests/unit/player-stats.test.ts` — directory W–D–L tallies (subs, sat-out, Bo2 draws, 10-man) and rank helpers (`bestRankPerUser`).
 - `tests/unit/season-schedule.test.ts` — `seasonSchedule` ordering, skipping unset dates, group stage range.
+- `tests/unit/series.test.ts` — `bestOfFor`, `seriesScore`, `loserOf`.
 - `tests/unit/rps.test.ts` — RPS outcomes and the lazy state machine (reveal, void replay, AFK reset, catch-up).
 - `tests/unit/draft-room.test.ts` — draft sequence, fearless availability, timeouts, Data Dragon parsing.
 - `tests/unit/standings.test.ts` — `rankStandings`: Bo2 points, head-to-head, series wins, tiebreaker games, shared ranks.
@@ -90,13 +91,13 @@ Rendered by `src/app/page.tsx`:
 - `src/app/seasons/[slug]/matches/sub-actions.ts` — `requestSub`, `withdrawSub`, `decideSub` (approve / reject / revoke), `pingSubListAction` (Discord Sub list ping).
 - `src/app/seasons/[slug]/matches/[matchId]/_components/lineups.tsx` — `MatchLineups`: rosters with subs, sub requests, request form.
 - `src/app/seasons/[slug]/matches/[matchId]/_components/match-day.tsx` — `MatchDayCard`: live RPS side select (ready up, throws + countdown, reveal/roast, blue/red pick). See [MATCH-DAY.md](MATCH-DAY.md).
-- `src/app/seasons/[slug]/matches/match-day-actions.ts` — `readyRps`, `unreadyRps`, `throwRps`, `pickSide`, `adminResetMatchDay` (return `{ error }`, lock the match row, settle deadlines first).
+- `src/app/seasons/[slug]/matches/match-day-actions.ts` — `readyRps`, `unreadyRps`, `throwRps`, `pickSide`, `reportGameWinner` (auto-confirms a decided series), `flagGameResult`, `adminResetMatchDay` (return `{ error, snap }`, lock the match row, settle deadlines first).
 - `src/app/api/matches/[matchId]/stream/route.ts` — match-day SSE stream (1s live / 2s idle, per-viewer snapshot).
 - `src/app/users/[username]/_components/match-history.tsx` — profile match history list (Sub / Sat out tags).
 - `src/app/seasons/[slug]/teams/page.tsx` — team rosters with roles, record, "Your team" highlight. Captains (and admins) get a "Rename team" form on their card.
 - `src/app/seasons/[slug]/teams/actions.ts` — `renameTeam`: captain of that team (until complete) or admin; name rules + per-season uniqueness; renames the Discord role/channels in the background.
 - `src/app/seasons/[slug]/matches/page.tsx` — standings (W/D/L + maps for Bo2, shared ranks, playoff cut line, tiebreak footnote), bracket (`BracketCard`), tiebreaker list, schedule with times (`MatchLine`).
-- `src/app/seasons/[slug]/matches/actions.ts` — `reportMatch`, `confirmMatch` (writes `championTeamId` on the final), `disputeMatch`, `resetMatch`. See [MATCHES.md](MATCHES.md).
+- `src/app/seasons/[slug]/matches/actions.ts` — `reportMatch`, `confirmMatch` (effects via `applyConfirmEffects`), `adminEditResult` (match page Edit result: game winners + series, confirmed at once), `disputeMatch`, `resetMatch`. See [MATCHES.md](MATCHES.md).
 - `src/app/seasons/[slug]/matches/[matchId]/page.tsx` — match detail + report form.
 
 ## 10-man (`src/app/10-man/`) — see [TEN-MAN.md](TEN-MAN.md)
@@ -189,7 +190,7 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/prize-pool.ts` — `prizePayouts` (dollars per place from `seasons.prizePool` / `prizeSplit`), `parsePrizeSplit` ("75/25"), `formatPrizeSplit`, `formatUsd`, `describePayouts`.
 - `src/lib/draft.ts` — `TEAM_SIZE`, `PICKS_PER_TEAM`, `picksForTeam`, `snakeOrder` (skips full teams), `groupCaptainTeams` / `loadCaptainTeams` (solo + duo captains), `teamForPick`, `totalPicks`, `getDraftSnapshot` (incl. solo-queue rank per pool player), `finalizeDraft`. See [DRAFT.md](DRAFT.md).
 - `src/lib/standings.ts` — pure `rankStandings`: points (2/1/0), head-to-head mini-table, series wins, game diff, tiebreaker games; shared ranks + `tiebreakersNeeded`. `PLAYOFF_SPOTS`.
-- `src/lib/match-format.ts` — pure: `isDraw` / `hasResult` / `resultFor`, `BO2_RESULTS`, `GROUP_BEST_OF_OPTIONS`, `formatStructure`, `FEARLESS_DRAFT_RULE` / `fearlessApplies`, `roundLabel`.
+- `src/lib/match-format.ts` — pure: `isDraw` / `hasResult` / `resultFor`, `BO2_RESULTS`, `GROUP_BEST_OF_OPTIONS` / `PLAYOFF_BEST_OF_OPTIONS`, `bestOfLabel`, `formatStructure(season)`, `FEARLESS_DRAFT_RULE` / `fearlessApplies`, `roundLabel`.
 - `src/lib/schedule.ts` — `buildRoundRobin` (circle method), `generateSchedule`, `computeStandings` (DB wrapper around `rankStandings`), `seedPlayoffs` (refuses with `needs-tiebreaker`), `createTiebreakers`, `getTeamForCaptain` (captain *or* rostered member), `getCaptainedTeamId` (captains only, either of a duo). See [MATCHES.md](MATCHES.md).
 - `src/lib/homepage.ts` — `getHomepageData()` (discriminated union of 6 home states), podium builder.
 - `src/lib/rank.ts` — pure LoL rank helpers: `formatRank` ("Gold II · 45 LP"), `formatTier` ("Gold II"), `rankScore` (lower = better), `bestRankPerUser` (best solo rank across a user's linked accounts — use it anywhere one rank per player is shown), `capitalize`.
@@ -197,6 +198,8 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/players.ts` — `getPlayerDirectory()`: onboarded users A–Z with career stats, from whole-table queries tallied in memory.
 - `src/lib/backdrop-clips.ts` — home-row backdrop clip registry (`backdropClip(game, index)`, `placeholderBackdrop(game)` for the still-art "Signups open" row, `otherGame`). LoL clips `lol-1..3` are live (`loopSources(id)` → WebM + MP4); CS2 clips still have `sources: []`.
 - `src/lib/live-season.ts` — `getLiveSeason`, `LIVE_STATE_COPY`, `liveSeasonHref`. Used by header pill + home hero.
+- `src/lib/series.ts` — pure: `bestOfFor(season, stage)`, `seriesScore` (Bo2 plays both; odd lengths stop at a majority), `loserOf`.
+- `src/lib/match-results.ts` — `applyConfirmEffects` (final after both semis, re-teams an unplayed final, champion, Discord, revalidation) and `confirmWithResult` (set + confirm in one go); used by `confirmMatch`, match day's auto-confirm and `adminEditResult`.
 - `src/lib/rps.ts` — pure RPS rules: `roundOutcome`, `advanceRps` / `settleRps` (lazy deadline state machine), timings, `griefLine`, `randomSide`.
 - `src/lib/match-day.ts` — `settleMatchDay` (apply lapsed deadlines under the match lock), `resolveExpired` (SKIP LOCKED), `getMatchDaySnapshot` (per viewer, throws hidden until reveal), `getMatchDayViewer`, `matchDayApplies`, `matchDayIsHot`.
 - `src/lib/draft-room.ts` — pure draft-room rules (phase 3, not wired): `DRAFT_SEQUENCE`, availability incl. fearless, `resolveTimeout`, `draftBoard`, `championIconUrl`.

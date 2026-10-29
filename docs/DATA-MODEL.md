@@ -45,6 +45,8 @@ files are in git history before the squash commit):
 - `0015_fearless_draft.sql` — `seasons.fearless_draft` (boolean, default false).
 - `0016_match_day.sql` — `match_rps`, `match_games` (+ enums `rps_state`,
   `rps_throw`, `side_chosen_via`) and `users.stats_opt_in_at`.
+- `0017_match_games_results.sql` — seasons.playoff_best_of / final_best_of;
+  match_games result columns (see match-day.ts section).
 
 **Why the baseline's `when` is old.** Drizzle's migrator applies a journal
 entry only if its `when` is greater than the newest `created_at` in
@@ -159,6 +161,11 @@ Auth, not queried directly by app code.
   reported as 2–0 / 1–1 / 0–2 where 1–1 is a draw. Edited in the admin
   season form (`GROUP_BEST_OF_OPTIONS`). See [MATCHES.md](MATCHES.md) →
   Group format.
+- `playoffBestOf` int, default 3, and `finalBestOf` int, default 5
+  (migration `0017_match_games_results`) — semifinal and final series
+  length, 1 / 3 / 5. Edited in the admin season form
+  (`PLAYOFF_BEST_OF_OPTIONS`). See [MATCHES.md](MATCHES.md) → Playoff
+  series length.
 - `prizePool` int (whole dollars) + `prizeSplit` int[] (percent per place,
   1st first, sums to 100), both nullable (migration `0014_prize_pool`).
   Null pool = no prize pool; the admin form only saves a split alongside a
@@ -292,8 +299,11 @@ cascade from `matches`; team/user FKs are `set null`.
 - `match_games` — one row per game, unique `(matchId, gameNumber)`.
   `sideChooserTeamId`, `sideDeadline`, `sideChosenVia` (`rps | loser | auto
   | admin`), `sideChosenBy`, `sideChosenAt`, `blueTeamId` / `redTeamId`
-  (null until chosen). `tournamentCode` / `riotMatchId` reserved for the
-  Riot Tournament API. Game 1 is inserted when RPS finishes.
+  (null until chosen); since `0017`: `winnerTeamId`, `resultReportedBy` /
+  `resultReportedAt`, `resultFlaggedBy` / `resultFlaggedAt`.
+  `tournamentCode` / `riotMatchId` reserved for the Riot Tournament API.
+  Game 1 is inserted when RPS finishes; game N+1 when game N's winner is
+  recorded and the series isn't decided.
 
 ## stats.ts — accountLinks, riotStatSnapshots, leetifyStatSnapshots
 

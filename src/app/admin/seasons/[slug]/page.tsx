@@ -26,7 +26,7 @@ import { formatPrizeSplit } from "@/lib/prize-pool";
 import { FlashToast } from "@/components/flash-toast";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { GAME_LABELS, SEASON_STATE_LABELS, nextStates } from "@/lib/seasons";
-import { GROUP_BEST_OF_OPTIONS } from "@/lib/match-format";
+import { GROUP_BEST_OF_OPTIONS, PLAYOFF_BEST_OF_OPTIONS } from "@/lib/match-format";
 import { discordConfig } from "@/lib/discord-api";
 import { getDiscordRoster } from "@/lib/discord-admin";
 import { cn } from "@/lib/utils";
@@ -341,6 +341,43 @@ export default async function EditSeasonPage({
               </select>
               <p className="text-muted-foreground text-xs">
                 Set before group results come in: it changes how matches are reported and ranked.
+              </p>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label htmlFor="playoffBestOf">Semifinal series</Label>
+                <select
+                  id="playoffBestOf"
+                  name="playoffBestOf"
+                  required
+                  defaultValue={String(season.playoffBestOf)}
+                  className="border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
+                >
+                  {PLAYOFF_BEST_OF_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="finalBestOf">Final series</Label>
+                <select
+                  id="finalBestOf"
+                  name="finalBestOf"
+                  required
+                  defaultValue={String(season.finalBestOf)}
+                  className="border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
+                >
+                  {PLAYOFF_BEST_OF_OPTIONS.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-muted-foreground text-xs sm:col-span-2">
+                Shown in the season format and on playoff match pages.
               </p>
             </div>
             <label className="flex items-start gap-2 text-sm">

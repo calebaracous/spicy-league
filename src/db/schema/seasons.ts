@@ -48,6 +48,10 @@ export const seasons = pgTable(
     // Group-stage series length. 1 = report a winner (+ optional score);
     // 2 = Bo2 series, reported as 2–0 / 1–1 / 0–2, and a 1–1 is a draw.
     groupBestOf: integer("group_best_of").notNull().default(1),
+    // Playoff series lengths (semis, final). Match day ends a series once a
+    // team has a majority (docs/MATCH-DAY.md); reporting is winner + score.
+    playoffBestOf: integer("playoff_best_of").notNull().default(3),
+    finalBestOf: integer("final_best_of").notNull().default(5),
     // Fearless draft: a champion picked in one game of a series can't be
     // picked again by either team in that series. Display only (the site
     // doesn't run champ select); shown wherever the series format is.

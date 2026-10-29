@@ -24,8 +24,8 @@ game N played in the LoL client (tournament code) ─▶ Riot callback records t
 Games per match: group = `seasons.groupBestOf` (Bo2 always plays both);
 tiebreaker = 1; semis = new `seasons.playoffBestOf` (default 3); final = new
 `seasons.finalBestOf` (default 5). Bo3/Bo5 end early once a team has a
-majority. `gamesForMatch(season, match)` + `seriesOver(games)` in
-`src/lib/match-format.ts`.
+majority. `bestOfFor(season, stage)` + `seriesScore(bestOf, games, teams)` in
+`src/lib/series.ts`.
 
 ## Decisions (agreed 2026-10-28)
 

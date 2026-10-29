@@ -61,6 +61,9 @@ export const EVENT_TYPES = {
   "match.disputed": "matches",
   "match.reset": "matches",
   "match.side_select_reset": "matches",
+  "match.game_result": "matches",
+  "match.game_result_flagged": "matches",
+  "match.result_edited": "matches",
   "sub.requested": "matches",
   "sub.withdrawn": "matches",
   "sub.decided": "matches",
@@ -162,6 +165,8 @@ const FIELD_LABELS: Record<string, string> = {
   semisAt: "Semis",
   finalAt: "Final",
   groupBestOf: "Group best-of",
+  playoffBestOf: "Semis best-of",
+  finalBestOf: "Final best-of",
   fearlessDraft: "Fearless draft",
   prizePool: "Prize pool ($)",
   prizeSplit: "Payout split (%)",
@@ -309,6 +314,12 @@ export function describeEvent(e: EventView): Segment[] {
       return match("reset");
     case "match.side_select_reset":
       return match("reset side selection for");
+    case "match.game_result":
+      return match(`recorded game ${str(d.gameNumber)} of`);
+    case "match.game_result_flagged":
+      return match(`flagged the game ${str(d.gameNumber)} result of`);
+    case "match.result_edited":
+      return match("edited the result of");
     case "sub.requested":
       return [...match("requested a sub for"), " (", subject, ")"];
     case "sub.withdrawn":

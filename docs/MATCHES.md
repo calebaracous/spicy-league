@@ -26,10 +26,12 @@ One `matches` table covers group, tiebreaker, semis, final. Key fields:
 
 ## Side selection
 
-LoL matches get a live rock-paper-scissors card on the match page: the
-winner picks blue/red for game 1. Separate tables (`match_rps`,
-`match_games`), its own actions and SSE stream — see
-[MATCH-DAY.md](MATCH-DAY.md).
+LoL matches get a live "Match day" card on the match page: rock paper
+scissors decides who picks blue/red for game 1, captains record each game's
+winner, the loser picks the next side, and a decided series **reports and
+confirms itself** (game count as the score) through the same confirm effects
+as the admin button. Separate tables (`match_rps`, `match_games`), its own
+actions and SSE stream — see [MATCH-DAY.md](MATCH-DAY.md).
 
 ## Group format (`seasons.groupBestOf`)
 
@@ -41,8 +43,20 @@ Per season, set in the admin season form (migration `0007_group_bo2`):
 
 Playoffs and tiebreakers always report a winner, whatever this is set to.
 Change it before group results come in — it changes how matches are reported
-and ranked. Copy that describes the format comes from `formatStructure()`
-(home upcoming section, season page header).
+and ranked. Copy that describes the format comes from `formatStructure(season)`
+(home upcoming section, season page header), which also names the playoff
+lengths below.
+
+## Playoff series length (`seasons.playoffBestOf`, `seasons.finalBestOf`)
+
+Per season, two admin season form selects (Semifinal series / Final series,
+`PLAYOFF_BEST_OF_OPTIONS`: Bo1 / Bo3 / Bo5, odd so there is always a
+winner). Defaults: semis Bo3, final Bo5 (migration
+`0017_match_games_results`, [design/MATCH-DAY.md](design/MATCH-DAY.md)
+decision 12). Shown in `formatStructure` ("…playoffs (best-of-3 semifinals,
+best-of-5 final)") and the match page subtitle (`bestOfLabel`, " · Best of
+N" on semis and the final). Reporting is unchanged: playoffs report a winner
+plus an optional score.
 
 ## Fearless draft (`seasons.fearlessDraft`)
 
@@ -115,14 +129,25 @@ All transitions are server actions in
   winner, or a draw). The admin UI only offers Confirm on `reported`
   matches, which always have one.
 - Sets `state = 'confirmed'`, stamps `confirmedAt`.
-- **Branches on stage**:
+- Then `applyConfirmEffects(season, match)` (`src/lib/match-results.ts`),
+  shared with match day's automatic confirm and admin Edit result:
   - If the match is a **semi**: check both semis are now confirmed with
     winners. If so, create the final as `round=201, stage='final',
-    home=semi1.winner, away=semi2.winner`. Idempotent (bails if final
-    already exists).
+    home=semi1.winner, away=semi2.winner` (semis ordered by round).
+    Idempotent. If the final exists but is still `scheduled` and an edit
+    changed a semi's winner, the final's teams are updated; a final with a
+    result is left alone (reset it first).
   - If the match is the **final**: set the enclosing `seasons.state` to
     `complete` and `seasons.championTeamId` to the winner. The season is
     now over.
+
+### `adminEditResult(slug, matchId, formData)` — admin only
+The match page's "Edit result" form (admins see it instead of Report
+result, in any state). Same series-result fields and validation as
+`reportMatch`, plus each match-day game's winner. Saves and confirms in one
+go via `confirmWithResult` → `applyConfirmEffects`; logs
+`match.result_edited`. The fix for a wrong automatic confirm or a flagged
+game — see [MATCH-DAY.md](MATCH-DAY.md).
 
 ### `disputeMatch(slug, matchId)` — admin only
 Resets `winnerTeamId`, `homeScore`, `awayScore` to null and sets

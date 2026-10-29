@@ -48,9 +48,7 @@ export function UpcomingSection({ season }: UpcomingSectionProps) {
                 </div>
                 <div>
                   <span style={{ color: "var(--muted)" }}>Structure: </span>
-                  <span style={{ color: "var(--text)" }}>
-                    {formatStructure(season.groupBestOf)}
-                  </span>
+                  <span style={{ color: "var(--text)" }}>{formatStructure(season)}</span>
                 </div>
                 {season.fearlessDraft && (
                   <div>

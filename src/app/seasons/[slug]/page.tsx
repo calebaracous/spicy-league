@@ -301,7 +301,7 @@ export default async function SeasonDetailPage({
         ) : null}
         <p className="text-sm">
           <span className="text-muted-foreground">Format: </span>
-          {formatStructure(season.groupBestOf)}.
+          {formatStructure(season)}.
         </p>
         {season.fearlessDraft ? (
           <p className="text-sm">

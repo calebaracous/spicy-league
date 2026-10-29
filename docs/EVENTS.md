@@ -49,7 +49,8 @@ Where each type is logged:
 | Draft | `draft.started/paused/resumed/pick/undo` | `src/app/seasons/[slug]/draft/actions.ts` |
 | Matches | `schedule.generated`, `playoffs.seeded`, `tiebreakers.created` | `src/app/admin/seasons/[slug]/matches/actions.ts` |
 | | `match.reported/confirmed/disputed/reset` | `src/app/seasons/[slug]/matches/actions.ts` |
-| | `match.side_select_reset` (admin wiped RPS + game sides) | `src/app/seasons/[slug]/matches/match-day-actions.ts` |
+| | `match.side_select_reset` (admin wiped RPS + game sides), `match.game_result` / `match.game_result_flagged` (`gameNumber`), `match.confirmed` with `auto: true` when a series decides itself | `src/app/seasons/[slug]/matches/match-day-actions.ts` |
+| | `match.result_edited` (admin Edit result, with `score`) | `src/app/seasons/[slug]/matches/actions.ts` |
 | | `sub.requested/withdrawn/decided/pinged` | `src/app/seasons/[slug]/matches/sub-actions.ts` |
 | | `team.renamed` | `src/app/seasons/[slug]/teams/actions.ts` |
 | 10-man | `tenman.started/cancelled/joined/left/pick/result` | `src/app/10-man/actions.ts` |

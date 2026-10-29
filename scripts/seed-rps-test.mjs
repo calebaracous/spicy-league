@@ -1,5 +1,5 @@
 // Seed (or reset) a match-day test season on STAGING, for trying RPS side
-// select by hand (docs/MATCH-DAY.md):
+// select and game results by hand (docs/MATCH-DAY.md):
 //
 //   node scripts/seed-rps-test.mjs
 //
@@ -7,8 +7,9 @@
 // password TEST_CAPTAIN_PASSWORD from .env.development.local (generated and
 // appended on first run, never printed). Season `rps-test` (LoL, group stage)
 // has Team A (rps_cap_a, plus claudius as duo co-captain if that account
-// exists) vs Team B (rps_cap_b) in three scheduled matches. Re-running resets
-// those matches to scheduled and wipes their RPS / side data.
+// exists) vs Team B (rps_cap_b) in three scheduled matches: two best-of-2
+// group matches and a best-of-3 semifinal. Re-running resets those matches to
+// scheduled and wipes their RPS / side / game data.
 //
 // Refuses to run against the production DATABASE_URL.
 import { appendFileSync, existsSync, readFileSync } from "node:fs";
@@ -96,17 +97,27 @@ async function upsertTeam(name, captainId, coCaptainId) {
   return team.id;
 }
 
+// Bo2 groups (always two games, 1–1 draws) and Bo3 semis, re-applied each run.
+await sql`update seasons set group_best_of = 2, playoff_best_of = 3 where id = ${season.id}`;
+
 const teamA = await upsertTeam("Team A", capA, claudius?.id ?? null);
 const teamB = await upsertTeam("Team B", capB, null);
 
 const existingMatches = await sql`select id from matches where season_id = ${season.id}`;
 if (existingMatches.length === 0) {
-  for (const round of [1, 2, 3]) {
+  for (const [round, stage] of [
+    [1, "group"],
+    [2, "group"],
+    [101, "semis"],
+  ]) {
     await sql`insert into matches (id, season_id, round, stage, home_team_id, away_team_id)
-              values (${randomUUID()}, ${season.id}, ${round}, 'group', ${teamA}, ${teamB})`;
+              values (${randomUUID()}, ${season.id}, ${round}, ${stage}, ${teamA}, ${teamB})`;
   }
 } else {
   const ids = existingMatches.map((m) => m.id);
+  // Older seeds made three group matches; the last becomes the semi.
+  await sql`update matches set stage = 'semis', round = 101
+            where season_id = ${season.id} and round = 3`;
   await sql.transaction([
     sql`delete from match_games where match_id = any(${ids})`,
     sql`delete from match_rps where match_id = any(${ids})`,
@@ -117,11 +128,14 @@ if (existingMatches.length === 0) {
 }
 
 const matches =
-  await sql`select id, round from matches where season_id = ${season.id} order by round`;
+  await sql`select id, round, stage from matches where season_id = ${season.id} order by round`;
 const base = process.env.NEXT_PUBLIC_APP_URL?.includes("localhost")
   ? "https://spicy-league-git-staging-calebaracous-projects.vercel.app"
   : (process.env.NEXT_PUBLIC_APP_URL ?? "");
 console.log(
   `Season ${SLUG}: Team A (rps_cap_a${claudius ? " + claudius" : ""}) vs Team B (rps_cap_b).`,
 );
-for (const m of matches) console.log(`  Round ${m.round}: ${base}/seasons/${SLUG}/matches/${m.id}`);
+for (const m of matches) {
+  const label = m.stage === "semis" ? "Semifinal (Bo3)" : `Round ${m.round} (Bo2)`;
+  console.log(`  ${label}: ${base}/seasons/${SLUG}/matches/${m.id}`);
+}

@@ -1,16 +1,20 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState, useTransition } from "react";
 
 import { LiveStatusDot } from "@/components/live-status";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSnapshotStream } from "@/components/use-turn-alert";
 import type { MatchDaySnapshot } from "@/lib/match-day";
+import { bestOfLabel } from "@/lib/match-format";
 import { griefLine, RPS_THROWS, type RpsRound, type RpsThrow } from "@/lib/rps";
 import {
   adminResetMatchDay,
+  flagGameResult,
   pickSide,
+  reportGameWinner,
   readyRps,
   throwRps,
   unreadyRps,
@@ -35,7 +39,8 @@ type Snap = MatchDaySnapshot;
 /** Where the card is; an error from an earlier phase stops showing once it moves on. */
 function phaseKey(snap: Snap): string {
   const r = snap.rps;
-  return `${r?.state ?? "none"}:${r?.round ?? 0}:${snap.games.map((g) => g.blueTeamId ?? "-").join()}`;
+  const games = snap.games.map((g) => `${g.blueTeamId ?? "-"}/${g.winnerTeamId ?? "-"}`);
+  return `${r?.state ?? "none"}:${r?.round ?? 0}:${games.join()}`;
 }
 
 /** Runs an action and applies the snapshot it returns straight away. */
@@ -112,28 +117,66 @@ export function MatchDayCard({
   const liveStatus = useSnapshotStream<Snap>(`/api/matches/${matchId}/stream`, apply);
   const { pending, error, run } = useAction(snap, apply);
 
-  const game1 = snap.games.find((g) => g.gameNumber === 1) ?? null;
+  // Only this card is live. When the series decides itself the rest of the
+  // page (status badge, Result card, sub form, report form) is stale, so
+  // re-render it once the match closes.
+  const router = useRouter();
+  const wasOpen = useRef(snap.open);
+  useEffect(() => {
+    if (wasOpen.current && !snap.open) router.refresh();
+    wasOpen.current = snap.open;
+  }, [snap.open, router]);
+
+  // The game whose side is being picked, else the one being played.
+  const sidePick = snap.games.find((g) => !g.blueTeamId) ?? null;
+  const current = snap.games.find((g) => g.blueTeamId && !g.winnerTeamId) ?? null;
+  const { series } = snap;
   const teamName = (id: string | null) =>
     id === snap.home.teamId ? snap.home.name : id === snap.away.teamId ? snap.away.name : "?";
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-3">
-        <CardTitle className="text-base">Side selection</CardTitle>
+        <CardTitle className="text-base">Match day</CardTitle>
         {snap.open ? <LiveStatusDot status={liveStatus} /> : null}
       </CardHeader>
       <CardContent className="space-y-4 text-sm">
-        {game1?.blueTeamId ? (
-          <SidesSet snap={snap} teamName={teamName} />
-        ) : game1 ? (
+        {series.played > 0 ? (
+          <p className="text-center text-base">
+            {bestOfLabel(snap.bestOf)} · {snap.home.name}{" "}
+            <span className="font-semibold tabular-nums">
+              {series.homeWins}–{series.awayWins}
+            </span>{" "}
+            {snap.away.name}
+            {series.over ? (
+              <span className="text-muted-foreground block text-sm">
+                {series.winnerTeamId
+                  ? `${teamName(series.winnerTeamId)} win the series.`
+                  : "Series drawn."}{" "}
+                {snap.open ? "" : "Result confirmed."}
+              </span>
+            ) : null}
+          </p>
+        ) : null}
+
+        {snap.open && sidePick ? (
           <SidePick
             snap={snap}
-            game={game1}
+            game={sidePick}
             teamName={teamName}
             pending={pending}
-            onPick={(side) => run(() => pickSide(slug, matchId, 1, side))}
+            onPick={(side) => run(() => pickSide(slug, matchId, sidePick.gameNumber, side))}
           />
-        ) : !snap.open ? (
+        ) : snap.open && current ? (
+          <ResultPrompt
+            snap={snap}
+            game={current}
+            pending={pending}
+            onReport={(winner) =>
+              run(() => reportGameWinner(slug, matchId, current.gameNumber, winner))
+            }
+          />
+        ) : snap.games.length > 0 ? null : !snap.open ? (
           <p className="text-muted-foreground">No side selection was played for this match.</p>
         ) : snap.rps && (snap.rps.state === "throwing" || snap.rps.state === "revealed") ? (
           <RpsRoundView
@@ -150,6 +193,16 @@ export function MatchDayCard({
           />
         )}
 
+        {snap.games.some((g) => g.blueTeamId) ? (
+          <GamesList
+            snap={snap}
+            teamName={teamName}
+            pending={pending}
+            onReport={(n, winner) => run(() => reportGameWinner(slug, matchId, n, winner))}
+            onFlag={(n) => run(() => flagGameResult(slug, matchId, n))}
+          />
+        ) : null}
+
         {error ? (
           <p role="alert" className="text-destructive text-sm">
             {error}
@@ -163,11 +216,15 @@ export function MatchDayCard({
               size="sm"
               disabled={pending}
               onClick={() => {
-                if (confirm("Reset side selection for this match? RPS and game sides are wiped."))
+                if (
+                  confirm(
+                    "Reset match day for this match? RPS, game sides and game results are wiped (the series result stays).",
+                  )
+                )
                   run(() => adminResetMatchDay(slug, matchId));
               }}
             >
-              Reset side selection
+              Reset match day
             </Button>
           </div>
         ) : null}
@@ -358,6 +415,8 @@ function Reveal({ snap, round }: { snap: Snap; round: RpsRound }) {
   );
 }
 
+type Game = Snap["games"][number];
+
 function SidePick({
   snap,
   game,
@@ -366,27 +425,33 @@ function SidePick({
   onPick,
 }: {
   snap: Snap;
-  game: Snap["games"][number];
+  game: Game;
   teamName: (id: string | null) => string;
   pending: boolean;
   onPick: (side: "blue" | "red") => void;
 }) {
   const ms = useCountdown(game.sideDeadline, snap.serverNow);
   const mine = snap.viewer.teamId !== null && snap.viewer.teamId === game.sideChooserTeamId;
+  const n = game.gameNumber;
   const winRound = snap.rps?.history.at(-1);
   return (
     <div className="space-y-4">
-      {winRound && winRound.home && winRound.away ? (
+      {n === 1 && winRound && winRound.home && winRound.away ? (
         <p className="text-center">
           {THROW_EMOJI[winRound.home]} vs {THROW_EMOJI[winRound.away]} ·{" "}
           <span className="font-medium">{teamName(game.sideChooserTeamId)}</span> won rock paper
           scissors.
         </p>
+      ) : n > 1 ? (
+        <p className="text-center">
+          <span className="font-medium">{teamName(game.sideChooserTeamId)}</span> lost game {n - 1},
+          so they pick the side for game {n}.
+        </p>
       ) : null}
       <Countdown ms={ms} total={60_000} />
       {mine ? (
         <>
-          <p className="text-center">Pick your side for game 1. Out of time = random side.</p>
+          <p className="text-center">Pick your side for game {n}. Out of time = random side.</p>
           <div className="grid grid-cols-2 gap-3">
             <Button
               className="h-14 text-base text-white"
@@ -408,39 +473,139 @@ function SidePick({
         </>
       ) : (
         <p className="text-muted-foreground text-center">
-          {teamName(game.sideChooserTeamId)} is choosing a side for game 1…
+          {teamName(game.sideChooserTeamId)} is choosing a side for game {n}…
         </p>
       )}
     </div>
   );
 }
 
-function SidesSet({ snap, teamName }: { snap: Snap; teamName: (id: string | null) => string }) {
+/** "Who won game N?" for the game being played. */
+function ResultPrompt({
+  snap,
+  game,
+  pending,
+  onReport,
+}: {
+  snap: Snap;
+  game: Game;
+  pending: boolean;
+  onReport: (winnerTeamId: string) => void;
+}) {
+  const canReport = snap.viewer.teamId !== null || snap.viewer.isAdmin;
   return (
-    <ul className="space-y-2">
-      {snap.games
-        .filter((g) => g.blueTeamId && g.redTeamId)
-        .map((g) => (
-          <li key={g.gameNumber} className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            <span className="text-muted-foreground w-16">Game {g.gameNumber}</span>
-            <span className="font-medium" style={{ color: BLUE }}>
-              {teamName(g.blueTeamId)} blue
-            </span>
-            <span className="text-muted-foreground">vs</span>
-            <span className="font-medium" style={{ color: RED }}>
-              {teamName(g.redTeamId)} red
-            </span>
-            <span className="text-muted-foreground text-xs">
-              {g.sideChosenVia === "rps"
-                ? `${teamName(g.sideChooserTeamId)} won RPS and chose`
-                : g.sideChosenVia === "auto"
-                  ? "random, the clock ran out"
-                  : g.sideChosenVia === "loser"
-                    ? `${teamName(g.sideChooserTeamId)} chose (lost the last game)`
-                    : "set by an admin"}
-            </span>
+    <div className="space-y-3 text-center">
+      <p>
+        Game {game.gameNumber} is on. Play it, then record the winner
+        {snap.series.played === 0 ? "" : " (the loser picks the next side)"}.
+      </p>
+      {canReport ? (
+        <div className="grid grid-cols-2 gap-3">
+          {[snap.home, snap.away].map((t) => (
+            <Button
+              key={t.teamId}
+              variant="outline"
+              className="h-12"
+              disabled={pending}
+              onClick={() => onReport(t.teamId)}
+            >
+              {t.name} won
+            </Button>
+          ))}
+        </div>
+      ) : (
+        <p className="text-muted-foreground">Waiting for a captain to record the result.</p>
+      )}
+    </div>
+  );
+}
+
+function sideNote(g: Game, teamName: (id: string | null) => string): string {
+  return g.sideChosenVia === "rps"
+    ? `${teamName(g.sideChooserTeamId)} won RPS and chose`
+    : g.sideChosenVia === "auto"
+      ? "random, the clock ran out"
+      : g.sideChosenVia === "loser"
+        ? `${teamName(g.sideChooserTeamId)} chose (lost the last game)`
+        : "set by an admin";
+}
+
+/** Every game with sides set: sides, result, and the captains' correct / flag buttons. */
+function GamesList({
+  snap,
+  teamName,
+  pending,
+  onReport,
+  onFlag,
+}: {
+  snap: Snap;
+  teamName: (id: string | null) => string;
+  pending: boolean;
+  onReport: (gameNumber: number, winnerTeamId: string) => void;
+  onFlag: (gameNumber: number) => void;
+}) {
+  const captain = snap.viewer.teamId !== null;
+  const games = snap.games.filter((g) => g.blueTeamId && g.redTeamId);
+  return (
+    <ul className="divide-y">
+      {games.map((g) => {
+        const next = snap.games.find((x) => x.gameNumber === g.gameNumber + 1);
+        // Captains can fix a result until the next game's sides are set.
+        const correctable = snap.open && captain && g.winnerTeamId && !next?.blueTeamId;
+        const other = g.winnerTeamId === snap.home.teamId ? snap.away.teamId : snap.home.teamId;
+        return (
+          <li key={g.gameNumber} className="space-y-1 py-2 first:pt-0 last:pb-0">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <span className="text-muted-foreground w-16">Game {g.gameNumber}</span>
+              <span className="font-medium" style={{ color: BLUE }}>
+                {teamName(g.blueTeamId)} blue
+              </span>
+              <span className="text-muted-foreground">vs</span>
+              <span className="font-medium" style={{ color: RED }}>
+                {teamName(g.redTeamId)} red
+              </span>
+              <span className="text-muted-foreground text-xs">{sideNote(g, teamName)}</span>
+            </div>
+            {g.winnerTeamId ? (
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pl-16 sm:pl-[4.75rem]">
+                <span>
+                  🏆 <span className="font-medium">{teamName(g.winnerTeamId)}</span> won
+                </span>
+                {g.resultReportedBy ? (
+                  <span className="text-muted-foreground text-xs">
+                    recorded by {g.resultReportedBy}
+                  </span>
+                ) : null}
+                {g.resultFlagged ? (
+                  <span className="text-destructive text-xs">Flagged for an admin</span>
+                ) : null}
+                {correctable ? (
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    disabled={pending}
+                    onClick={() => onReport(g.gameNumber, other)}
+                  >
+                    Wrong? {teamName(other)} won
+                  </Button>
+                ) : captain && !g.resultFlagged ? (
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    disabled={pending}
+                    onClick={() => {
+                      if (confirm(`Flag the game ${g.gameNumber} result for an admin to check?`))
+                        onFlag(g.gameNumber);
+                    }}
+                  >
+                    Flag as wrong
+                  </Button>
+                ) : null}
+              </div>
+            ) : null}
           </li>
-        ))}
+        );
+      })}
     </ul>
   );
 }

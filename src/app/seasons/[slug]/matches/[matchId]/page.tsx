@@ -2,7 +2,7 @@ import { and, eq } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
-import { reportMatch } from "../actions";
+import { adminEditResult, reportMatch } from "../actions";
 import { db } from "@/db/client";
 import { teams } from "@/db/schema/drafts";
 import { matches } from "@/db/schema/matches";
@@ -18,6 +18,7 @@ import { LocalTime } from "@/components/ui/local-time";
 import { FlashToast } from "@/components/flash-toast";
 import {
   BO2_RESULTS,
+  bestOfLabel,
   FEARLESS_DRAFT_RULE,
   fearlessApplies,
   isDraw,
@@ -57,6 +58,7 @@ const SAVED_MESSAGES: Record<string, string> = {
   "sub-rejected": "Sub rejected.",
   "sub-revoked": "Sub revoked.",
   "sub-pinged": "Pinged the Sub list in the match's Discord thread.",
+  "result-edited": "Result saved and confirmed.",
 };
 
 const STATE_BADGE: Record<
@@ -106,7 +108,8 @@ export default async function MatchDetailPage({
     : [null, null];
   const isOnThisMatch =
     myTeam && (myTeam.id === match.homeTeamId || myTeam.id === match.awayTeamId);
-  const canReport = (isOnThisMatch || isAdmin) && match.state !== "confirmed";
+  // Captains report until it's confirmed; admins get Edit result at any time.
+  const canReport = (isOnThisMatch && match.state !== "confirmed") || isAdmin;
 
   // Subs: captains (either of a duo) manage their own team; admins either team.
   const managedTeamIds = isAdmin
@@ -132,15 +135,21 @@ export default async function MatchDetailPage({
     : null;
   const showMatchDay = matchDay && (matchDay.open || matchDay.games.length > 0);
 
-  const reportWithIds = reportMatch.bind(null, slug, matchId);
+  const reportWithIds = isAdmin
+    ? adminEditResult.bind(null, slug, matchId)
+    : reportMatch.bind(null, slug, matchId);
+  // Before anything's reported, pre-fill from match-day game results.
+  const series = matchDay?.series.played ? matchDay.series : null;
+  const reported = match.state !== "scheduled";
+  const defaultHome = reported ? match.homeScore : (series?.homeWins ?? null);
+  const defaultAway = reported ? match.awayScore : (series?.awayWins ?? null);
+  const defaultWinner = reported ? match.winnerTeamId : (series?.winnerTeamId ?? null);
+  const gameRows = isAdmin ? (matchDay?.games.filter((g) => g.blueTeamId) ?? []) : [];
   // Bo2 group series: report one of 2–0 / 1–1 / 0–2 (a 1–1 is a draw).
   const bo2 = match.stage === "group" && season.groupBestOf === 2;
   const draw = isDraw(match);
   const bo2Current = (Object.keys(BO2_RESULTS) as Bo2Result[]).find(
-    (k) =>
-      match.state !== "scheduled" &&
-      BO2_RESULTS[k].homeScore === match.homeScore &&
-      BO2_RESULTS[k].awayScore === match.awayScore,
+    (k) => BO2_RESULTS[k].homeScore === defaultHome && BO2_RESULTS[k].awayScore === defaultAway,
   );
   const sb = STATE_BADGE[match.state] ?? STATE_BADGE.scheduled;
   const errorMessage = error ? ERROR_MESSAGES[error] : null;
@@ -170,7 +179,15 @@ export default async function MatchDetailPage({
         </div>
         <p className="text-muted-foreground text-sm">
           {season.name} · {roundLabel(match.stage, match.round)}
-          {bo2 ? " · Best of 2" : match.stage === "tiebreaker" ? " · Best of 1" : ""}
+          {bo2
+            ? " · Best of 2"
+            : match.stage === "tiebreaker"
+              ? " · Best of 1"
+              : match.stage === "semis"
+                ? ` · ${bestOfLabel(season.playoffBestOf)}`
+                : match.stage === "final"
+                  ? ` · ${bestOfLabel(season.finalBestOf)}`
+                  : ""}
           {fearlessApplies(season, match.stage) ? (
             <span title={`Fearless draft: ${FEARLESS_DRAFT_RULE}`}> · Fearless draft</span>
           ) : null}
@@ -251,12 +268,45 @@ export default async function MatchDetailPage({
         <Card>
           <CardHeader>
             <CardTitle className="text-base">
-              {match.state === "reported" ? "Update result" : "Report result"}
+              {isAdmin
+                ? "Edit result"
+                : match.state === "reported"
+                  ? "Update result"
+                  : "Report result"}
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            {isAdmin ? (
+              <p className="text-muted-foreground text-xs">
+                Admin: saves and confirms straight away, whatever state the match is in. Standings,
+                the bracket and the champion follow.
+              </p>
+            ) : null}
             {bo2 ? (
               <form action={reportWithIds} className="space-y-4">
+                {gameRows.length > 0 ? (
+                  <fieldset className="space-y-2">
+                    <legend className="mb-1.5 text-sm font-medium">Game winners</legend>
+                    {gameRows.map((g) => (
+                      <div key={g.gameNumber} className="flex items-center gap-3">
+                        <Label htmlFor={`game-${g.gameNumber}`} className="w-16 shrink-0">
+                          Game {g.gameNumber}
+                          {g.resultFlagged ? " ⚑" : ""}
+                        </Label>
+                        <select
+                          id={`game-${g.gameNumber}`}
+                          name={`game-${g.gameNumber}`}
+                          defaultValue={g.winnerTeamId ?? ""}
+                          className="border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
+                        >
+                          <option value="">No result</option>
+                          <option value={match.homeTeamId}>{homeTeam?.name}</option>
+                          <option value={match.awayTeamId}>{awayTeam?.name}</option>
+                        </select>
+                      </div>
+                    ))}
+                  </fieldset>
+                ) : null}
                 <fieldset className="space-y-2">
                   <legend className="mb-1.5 text-sm font-medium">Series result (maps won)</legend>
                   {(
@@ -284,17 +334,42 @@ export default async function MatchDetailPage({
                 <p className="text-muted-foreground text-xs">
                   Both maps are always played. A 1–1 is a draw: one map win each.
                 </p>
-                <PendingSubmitButton>Submit result</PendingSubmitButton>
+                <PendingSubmitButton>
+                  {isAdmin ? "Save and confirm" : "Submit result"}
+                </PendingSubmitButton>
               </form>
             ) : (
               <form action={reportWithIds} className="space-y-4">
+                {gameRows.length > 0 ? (
+                  <fieldset className="space-y-2">
+                    <legend className="mb-1.5 text-sm font-medium">Game winners</legend>
+                    {gameRows.map((g) => (
+                      <div key={g.gameNumber} className="flex items-center gap-3">
+                        <Label htmlFor={`game-${g.gameNumber}`} className="w-16 shrink-0">
+                          Game {g.gameNumber}
+                          {g.resultFlagged ? " ⚑" : ""}
+                        </Label>
+                        <select
+                          id={`game-${g.gameNumber}`}
+                          name={`game-${g.gameNumber}`}
+                          defaultValue={g.winnerTeamId ?? ""}
+                          className="border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
+                        >
+                          <option value="">No result</option>
+                          <option value={match.homeTeamId}>{homeTeam?.name}</option>
+                          <option value={match.awayTeamId}>{awayTeam?.name}</option>
+                        </select>
+                      </div>
+                    ))}
+                  </fieldset>
+                ) : null}
                 <div className="space-y-1.5">
                   <Label htmlFor="winnerTeamId">Winner</Label>
                   <select
                     id="winnerTeamId"
                     name="winnerTeamId"
                     required
-                    defaultValue={match.winnerTeamId ?? ""}
+                    defaultValue={defaultWinner ?? ""}
                     className="border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
                   >
                     <option value="">Select winner…</option>
@@ -311,7 +386,7 @@ export default async function MatchDetailPage({
                       type="number"
                       min="0"
                       max="10"
-                      defaultValue={match.homeScore ?? ""}
+                      defaultValue={defaultHome ?? ""}
                       placeholder="0"
                       className="border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
                     />
@@ -324,13 +399,15 @@ export default async function MatchDetailPage({
                       type="number"
                       min="0"
                       max="10"
-                      defaultValue={match.awayScore ?? ""}
+                      defaultValue={defaultAway ?? ""}
                       placeholder="0"
                       className="border-input focus-visible:border-ring focus-visible:ring-ring/50 flex h-8 w-full rounded-lg border bg-transparent px-2.5 text-sm outline-none focus-visible:ring-3"
                     />
                   </div>
                 </div>
-                <PendingSubmitButton>Submit result</PendingSubmitButton>
+                <PendingSubmitButton>
+                  {isAdmin ? "Save and confirm" : "Submit result"}
+                </PendingSubmitButton>
               </form>
             )}
           </CardContent>
