@@ -11,7 +11,7 @@ import { syncInBackground } from "@/lib/discord-roles";
 import { logEvent, matchEventData } from "@/lib/events";
 import { settleMatchDay } from "@/lib/match-day";
 import { confirmWithResult } from "@/lib/match-results";
-import { SIDE_PICK_MS } from "@/lib/rps";
+import { LOSER_SIDE_PICK_MS } from "@/lib/rps";
 import { bestOfFor, loserOf, seriesScore } from "@/lib/series";
 
 // Recording a game's winner (docs/MATCH-DAY.md, phase 2) — shared by the
@@ -22,7 +22,7 @@ import { bestOfFor, loserOf, seriesScore } from "@/lib/series";
 export class GameResultError extends Error {}
 
 /**
- * Not over → the loser gets the next game's side pick (60s). Over → the match
+ * Not over → the loser gets the next game's side pick (5 minutes). Over → the match
  * is reported and confirmed with the series score. `privileged` (admins, and
  * Riot's callback) may record before the draft is done and correct a game
  * after the next one started. Returns false when nothing changed.
@@ -84,7 +84,7 @@ export async function recordGameWinner(opts: {
         matchId,
         gameNumber: gameNumber + 1,
         sideChooserTeamId: loserOf(winnerTeamId, match),
-        sideDeadline: new Date(now.getTime() + SIDE_PICK_MS),
+        sideDeadline: new Date(now.getTime() + LOSER_SIDE_PICK_MS),
       });
     }
     return { season, score };

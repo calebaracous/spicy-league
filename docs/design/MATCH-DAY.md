@@ -36,7 +36,7 @@ majority. `bestOfFor(season, stage)` + `seriesScore(bestOf, games, teams)` in
 | 2 | RPS throw window | 10s. Throw locks on click. Reveal when both are in or at the deadline. |
 | 3 | No throw by the deadline | The round is **replayed**, and the reveal roasts whoever didn't throw as a griefer (random line from a small list, e.g. "{name} griefed RPS. Unbelievable."). If neither threw, both get roasted. |
 | 4 | Ties | Show the reveal ~3s, then a new round. Single winning round, no Bo3. |
-| 5 | Side picker timer | **60s**, then a random side, marked "auto". |
+| 5 | Side picker timer | RPS winner (game 1): **60s**. Loser of the previous game: **5 minutes** (changed 2026-10-29; was 60s). Then a random side, marked "auto". |
 | 6 | Draft step timeout | Hovered champion locks. No hover: a **ban is skipped** (pro rule), a **pick pauses the draft** until that side or an admin locks it (changed 2026-10-29; was a random pick). Steps: **60s per ban, 2 minutes per pick** (was 30s). |
 | 7 | Draft start | Both sides press Ready in the room, then a **3s countdown** for everyone, then step 1's clock. No clock while someone is missing. |
 | 8 | Who acts in the draft | Either captain of the side's team (duo-aware, like the season draft). Admins can act for either side ("Admin — picking for X" pill, as in the 10-man). Admins cannot throw RPS. |

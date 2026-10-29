@@ -10,6 +10,7 @@ import {
   RPS_REVEAL_MS,
   RPS_THROW_MS,
   settleRps,
+  sidePickMs,
   type RpsCore,
   type RpsRound,
 } from "@/lib/rps";
@@ -199,5 +200,13 @@ describe("griefLine / randomSide", () => {
   it("picks a side from the rng", () => {
     expect(randomSide(() => 0.1)).toBe("blue");
     expect(randomSide(() => 0.9)).toBe("red");
+  });
+});
+
+describe("sidePickMs", () => {
+  it("gives the RPS winner 60s for game 1 and the loser 5 minutes after", () => {
+    expect(sidePickMs(1)).toBe(60_000);
+    expect(sidePickMs(2)).toBe(5 * 60_000);
+    expect(sidePickMs(3)).toBe(5 * 60_000);
   });
 });

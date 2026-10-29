@@ -14,7 +14,15 @@ export type RpsRound = {
 export const RPS_THROWS: readonly RpsThrow[] = ["rock", "paper", "scissors"];
 export const RPS_THROW_MS = 10_000;
 export const RPS_REVEAL_MS = 3_000;
+/** The RPS winner's side pick for game 1. */
 export const SIDE_PICK_MS = 60_000;
+/** The loser of game N-1 picks game N's side: more time, they may want to talk it over. */
+export const LOSER_SIDE_PICK_MS = 5 * 60_000;
+
+/** How long game N's side pick lasts. */
+export function sidePickMs(gameNumber: number): number {
+  return gameNumber === 1 ? SIDE_PICK_MS : LOSER_SIDE_PICK_MS;
+}
 /** Both captains AFK this many rounds in a row → back to ready-up. */
 export const RPS_MAX_DOUBLE_VOIDS = 3;
 

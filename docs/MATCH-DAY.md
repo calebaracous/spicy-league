@@ -25,7 +25,7 @@ captains ready up (one seat per team) ─▶ round: 10s to throw ─▶ reveal 3
                                                                    │
               ┌─── a captain records "X won game N" ◀─ game N is played ◀─┘
               │
-              ├─ series not decided ─▶ game N+1: the loser picks blue/red (60s) ─▶ …
+              ├─ series not decided ─▶ game N+1: the loser picks blue/red (5 min) ─▶ …
               └─ series decided ─────▶ match reported + confirmed (game count as score)
 ```
 
@@ -60,7 +60,9 @@ captains ready up (one seat per team) ─▶ round: 10s to throw ─▶ reveal 3
 - **Recording**: `reportGameWinner(slug, matchId, gameNumber, winnerTeamId)`
   — any captain of either team, or an admin, once that game's sides are
   set. Not decided → inserts game N+1 with `sideChooserTeamId` = the loser
-  (`loserOf`) and a 60s `sideDeadline`; `pickSide` then records
+  (`loserOf`) and a 5-minute `sideDeadline` (`LOSER_SIDE_PICK_MS`; game
+  1's RPS pick stays 60s, `sidePickMs` in `src/lib/rps.ts`); `pickSide`
+  then records
   `sideChosenVia = 'loser'`.
 - **Corrections**: re-recording a game with the other team is allowed for
   captains until game N+1's sides are set (the pending side pick is deleted
@@ -275,7 +277,7 @@ results race, so the card keeps whichever has the later `serverNow`.
 on the match page above Lineups, titled "Match day": ready-up → throw
 buttons + countdown → reveal (both throws, winner / tie / roast) → side pick
 (Blue / Red + 60s) → "Game N is on" with "X won" buttons → the loser's side
-pick → … Once games have results, a series line ("Best of 3 · A 1–0 B")
+pick (5 minutes) → … Countdowns show m:ss from a minute up. Once games have results, a series line ("Best of 3 · A 1–0 B")
 and the games list (sides, winner, who recorded it, Wrong? / Flag as wrong).
 Shown while the match is scheduled, and afterwards only if sides were set.
 Admins get "Reset match day" (wipes RPS, sides and game results; the

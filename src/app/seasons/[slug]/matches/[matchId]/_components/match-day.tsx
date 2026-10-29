@@ -11,7 +11,7 @@ import { useSnapshotStream } from "@/components/use-turn-alert";
 import type { DraftSide } from "@/lib/draft-room";
 import type { MatchDaySnapshot } from "@/lib/match-day";
 import { bestOfLabel } from "@/lib/match-format";
-import { griefLine, RPS_THROWS, type RpsRound, type RpsThrow } from "@/lib/rps";
+import { griefLine, RPS_THROWS, sidePickMs, type RpsRound, type RpsThrow } from "@/lib/rps";
 import {
   adminResetMatchDay,
   assignPicks,
@@ -97,9 +97,12 @@ export function useCountdown(deadline: string | null, serverNow: string): number
 export function Countdown({ ms, total }: { ms: number | null; total: number }) {
   if (ms === null) return null;
   const pct = Math.max(0, Math.min(100, (ms / total) * 100));
+  const s = Math.ceil(ms / 1000);
   return (
     <div className="space-y-1">
-      <div className="text-center text-3xl font-semibold tabular-nums">{Math.ceil(ms / 1000)}</div>
+      <div className="text-center text-3xl font-semibold tabular-nums">
+        {s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : s}
+      </div>
       <div className="bg-muted h-1 overflow-hidden rounded-full">
         <div
           className="h-full rounded-full transition-[width] duration-200 ease-linear"
@@ -507,7 +510,7 @@ function SidePick({
           so they pick the side for game {n}.
         </p>
       ) : null}
-      <Countdown ms={ms} total={60_000} />
+      <Countdown ms={ms} total={sidePickMs(n)} />
       {mine ? (
         <>
           <p className="text-center">Pick your side for game {n}. Out of time = random side.</p>
