@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, inArray, isNotNull } from "drizzle-orm";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
@@ -12,6 +12,7 @@ import {
 } from "@/app/admin/seasons/actions";
 import { db } from "@/db/client";
 import { seasons } from "@/db/schema/seasons";
+import { users } from "@/db/schema/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -89,6 +90,27 @@ export default async function EditSeasonPage({
   const available = nextStates(season.state);
   const discordReady = discordConfig() !== null;
   const discordRoster = await getDiscordRoster(season.id);
+  // LoL: who has opted in to public per-player stats (users.statsOptInAt).
+  const isLol = season.game === "lol";
+  const statsOptedIn =
+    isLol && discordRoster.length
+      ? new Set(
+          (
+            await db
+              .select({ id: users.id })
+              .from(users)
+              .where(
+                and(
+                  inArray(
+                    users.id,
+                    discordRoster.map((p) => p.id),
+                  ),
+                  isNotNull(users.statsOptInAt),
+                ),
+              )
+          ).map((u) => u.id),
+        )
+      : new Set<string>();
   const syncDiscordWithSlug = syncDiscordRoles.bind(null, slug);
   // Stored as Data Dragon keys; shown as names (keys if the catalogue is down).
   const championCatalog =
@@ -216,7 +238,8 @@ export default async function EditSeasonPage({
                     <th className="pr-4 pb-2 font-medium">Player</th>
                     <th className="pr-4 pb-2 font-medium">Role</th>
                     <th className="pr-4 pb-2 font-medium">Discord</th>
-                    <th className="pb-2 font-medium">Status</th>
+                    <th className={cn("pb-2 font-medium", isLol && "pr-4")}>Status</th>
+                    {isLol ? <th className="pb-2 font-medium">Public stats</th> : null}
                   </tr>
                 </thead>
                 <tbody className="divide-y">
@@ -232,7 +255,7 @@ export default async function EditSeasonPage({
                           .join(" · ")}
                       </td>
                       <td className="py-1.5 pr-4 font-mono text-xs">{p.discordUsername ?? "—"}</td>
-                      <td className="py-1.5 text-xs">
+                      <td className={cn("py-1.5 text-xs", isLol && "pr-4")}>
                         {!p.discordUsername ? (
                           <span style={{ color: "var(--accent-text)" }}>No username</span>
                         ) : p.discordUserId ? (
@@ -241,6 +264,15 @@ export default async function EditSeasonPage({
                           <span className="text-muted-foreground">Not matched yet</span>
                         )}
                       </td>
+                      {isLol ? (
+                        <td className="py-1.5 text-xs whitespace-nowrap">
+                          {statsOptedIn.has(p.id) ? (
+                            <span className="text-muted-foreground">Opted in</span>
+                          ) : (
+                            <span className="text-destructive">Not opted in</span>
+                          )}
+                        </td>
+                      ) : null}
                     </tr>
                   ))}
                 </tbody>
