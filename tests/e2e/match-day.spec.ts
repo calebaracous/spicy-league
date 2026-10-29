@@ -376,3 +376,40 @@ test("Draft room: ready, countdown, lock, timeout locks the hover, skipped ban, 
     await expect(card(blue)).toContainText("Game 2 is on");
   });
 });
+
+test("Draft recap: a captain assigns their picks to lineup players", async ({ browser }) => {
+  const { url, matchId } = await seedMatch("recap", { game1Sides: true });
+  const [game] = await db
+    .update(schema.matchGames)
+    .set({ draftState: "complete" })
+    .where(eq(schema.matchGames.matchId, matchId))
+    .returning();
+  // Blue (home) picked Garen at step 7 and Lux at step 10; red picked Jinx at 8.
+  await db.insert(schema.matchDraftActions).values([
+    { gameId: game.id, step: 7, side: "blue", kind: "pick", championKey: "Garen" },
+    { gameId: game.id, step: 8, side: "red", kind: "pick", championKey: "Jinx" },
+    { gameId: game.id, step: 10, side: "blue", kind: "pick", championKey: "Lux" },
+  ]);
+  const p1 = await signedInPage(browser, P(1).username);
+  await p1.goto(url);
+
+  // Home's captain can assign blue's picks, not red's.
+  const assign = card(p1).getByRole("button", { name: "Assign players" });
+  await expect(assign).toHaveCount(1);
+  await assign.click();
+  const selects = card(p1).getByRole("combobox");
+  await selects.nth(0).selectOption({ label: "E2E P01" });
+  await selects.nth(1).selectOption({ label: "E2E P03" });
+  await card(p1).getByRole("button", { name: "Save", exact: true }).click();
+  await expect(card(p1).getByRole("button", { name: "Edit players" })).toBeVisible();
+
+  const ids = await userIdsByUsername([P(1).username, P(3).username]);
+  const picks = await db
+    .select()
+    .from(schema.matchDraftActions)
+    .where(eq(schema.matchDraftActions.gameId, game.id));
+  const by = (step: number) => picks.find((a) => a.step === step)!.assignedUserId;
+  expect(by(7)).toBe(ids.get(P(1).username));
+  expect(by(10)).toBe(ids.get(P(3).username));
+  expect(by(8)).toBeNull();
+});

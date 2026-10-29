@@ -155,12 +155,15 @@ function draftDue(g: MatchGame, now: Date): boolean {
   }
 }
 
+/** A stored draft step: the rules' shape plus who played a pick (phase 4). */
+export type StoredDraftAction = DraftAction & { assignedUserId: string | null };
+
 /** Every game's draft actions in step order, keyed by game id. */
 export async function loadDraftActions(
   q: Pick<Tx, "select">,
   gameIds: string[],
-): Promise<Map<string, DraftAction[]>> {
-  const byGame = new Map<string, DraftAction[]>();
+): Promise<Map<string, StoredDraftAction[]>> {
+  const byGame = new Map<string, StoredDraftAction[]>();
   if (gameIds.length === 0) return byGame;
   const rows = await q
     .select()
@@ -169,7 +172,13 @@ export async function loadDraftActions(
     .orderBy(asc(matchDraftActions.step));
   for (const r of rows) {
     const list = byGame.get(r.gameId) ?? [];
-    list.push({ step: r.step, side: r.side, kind: r.kind, championKey: r.championKey });
+    list.push({
+      step: r.step,
+      side: r.side,
+      kind: r.kind,
+      championKey: r.championKey,
+      assignedUserId: r.assignedUserId,
+    });
     byGame.set(r.gameId, list);
   }
   return byGame;
@@ -184,7 +193,7 @@ export async function draftAvailability(
   q: Pick<Tx, "select" | "query">,
   match: MatchTeams,
   games: MatchGame[],
-  actionsByGame: Map<string, DraftAction[]>,
+  actionsByGame: Map<string, StoredDraftAction[]>,
   gameNumber: number,
 ): Promise<((actions: readonly DraftAction[]) => string[]) | null> {
   const [catalog, season] = await Promise.all([
@@ -243,7 +252,7 @@ async function settleDrafts(tx: Tx, match: MatchTeams, now: Date): Promise<numbe
       await tx
         .insert(matchDraftActions)
         .values(taken.map((a) => ({ ...a, gameId: g.id, auto: true })));
-      actionsByGame.set(g.id, [...actions, ...taken]);
+      actionsByGame.set(g.id, [...actions, ...taken.map((a) => ({ ...a, assignedUserId: null }))]);
     }
   }
   return done;
@@ -335,7 +344,7 @@ export type MatchDaySnapshot = {
       stepDeadline: string | null;
       blueHover: string | null;
       redHover: string | null;
-      actions: DraftAction[];
+      actions: StoredDraftAction[];
     };
   }[];
   /** Draft room rules: fearless across this match's games, season-disabled champions. */

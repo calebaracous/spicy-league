@@ -1,0 +1,2 @@
+ALTER TABLE "match_draft_actions" ADD COLUMN "assigned_user_id" text;--> statement-breakpoint
+ALTER TABLE "match_draft_actions" ADD CONSTRAINT "match_draft_actions_assigned_user_id_users_id_fk" FOREIGN KEY ("assigned_user_id") REFERENCES "public"."users"("id") ON DELETE set null ON UPDATE no action;

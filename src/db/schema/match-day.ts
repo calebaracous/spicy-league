@@ -138,6 +138,11 @@ export const matchDraftActions = pgTable(
     // Null when the clock picked (auto).
     actedBy: text("acted_by").references(() => users.id, { onDelete: "set null" }),
     auto: boolean("auto").notNull().default(false),
+    // Picks only (phase 4): which lineup player played it — set by the team's
+    // captains after the draft; per-player champion stats read it.
+    assignedUserId: text("assigned_user_id").references(() => users.id, {
+      onDelete: "set null",
+    }),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   },
   (t) => [unique("match_draft_actions_game_step_uniq").on(t.gameId, t.step)],

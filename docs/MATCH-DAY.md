@@ -7,7 +7,8 @@ draft room, stats, Riot Tournament API) and every agreed decision live in
 Shipped: **phase 1** — rock paper scissors decides who picks game 1's side,
 plus the stats opt-in; **phase 2** — per-game results, the loser picks the
 next side, the match confirms itself when the series is decided, and the
-admin Edit result tool; **phase 3** — our own pick/ban draft room per game. LoL seasons only (`matchDayApplies(season)`); CS2
+admin Edit result tool; **phase 3** — our own pick/ban draft room per game;
+**phase 4** — draft recaps (card + Discord) and who-played-what per pick. LoL seasons only (`matchDayApplies(season)`); CS2
 match pages are unchanged.
 
 ## Flow
@@ -124,6 +125,25 @@ and captains can only record that game's winner once the draft is
   your turn; admin Undo / Skip / Restart. Icons are plain `<img>` from Data
   Dragon (no next/image optimisation). Same stream as the card; countdown
   ticks re-render only the status bar.
+
+## Draft recap + players (phase 4)
+
+- **Card**: each drafted game in the games list shows `DraftRecap`
+  (`_components/draft-recap.tsx`): both sides' picks as icons with the
+  player who played each (else the champion name), bans faded. The match
+  page passes champion names (`getChampionCatalog`, only once a game has a
+  draft) and each team's match lineup (approved subs in, sat-out players
+  out).
+- **Players per pick**: after a completed draft, that team's captains (or an
+  admin, either team) open **Assign players** and pick a lineup player per
+  champion → `assignPicks(slug, matchId, gameNumber, side, {step: userId})`.
+  Validated against `getMatchLineups` (no outsiders, one champion per
+  player); works after the match is confirmed too. Optional — it only feeds
+  per-player champion stats. Stored in `match_draft_actions.assignedUserId`
+  (migration `0019_draft_pick_players`).
+- **Discord**: when a draft completes (last step by hand in `lockChampion`,
+  or by the clock in `resolveExpired`), `notifyDraftRecap` posts both
+  sides' picks and bans in the match thread.
 
 ## State + deadlines
 

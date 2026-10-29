@@ -29,6 +29,7 @@ import { seasonPageMetadata } from "@/lib/season-meta";
 import { getCaptainedTeamId, getTeamForCaptain } from "@/lib/schedule";
 import { SUB_ERROR_MESSAGES } from "@/lib/substitution-rules";
 import { getMatchLineups, getSubCandidates } from "@/lib/substitutions";
+import { getChampionCatalog } from "@/lib/champions";
 import { getMatchDaySnapshot, matchDayApplies } from "@/lib/match-day";
 import { MatchLineups } from "./_components/lineups";
 import { MatchDayCard } from "./_components/match-day";
@@ -134,6 +135,21 @@ export default async function MatchDetailPage({
       })
     : null;
   const showMatchDay = matchDay && (matchDay.open || matchDay.games.length > 0);
+  // Draft recaps need champion names; only fetched once a game has a draft.
+  const catalog = matchDay?.games.some((g) => g.draft.actions.length > 0)
+    ? await getChampionCatalog()
+    : null;
+  const champions = catalog
+    ? {
+        version: catalog.version,
+        names: Object.fromEntries(catalog.champions.map((c) => [c.key, c.name])),
+      }
+    : null;
+  // Who played (approved subs in, sat-out players out), for assigning picks.
+  const playing = (players: typeof lineups.home) =>
+    players
+      .filter((p) => !p.satOut)
+      .map((p) => ({ userId: p.userId, name: p.name ?? p.username ?? "?" }));
 
   const reportWithIds = isAdmin
     ? adminEditResult.bind(null, slug, matchId)
@@ -247,7 +263,18 @@ export default async function MatchDetailPage({
         </Card>
       ) : null}
 
-      {showMatchDay ? <MatchDayCard initial={matchDay} slug={slug} matchId={matchId} /> : null}
+      {showMatchDay ? (
+        <MatchDayCard
+          initial={matchDay}
+          slug={slug}
+          matchId={matchId}
+          champions={champions}
+          lineups={{
+            [match.homeTeamId]: playing(lineups.home),
+            [match.awayTeamId]: playing(lineups.away),
+          }}
+        />
+      ) : null}
 
       {homeTeam && awayTeam ? (
         <MatchLineups

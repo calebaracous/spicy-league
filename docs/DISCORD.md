@@ -70,6 +70,8 @@ mentionable, which the pings below rely on.
   red. Draft room: <link>" (`notifyMatchSides`, [MATCH-DAY.md](MATCH-DAY.md)).
 - **Game results**: "🏁 Game 1: X won. Series: A 1–0 B." plus who picks the
   next side (`notifyGameResult`); a decided series then gets *confirmed*.
+- **Draft recaps**: when a game's draft completes, both sides' picks and bans
+  (`notifyDraftRecap`).
 - **Sub decisions**: approved / rejected / revoked, in the requesting team's
   channel.
 - **Ping the Sub list**: a button for captains (and admins) on the match

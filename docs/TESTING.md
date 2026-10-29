@@ -209,6 +209,9 @@ as duo captains, away = P2) and drives [MATCH-DAY.md](MATCH-DAY.md):
   only; blue locks Garen (greyed "Banned" for red); red hovers Lux and lets
   the 30s run out → Lux locks with `auto`; blue skips a ban (null); an admin
   skips the rest and the card offers the result. ~45s of real waiting.
+- Draft recap (completed draft seeded): home's captain sees one "Assign
+  players" (blue only), assigns Garen → P01 and Lux → P03; the red pick
+  stays unassigned.
 - A late admin pick (admin board frozen at pick 1 after the captain has
   picked) is rejected with `stale-pick`, not credited to the next captain.
 - Two picks at the same moment (captain + admin): exactly one lands as

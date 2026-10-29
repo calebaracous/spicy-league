@@ -94,8 +94,9 @@ Rendered by `src/app/page.tsx`:
 - `src/app/seasons/[slug]/matches/[matchId]/_components/lineups.tsx` — `MatchLineups`: rosters with subs, sub requests, request form.
 - `src/app/seasons/[slug]/matches/[matchId]/_components/match-day.tsx` — `MatchDayCard`: live RPS side select (ready up, throws + countdown, reveal/roast, blue/red pick). See [MATCH-DAY.md](MATCH-DAY.md).
 - `src/app/seasons/[slug]/matches/[matchId]/games/[n]/page.tsx` — the match-day draft room for game n (snapshot + champion catalogue → `DraftRoom`).
+- `src/app/seasons/[slug]/matches/[matchId]/_components/draft-recap.tsx` — `DraftRecap`: a drafted game's picks (with players) and bans on the match-day card, plus the Assign players form.
 - `src/app/seasons/[slug]/matches/[matchId]/_components/draft-room.tsx` — `DraftRoom`: ready boxes, countdown, step banner + timer, blue/red ban and pick slots, champion grid with search, Lock in / Skip ban, admin Undo / Skip / Restart.
-- `src/app/seasons/[slug]/matches/match-day-actions.ts` — `readyRps`, `unreadyRps`, `throwRps`, `pickSide`, `reportGameWinner` (auto-confirms a decided series; waits for the draft), `flagGameResult`, `readyDraft`, `hoverChampion`, `lockChampion`, `adminUndoDraftStep`, `adminSetDraft`, `adminResetMatchDay` (return `{ error, snap }`, lock the match row, settle deadlines first).
+- `src/app/seasons/[slug]/matches/match-day-actions.ts` — `readyRps`, `unreadyRps`, `throwRps`, `pickSide`, `reportGameWinner` (auto-confirms a decided series; waits for the draft), `flagGameResult`, `readyDraft`, `hoverChampion`, `lockChampion`, `adminUndoDraftStep`, `adminSetDraft`, `assignPicks`, `adminResetMatchDay` (return `{ error, snap }`, lock the match row, settle deadlines first).
 - `src/app/api/matches/[matchId]/stream/route.ts` — match-day SSE stream (1s live / 2s idle, per-viewer snapshot).
 - `src/app/users/[username]/_components/match-history.tsx` — profile match history list (Sub / Sat out tags).
 - `src/app/seasons/[slug]/teams/page.tsx` — team rosters with roles, record, "Your team" highlight. Captains (and admins) get a "Rename team" form on their card.
@@ -220,7 +221,7 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/discord-plan.ts` — pure role-sync decisions: `pickExactMember`, `roleHolderChanges`, `staleTeamRoles`.
 - `src/lib/discord-roles.ts` — shared bot plumbing (`grant`, `revoke`, `leagueRoleId`, `syncExclusiveRole`, `syncInBackground` via `after()`, `mergeReports`), `syncCaptainRole`, `syncTeamRoles` (team roles + private text/voice channels), `renameTeamInDiscord`.
 - `src/lib/discord-ping-roles.ts` — Signed up / Sub list (`syncSignupRoles`, `updateSignupRolesForUser`), Champion (`syncChampionRole`), 10-man (`setTenManRole`, `syncTenManRole`), `removeLeagueRoles` (account deleted).
-- `src/lib/discord-notify.ts` — match threads (`ensureMatchThreads`), team schedules (`postTeamSchedules`), result / side / sub-decision notes (`notifyMatchEvent`, `notifyMatchSides`, `notifySubDecision`), sub-list and 10-man pings (`pingSubList`, `pingTenMan`), `sendDailyReminders`.
+- `src/lib/discord-notify.ts` — match threads (`ensureMatchThreads`), team schedules (`postTeamSchedules`), result / side / sub-decision notes (`notifyMatchEvent`, `notifyMatchSides`, `notifyGameResult`, `notifyDraftRecap`, `notifySubDecision`), sub-list and 10-man pings (`pingSubList`, `pingTenMan`), `sendDailyReminders`.
 - `src/lib/discord-sync.ts` — `syncSeasonDiscord`: every sync, for the admin button.
 - `src/lib/discord-admin.ts` — admin card roster (`getDiscordRoster`), `syncNicknames`, `deleteOldTeamChannels`, `emailUnmatchedPlayers`.
 - `src/lib/discord-format.ts` — pure message formatting (`discordTime`, mentions, `resultLine`, `standingsTable`) and ticker text (`plainMessageText`, `tickerItems`).

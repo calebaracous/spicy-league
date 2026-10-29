@@ -25,6 +25,7 @@ import {
 import { confirmWithResult } from "@/lib/match-results";
 import { isRpsThrow, SIDE_PICK_MS } from "@/lib/rps";
 import { getCaptainedTeamId } from "@/lib/schedule";
+import { getMatchLineups } from "@/lib/substitutions";
 import { bestOfFor, loserOf, seriesScore } from "@/lib/series";
 
 // Match day actions (docs/MATCH-DAY.md). Like the 10-man actions they return
@@ -607,6 +608,70 @@ export async function adminSetDraft(
           draftCompletedAt: null,
         })
         .where(eq(matchGames.id, game.id));
+    });
+  });
+}
+
+/**
+ * After a completed draft, a captain says which lineup player played each of
+ * their team's picks (an admin can do either team). Optional; per-player
+ * champion stats read it. `assignments` maps pick step → user id (or null to
+ * clear). Works after the match is confirmed too.
+ */
+export async function assignPicks(
+  slug: string,
+  matchId: string,
+  gameNumber: number,
+  side: string,
+  assignments: Record<number, string | null>,
+): Promise<MatchDayActionResult> {
+  const session = await requireAuth();
+  const userId = session.user.id;
+  const isAdmin = session.user.role === "admin";
+  return run(matchId, async () => {
+    if (side !== "blue" && side !== "red") throw new MatchDayError("Pick a side.");
+    await db.transaction(async (tx) => {
+      const { season, match } = await lockMatch(tx, slug, matchId, { finished: true });
+      const [game] = await tx
+        .select()
+        .from(matchGames)
+        .where(and(eq(matchGames.matchId, matchId), eq(matchGames.gameNumber, gameNumber)));
+      if (!game?.blueTeamId || !game.redTeamId || game.draftState !== "complete") {
+        throw new MatchDayError("That game's draft isn't complete.");
+      }
+      const teamId = side === "blue" ? game.blueTeamId : game.redTeamId;
+      if (!isAdmin && (await getCaptainedTeamId(season.id, userId)) !== teamId) {
+        throw new MatchDayError("Only that team's captains can assign its picks.");
+      }
+      // Who actually played: the match lineup (approved subs in, sat-out players out).
+      const lineups = await getMatchLineups(match);
+      const lineup = (teamId === match.homeTeamId ? lineups.home : lineups.away)
+        .filter((p) => !p.satOut)
+        .map((p) => p.userId);
+      const chosen = Object.values(assignments).filter((v): v is string => !!v);
+      if (chosen.some((id) => !lineup.includes(id))) {
+        throw new MatchDayError("Pick players from this match's lineup.");
+      }
+      if (new Set(chosen).size !== chosen.length) {
+        throw new MatchDayError("Each player can only play one champion.");
+      }
+      const picks = await tx
+        .select()
+        .from(matchDraftActions)
+        .where(
+          and(
+            eq(matchDraftActions.gameId, game.id),
+            eq(matchDraftActions.side, side),
+            eq(matchDraftActions.kind, "pick"),
+          ),
+        );
+      for (const pick of picks) {
+        if (!(pick.step in assignments)) continue;
+        await tx
+          .update(matchDraftActions)
+          .set({ assignedUserId: assignments[pick.step] ?? null })
+          .where(eq(matchDraftActions.id, pick.id));
+      }
     });
   });
 }

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 
 import { LiveStatusDot } from "@/components/live-status";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -13,6 +13,7 @@ import { bestOfLabel } from "@/lib/match-format";
 import { griefLine, RPS_THROWS, type RpsRound, type RpsThrow } from "@/lib/rps";
 import {
   adminResetMatchDay,
+  assignPicks,
   flagGameResult,
   pickSide,
   reportGameWinner,
@@ -21,6 +22,7 @@ import {
   unreadyRps,
   type MatchDayActionResult,
 } from "../../match-day-actions";
+import { DraftRecap, type ChampionNames, type LineupOption } from "./draft-recap";
 
 // Side selection card (docs/MATCH-DAY.md): ready up → RPS rounds → the winner
 // picks blue/red for game 1. Server-authoritative: deadlines come from the
@@ -109,10 +111,16 @@ export function MatchDayCard({
   initial,
   slug,
   matchId,
+  champions,
+  lineups,
 }: {
   initial: Snap;
   slug: string;
   matchId: string;
+  /** Champion names + icon patch for draft recaps; null if Data Dragon is down. */
+  champions: ChampionNames | null;
+  /** Who played for each team (match lineup), for assigning picks to players. */
+  lineups: Record<string, LineupOption[]>;
 }) {
   const [snap, setSnap] = useState<Snap>(initial);
   // Action results and stream frames race; keep whichever the server made last.
@@ -204,6 +212,24 @@ export function MatchDayCard({
             snap={snap}
             teamName={teamName}
             draftHref={draftHref}
+            recap={(g) =>
+              champions && g.draft.actions.length > 0 ? (
+                <DraftRecap
+                  game={g}
+                  champions={champions}
+                  lineups={lineups}
+                  canAssign={(side) =>
+                    snap.viewer.isAdmin ||
+                    (snap.viewer.teamId !== null &&
+                      snap.viewer.teamId === (side === "blue" ? g.blueTeamId : g.redTeamId))
+                  }
+                  pending={pending}
+                  onAssign={(side, assignments) =>
+                    run(() => assignPicks(slug, matchId, g.gameNumber, side, assignments))
+                  }
+                />
+              ) : null
+            }
             pending={pending}
             onReport={(n, winner) => run(() => reportGameWinner(slug, matchId, n, winner))}
             onFlag={(n) => run(() => flagGameResult(slug, matchId, n))}
@@ -568,6 +594,7 @@ function GamesList({
   snap,
   teamName,
   draftHref,
+  recap,
   pending,
   onReport,
   onFlag,
@@ -575,6 +602,7 @@ function GamesList({
   snap: Snap;
   teamName: (id: string | null) => string;
   draftHref: (gameNumber: number) => string;
+  recap: (game: Game) => ReactNode;
   pending: boolean;
   onReport: (gameNumber: number, winnerTeamId: string) => void;
   onFlag: (gameNumber: number) => void;
@@ -609,6 +637,7 @@ function GamesList({
                 </Link>
               ) : null}
             </div>
+            <div className="pl-16 sm:pl-[4.75rem]">{recap(g)}</div>
             {g.winnerTeamId ? (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pl-16 sm:pl-[4.75rem]">
                 <span>
