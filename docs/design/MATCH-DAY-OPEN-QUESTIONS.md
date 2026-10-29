@@ -5,10 +5,9 @@ live database.** Live still needs migrations `0016`, `0017`, `0018` (all
 additive) before the code ships. Each item is a call I made without you;
 the default is what's built.
 
-**Overnight check-in:** I scheduled an hourly check-in (cron job, this
-session only) that resumes work when usage allows. It stops when the work is
-done or when this session closes; cancel it any time with CronList /
-CronDelete.
+**Overnight check-in:** the hourly check-in I scheduled is cancelled — all
+six phases are on `staging` (CI green on every push). Only the Riot
+per-player stats *display* is left, waiting on question 10.
 
 ## Needs a decision
 
