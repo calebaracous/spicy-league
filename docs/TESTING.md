@@ -25,6 +25,13 @@ site: don't sign it up
 for real seasons, and delete it (`delete from users where username =
 'claudius'`) if that password ever leaks. `test:e2e:cleanup` leaves it alone.
 
+## RPS test captains (`rps_cap_a`, `rps_cap_b`) — staging only
+
+`node scripts/seed-rps-test.mjs` creates two non-admin captains and a
+`rps-test` season with three scheduled matches for trying match day by hand
+([MATCH-DAY.md](MATCH-DAY.md)). Password: `TEST_CAPTAIN_PASSWORD` in
+`.env.development.local`. Not created on live.
+
 ## Unit tests (`tests/unit/`, `vitest.config.mts`)
 
 - `draft-order.test.ts` — `snakeOrder` for 2–8 solo captains (unchanged

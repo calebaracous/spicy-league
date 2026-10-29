@@ -96,6 +96,16 @@ from `resolveExpired` when the clock picked at random. See
 it for display yet (per-player Riot stats are phase 6). See
 [SEASON-LIFECYCLE.md](SEASON-LIFECYCLE.md) and decision 20 in the design doc.
 
+## Trying it by hand (staging)
+
+`node scripts/seed-rps-test.mjs` (staging only — refuses the production
+`DATABASE_URL`) seeds season `rps-test`: Team A (`rps_cap_a`, plus
+`claudius` as duo co-captain) vs Team B (`rps_cap_b`) in three scheduled
+matches, and prints their URLs. Both captains use `TEST_CAPTAIN_PASSWORD`
+from `.env.development.local` (generated on first run, never printed).
+Re-running resets the matches and wipes their RPS / side data. Use two
+browsers (or a private window) to play both captains.
+
 ## Groundwork (not wired yet)
 
 `src/lib/draft-room.ts` (20-step draft sequence, fearless availability,
