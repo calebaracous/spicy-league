@@ -46,3 +46,35 @@ export async function getChampionCatalog(): Promise<ChampionCatalog | null> {
     return null;
   }
 }
+
+/** Lowercase letters and digits only, so "Kai'Sa", "kaisa" and "KAI SA" all compare equal. */
+function championToken(s: string): string {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+/**
+ * Admin input ("Wukong, Kai'Sa, nunu & willump") → Data Dragon keys, deduped
+ * and sorted. Each comma- or newline-separated entry matches a champion's
+ * display name or key, ignoring case, spaces and punctuation. Entries that
+ * match nothing come back in `unknown` (trimmed, deduped, input order).
+ */
+export function resolveChampionKeys(
+  input: string,
+  champions: Champion[],
+): { keys: string[]; unknown: string[] } {
+  const byToken = new Map<string, string>();
+  for (const c of champions) {
+    byToken.set(championToken(c.key), c.key);
+    byToken.set(championToken(c.name), c.key);
+  }
+  const keys = new Set<string>();
+  const unknown: string[] = [];
+  for (const raw of input.split(/[,\n]/)) {
+    const entry = raw.trim();
+    if (!entry) continue;
+    const key = byToken.get(championToken(entry));
+    if (key) keys.add(key);
+    else if (!unknown.includes(entry)) unknown.push(entry);
+  }
+  return { keys: [...keys].sort(), unknown };
+}

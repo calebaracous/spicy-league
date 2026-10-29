@@ -21,7 +21,13 @@ const AWAY = "Away Antelopes";
 
 async function seedMatch(
   suffix: string,
-  opts: { stage?: "group" | "semis"; game1Sides?: boolean } = {},
+  opts: {
+    stage?: "group" | "semis";
+    game1Sides?: boolean;
+    /** Game 1's draft state when seeded with sides (default: skipped). */
+    game1Draft?: "skipped" | "waiting";
+    fearless?: boolean;
+  } = {},
 ): Promise<{ url: string; matchId: string; homeId: string; awayId: string }> {
   const slug = seasonSlug(suffix);
   const [season] = await db
@@ -31,6 +37,7 @@ async function seedMatch(
       slug,
       game: "lol",
       state: opts.stage === "semis" ? "playoffs" : "group_stage",
+      fearlessDraft: opts.fearless ?? false,
     })
     .returning({ id: schema.seasons.id });
   const ids = await userIdsByUsername([1, 2, 3].map((n) => P(n).username));
@@ -61,7 +68,8 @@ async function seedMatch(
       awayTeamId: away.id,
     })
     .returning({ id: schema.matches.id });
-  // Skip RPS: game 1 already has sides (home won RPS and took blue).
+  // Skip RPS: game 1 already has sides (home won RPS and took blue) and, by
+  // default, a skipped draft so results can be recorded straight away.
   if (opts.game1Sides) {
     await db.insert(schema.matchGames).values({
       matchId: match.id,
@@ -70,6 +78,7 @@ async function seedMatch(
       sideChosenVia: "rps",
       blueTeamId: home.id,
       redTeamId: away.id,
+      draftState: opts.game1Draft ?? "skipped",
     });
   }
   return {
@@ -202,6 +211,13 @@ test("Bo3 semi: results, loser's side pick, a correction, auto-confirm, flag, ad
     await expect(card(p1)).toContainText("Pick your side for game 2", { timeout: SSE_TIMEOUT });
     await expect(card(p1)).toContainText("Best of 3");
     await card(p1).getByRole("button", { name: "Blue side" }).click();
+    // Results wait for the draft; this test isn't about the draft room.
+    await expect(card(p1)).toContainText("Open draft room");
+    await db
+      .update(schema.matchGames)
+      .set({ draftState: "skipped" })
+      .where(eq(schema.matchGames.matchId, matchId));
+    await p1.reload();
     await expect(card(p1)).toContainText("Game 2 is on");
   });
 
@@ -256,5 +272,107 @@ test("Bo3 semi: results, loser's side pick, a correction, auto-confirm, flag, ad
     });
     const g2 = (await games()).find((g) => g.gameNumber === 2)!;
     expect(g2).toMatchObject({ winnerTeamId: homeId, resultFlaggedAt: null });
+  });
+});
+
+test("Draft room: ready, countdown, lock, timeout locks the hover, skipped ban, fearless", async ({
+  browser,
+}) => {
+  test.setTimeout(150_000);
+  // Fearless Bo3 semi; game 1 is done with Ahri picked, game 2 (home blue)
+  // is the one we draft.
+  const { url, matchId, homeId, awayId } = await seedMatch("draft", {
+    stage: "semis",
+    game1Sides: true,
+    fearless: true,
+  });
+  const [game1] = await db
+    .update(schema.matchGames)
+    .set({ draftState: "complete", winnerTeamId: awayId })
+    .where(eq(schema.matchGames.matchId, matchId))
+    .returning();
+  await db.insert(schema.matchDraftActions).values({
+    gameId: game1.id,
+    step: 7,
+    side: "blue",
+    kind: "pick",
+    championKey: "Ahri",
+  });
+  await db.insert(schema.matchGames).values({
+    matchId,
+    gameNumber: 2,
+    sideChooserTeamId: homeId,
+    sideChosenVia: "loser",
+    blueTeamId: homeId,
+    redTeamId: awayId,
+  });
+  const room = `${url}/games/2`;
+  const [blue, red, spectator] = await Promise.all([
+    signedInPage(browser, P(1).username),
+    signedInPage(browser, P(2).username),
+    anonymousPage(browser),
+  ]);
+  await Promise.all([blue, red, spectator].map((p) => p.goto(room)));
+  const actions = async () => {
+    const [g2] = await db
+      .select()
+      .from(schema.matchGames)
+      .where(eq(schema.matchGames.matchId, matchId))
+      .then((rows) => rows.filter((g) => g.gameNumber === 2));
+    return db
+      .select()
+      .from(schema.matchDraftActions)
+      .where(eq(schema.matchDraftActions.gameId, g2.id))
+      .then((rows) => rows.sort((a, b) => a.step - b.step));
+  };
+  const champ = (p: Page, title: string) =>
+    p.getByRole("button").and(p.getByTitle(title, { exact: true }));
+
+  await test.step("fearless greys out last game's pick; spectators can't choose", async () => {
+    await expect(champ(blue, "Ahri: Fearless")).toBeDisabled();
+    await expect(spectator.getByRole("button", { name: "Ready" })).toHaveCount(0);
+  });
+
+  await test.step("both ready → countdown → blue's first ban", async () => {
+    await blue.getByRole("button", { name: "Ready", exact: true }).click();
+    await red.getByRole("button", { name: "Ready", exact: true }).click();
+    for (const p of [blue, red, spectator]) {
+      await expect(p.getByText("BLUE BAN 1")).toBeVisible({ timeout: SSE_TIMEOUT });
+    }
+    await expect(blue.getByText("Your turn")).toBeVisible();
+    await expect(red.getByText("Your turn")).toHaveCount(0);
+  });
+
+  await test.step("blue bans Garen", async () => {
+    await champ(blue, "Garen").click();
+    await blue.getByRole("button", { name: "Lock in" }).click();
+    await expect(red.getByText("RED BAN 1")).toBeVisible({ timeout: SSE_TIMEOUT });
+    await expect(champ(red, "Garen: Banned")).toBeDisabled();
+  });
+
+  await test.step("red hovers Lux and lets the clock run out: Lux locks", async () => {
+    await champ(red, "Lux").click();
+    await expect(spectator.getByText("BLUE BAN 2")).toBeVisible({ timeout: 45_000 });
+    const taken = await actions();
+    expect(taken.map((a) => [a.step, a.championKey, a.auto])).toEqual([
+      [1, "Garen", false],
+      [2, "Lux", true],
+    ]);
+  });
+
+  await test.step("blue skips a ban", async () => {
+    await blue.getByRole("button", { name: "Skip ban" }).click();
+    await expect(red.getByText("RED BAN 2")).toBeVisible({ timeout: SSE_TIMEOUT });
+    expect((await actions())[2]).toMatchObject({ step: 3, championKey: null, auto: false });
+  });
+
+  await test.step("an admin skips the rest; the card offers the result", async () => {
+    const adminPage = await signedInPage(browser, admin().username);
+    await adminPage.goto(room);
+    adminPage.once("dialog", (d) => d.accept());
+    await adminPage.getByRole("button", { name: "Skip draft" }).click();
+    await expect(adminPage.getByText("An admin skipped this draft.")).toBeVisible();
+    await blue.goto(url);
+    await expect(card(blue)).toContainText("Game 2 is on");
   });
 });

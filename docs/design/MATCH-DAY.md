@@ -1,6 +1,7 @@
 # Match day: RPS side select, per-game results, our own draft room
 
-Design + build plan, not shipped yet. When a phase ships, its facts move to
+Design + build plan. Phases 1–3 are built (on `staging`); see
+[../MATCH-DAY.md](../MATCH-DAY.md) for what shipped. When a phase ships, its facts move to
 `docs/MATCH-DAY.md` (and MATCHES / DATA-MODEL / FILE-MAP); this file stays as
 the spec it was built from, like `docs/design/SUBSTITUTIONS.md`.
 

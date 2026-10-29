@@ -1,16 +1,26 @@
 import "server-only";
 
-import { and, eq, inArray, isNull, lte } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, lte } from "drizzle-orm";
 
 import { auth } from "@/auth";
 import { db } from "@/db/client";
 import { users } from "@/db/schema/auth";
 import { teams } from "@/db/schema/drafts";
-import { matchGames, matchRps, type MatchRps } from "@/db/schema/match-day";
+import {
+  matchDraftActions,
+  matchGames,
+  matchRps,
+  type MatchGame,
+  type MatchRps,
+} from "@/db/schema/match-day";
 import { matches, type Match } from "@/db/schema/matches";
 import { seasons } from "@/db/schema/seasons";
-import { notifyMatchSides } from "@/lib/discord-notify";
+import { getChampionCatalog } from "@/lib/champions";
+import { notifyDraftRecap, notifyMatchSides } from "@/lib/discord-notify";
 import { syncInBackground } from "@/lib/discord-roles";
+import { settleDraft, type DraftClock, type DraftState } from "@/lib/draft-clock";
+import { availableChampions, type DraftAction } from "@/lib/draft-room";
+import { fearlessApplies } from "@/lib/match-format";
 import { getCaptainedTeamId } from "@/lib/schedule";
 import { bestOfFor, seriesScore, type SeriesScore } from "@/lib/series";
 import {
@@ -28,7 +38,7 @@ import {
 // applies what has lapsed (settleMatchDay), so the 1s SSE poll is the clock.
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
-type MatchTeams = Pick<Match, "id" | "homeTeamId" | "awayTeamId">;
+type MatchTeams = Pick<Match, "id" | "homeTeamId" | "awayTeamId" | "seasonId" | "stage">;
 
 /** Side selection exists for LoL seasons only. */
 export function matchDayApplies(season: { game: string }): boolean {
@@ -60,7 +70,7 @@ export async function settleMatchDay(
   tx: Tx,
   match: MatchTeams,
   now: Date,
-): Promise<{ autoSides: number[] }> {
+): Promise<{ autoSides: number[]; draftsDone: number[] }> {
   const [rps] = await tx.select().from(matchRps).where(eq(matchRps.matchId, match.id));
   if (rps) {
     const { row, changed } = settleRps(rpsCore(rps), now, {
@@ -111,7 +121,132 @@ export async function settleMatchDay(
       })
       .where(eq(matchGames.id, game.id));
   }
-  return { autoSides: lapsed.map((g) => g.gameNumber) };
+  const draftsDone = await settleDrafts(tx, match, now);
+  return { autoSides: lapsed.map((g) => g.gameNumber), draftsDone };
+}
+
+// ── Draft room ───────────────────────────────────────────────────────────────
+
+export function draftClock(g: MatchGame): DraftClock {
+  return {
+    draftState: g.draftState,
+    blueReadyAt: g.blueReadyAt,
+    redReadyAt: g.redReadyAt,
+    draftStartsAt: g.draftStartsAt,
+    stepDeadline: g.stepDeadline,
+    blueHover: g.blueHover,
+    redHover: g.redHover,
+    draftCompletedAt: g.draftCompletedAt,
+  };
+}
+
+/** Is a draft clock transition due? Cheap: needs no actions or champion list. */
+function draftDue(g: MatchGame, now: Date): boolean {
+  if (!g.blueTeamId) return false;
+  switch (g.draftState) {
+    case "waiting":
+      return !!g.blueReadyAt && !!g.redReadyAt;
+    case "countdown":
+      return !!g.draftStartsAt && now >= g.draftStartsAt;
+    case "drafting":
+      return !!g.stepDeadline && now >= g.stepDeadline;
+    default:
+      return false;
+  }
+}
+
+/** Every game's draft actions in step order, keyed by game id. */
+export async function loadDraftActions(
+  q: Pick<Tx, "select">,
+  gameIds: string[],
+): Promise<Map<string, DraftAction[]>> {
+  const byGame = new Map<string, DraftAction[]>();
+  if (gameIds.length === 0) return byGame;
+  const rows = await q
+    .select()
+    .from(matchDraftActions)
+    .where(inArray(matchDraftActions.gameId, gameIds))
+    .orderBy(asc(matchDraftActions.step));
+  for (const r of rows) {
+    const list = byGame.get(r.gameId) ?? [];
+    list.push({ step: r.step, side: r.side, kind: r.kind, championKey: r.championKey });
+    byGame.set(r.gameId, list);
+  }
+  return byGame;
+}
+
+/**
+ * What game `gameNumber` may still ban or pick: the catalogue minus this
+ * game's actions, the season's disabled champions and — fearless — every
+ * champion picked in an earlier game of the match. Null without a catalogue.
+ */
+export async function draftAvailability(
+  q: Pick<Tx, "select" | "query">,
+  match: MatchTeams,
+  games: MatchGame[],
+  actionsByGame: Map<string, DraftAction[]>,
+  gameNumber: number,
+): Promise<((actions: readonly DraftAction[]) => string[]) | null> {
+  const [catalog, season] = await Promise.all([
+    getChampionCatalog(),
+    q.query.seasons.findFirst({ where: eq(seasons.id, match.seasonId) }),
+  ]);
+  if (!catalog || !season) return null;
+  const catalogKeys = catalog.champions.map((c) => c.key);
+  const priorGamePicks = games
+    .filter((g) => g.gameNumber < gameNumber)
+    .flatMap((g) => actionsByGame.get(g.id) ?? [])
+    .filter((a) => a.kind === "pick" && a.championKey)
+    .map((a) => a.championKey!);
+  const fearless = fearlessApplies(season, match.stage);
+  return (actions) =>
+    availableChampions({
+      catalogKeys,
+      actions,
+      priorGamePicks,
+      disabled: season.disabledChampions,
+      fearless,
+    });
+}
+
+/**
+ * Draft clocks that have lapsed: countdown → drafting, and timed-out steps
+ * (hover locks, else a skipped ban / random pick). Without the champion list
+ * a timed-out step waits for the next tick rather than guessing.
+ */
+/** Returns the game numbers whose draft the clock just completed. */
+async function settleDrafts(tx: Tx, match: MatchTeams, now: Date): Promise<number[]> {
+  const games = await tx
+    .select()
+    .from(matchGames)
+    .where(eq(matchGames.matchId, match.id))
+    .orderBy(asc(matchGames.gameNumber));
+  const due = games.filter((g) => draftDue(g, now));
+  const done: number[] = [];
+  if (due.length === 0) return done;
+  const actionsByGame = await loadDraftActions(
+    tx,
+    games.map((g) => g.id),
+  );
+  for (const g of due) {
+    const actions = actionsByGame.get(g.id) ?? [];
+    let available: (a: readonly DraftAction[]) => readonly string[] = () => [];
+    if (g.draftState === "drafting") {
+      const fn = await draftAvailability(tx, match, games, actionsByGame, g.gameNumber);
+      if (!fn) continue;
+      available = fn;
+    }
+    const { clock, taken } = settleDraft(draftClock(g), actions, now, available);
+    await tx.update(matchGames).set(clock).where(eq(matchGames.id, g.id));
+    if (clock.draftState === "complete") done.push(g.gameNumber);
+    if (taken.length) {
+      await tx
+        .insert(matchDraftActions)
+        .values(taken.map((a) => ({ ...a, gameId: g.id, auto: true })));
+      actionsByGame.set(g.id, [...actions, ...taken]);
+    }
+  }
+  return done;
 }
 
 /**
@@ -132,19 +267,23 @@ export async function resolveExpired(match: MatchTeams, now = new Date()): Promi
       awayTeamId: match.awayTeamId,
     }) !== null;
   const sideDue = games.some((g) => !g.blueTeamId && g.sideDeadline && g.sideDeadline <= now);
-  if (!rpsDue && !sideDue) return;
+  const draftIsDue = games.some((g) => draftDue(g, now));
+  if (!rpsDue && !sideDue && !draftIsDue) return;
 
-  const autoSides = await db.transaction(async (tx) => {
+  const settled = await db.transaction(async (tx) => {
     const [locked] = await tx
       .select({ id: matches.id, state: matches.state })
       .from(matches)
       .where(eq(matches.id, match.id))
       .for("update", { skipLocked: true });
-    if (!locked || locked.state !== "scheduled") return [];
-    return (await settleMatchDay(tx, match, now)).autoSides;
+    if (!locked || locked.state !== "scheduled") return null;
+    return settleMatchDay(tx, match, now);
   });
-  for (const gameNumber of autoSides) {
+  for (const gameNumber of settled?.autoSides ?? []) {
     syncInBackground("match sides", () => notifyMatchSides(match.id, gameNumber));
+  }
+  for (const gameNumber of settled?.draftsDone ?? []) {
+    syncInBackground("draft recap", () => notifyDraftRecap(match.id, gameNumber));
   }
 }
 
@@ -188,7 +327,20 @@ export type MatchDaySnapshot = {
     /** Who recorded the winner (display name). */
     resultReportedBy: string | null;
     resultFlagged: boolean;
+    draft: {
+      state: DraftState;
+      blueReady: boolean;
+      redReady: boolean;
+      startsAt: string | null;
+      stepDeadline: string | null;
+      blueHover: string | null;
+      redHover: string | null;
+      actions: DraftAction[];
+    };
   }[];
+  /** Draft room rules: fearless across this match's games, season-disabled champions. */
+  fearless: boolean;
+  disabledChampions: string[];
   /** Series length and the running score from game results. */
   bestOf: number;
   series: SeriesScore;
@@ -237,6 +389,10 @@ export async function getMatchDaySnapshot(
     }),
   ]);
   const teamName = (id: string) => teamRows.find((t) => t.id === id)?.name ?? "?";
+  const actionsByGame = await loadDraftActions(
+    db,
+    games.map((g) => g.id),
+  );
 
   // Seat holders and game-result reporters, for display names.
   const seatIds = [
@@ -305,7 +461,19 @@ export async function getMatchDaySnapshot(
       winnerTeamId: g.winnerTeamId,
       resultReportedBy: seat(g.resultReportedBy)?.name ?? null,
       resultFlagged: g.resultFlaggedAt !== null,
+      draft: {
+        state: g.draftState,
+        blueReady: !!g.blueReadyAt,
+        redReady: !!g.redReadyAt,
+        startsAt: iso(g.draftStartsAt),
+        stepDeadline: iso(g.stepDeadline),
+        blueHover: g.blueHover,
+        redHover: g.redHover,
+        actions: actionsByGame.get(g.id) ?? [],
+      },
     })),
+    fearless: season ? fearlessApplies(season, match.stage) : false,
+    disabledChampions: season?.disabledChampions ?? [],
     bestOf,
     series: seriesScore(bestOf, games, match),
     viewer: { ...viewer, myThrow },
@@ -318,5 +486,11 @@ export function matchDayIsHot(snap: MatchDaySnapshot): boolean {
   const r = snap.rps;
   if (r && (r.state === "throwing" || r.state === "revealed")) return true;
   if (r && r.state === "waiting" && (r.home.ready || r.away.ready)) return true;
-  return snap.games.some((g) => !g.blueTeamId);
+  return snap.games.some(
+    (g) =>
+      !g.blueTeamId ||
+      g.draft.state === "countdown" ||
+      g.draft.state === "drafting" ||
+      (g.draft.state === "waiting" && (g.draft.blueReady || g.draft.redReady)),
+  );
 }

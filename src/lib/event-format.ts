@@ -167,6 +167,7 @@ const FIELD_LABELS: Record<string, string> = {
   groupBestOf: "Group best-of",
   playoffBestOf: "Semis best-of",
   finalBestOf: "Final best-of",
+  disabledChampions: "Disabled champions",
   fearlessDraft: "Fearless draft",
   prizePool: "Prize pool ($)",
   prizeSplit: "Payout split (%)",

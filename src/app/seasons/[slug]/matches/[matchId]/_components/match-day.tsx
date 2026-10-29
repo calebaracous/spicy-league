@@ -1,10 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 
 import { LiveStatusDot } from "@/components/live-status";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSnapshotStream } from "@/components/use-turn-alert";
 import type { MatchDaySnapshot } from "@/lib/match-day";
@@ -31,20 +32,23 @@ const THROW_LABEL: Record<RpsThrow, string> = {
   scissors: "Scissors",
 };
 const THROW_EMOJI: Record<RpsThrow, string> = { rock: "✊", paper: "✋", scissors: "✌️" };
-const BLUE = "#3b82f6";
-const RED = "#ef4444";
+export const BLUE = "#3b82f6";
+export const RED = "#ef4444";
 
 type Snap = MatchDaySnapshot;
 
 /** Where the card is; an error from an earlier phase stops showing once it moves on. */
 function phaseKey(snap: Snap): string {
   const r = snap.rps;
-  const games = snap.games.map((g) => `${g.blueTeamId ?? "-"}/${g.winnerTeamId ?? "-"}`);
+  const games = snap.games.map(
+    (g) =>
+      `${g.blueTeamId ?? "-"}/${g.winnerTeamId ?? "-"}/${g.draft.state}/${g.draft.actions.length}`,
+  );
   return `${r?.state ?? "none"}:${r?.round ?? 0}:${games.join()}`;
 }
 
 /** Runs an action and applies the snapshot it returns straight away. */
-function useAction(snap: Snap, apply: (next: Snap) => void) {
+export function useAction(snap: Snap, apply: (next: Snap) => void) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<{ message: string; phase: string } | null>(null);
   function run(action: () => Promise<MatchDayActionResult>) {
@@ -67,7 +71,7 @@ function useAction(snap: Snap, apply: (next: Snap) => void) {
 }
 
 /** Milliseconds left until `deadline` on the server's clock, re-rendered ~5×/s. */
-function useCountdown(deadline: string | null, serverNow: string): number | null {
+export function useCountdown(deadline: string | null, serverNow: string): number | null {
   // Local clock reading at the last tick, and how far the server's is ahead.
   const [clock, setClock] = useState<{ now: number; offset: number } | null>(null);
   useEffect(() => {
@@ -85,7 +89,7 @@ function useCountdown(deadline: string | null, serverNow: string): number | null
   return Math.max(0, Date.parse(deadline) - (clock.now + clock.offset));
 }
 
-function Countdown({ ms, total }: { ms: number | null; total: number }) {
+export function Countdown({ ms, total }: { ms: number | null; total: number }) {
   if (ms === null) return null;
   const pct = Math.max(0, Math.min(100, (ms / total) * 100));
   return (
@@ -131,6 +135,7 @@ export function MatchDayCard({
   const sidePick = snap.games.find((g) => !g.blueTeamId) ?? null;
   const current = snap.games.find((g) => g.blueTeamId && !g.winnerTeamId) ?? null;
   const { series } = snap;
+  const draftHref = (n: number) => `/seasons/${slug}/matches/${matchId}/games/${n}`;
   const teamName = (id: string | null) =>
     id === snap.home.teamId ? snap.home.name : id === snap.away.teamId ? snap.away.name : "?";
 
@@ -171,6 +176,7 @@ export function MatchDayCard({
           <ResultPrompt
             snap={snap}
             game={current}
+            draftHref={draftHref(current.gameNumber)}
             pending={pending}
             onReport={(winner) =>
               run(() => reportGameWinner(slug, matchId, current.gameNumber, winner))
@@ -197,6 +203,7 @@ export function MatchDayCard({
           <GamesList
             snap={snap}
             teamName={teamName}
+            draftHref={draftHref}
             pending={pending}
             onReport={(n, winner) => run(() => reportGameWinner(slug, matchId, n, winner))}
             onFlag={(n) => run(() => flagGameResult(slug, matchId, n))}
@@ -481,18 +488,44 @@ function SidePick({
 }
 
 /** "Who won game N?" for the game being played. */
+const DRAFT_STATUS: Record<Game["draft"]["state"], string> = {
+  waiting: "waiting for both captains to ready up",
+  countdown: "starting",
+  drafting: "in progress",
+  complete: "complete",
+  skipped: "skipped",
+};
+
+/** The game being played: its draft first, then "who won?". */
 function ResultPrompt({
   snap,
   game,
+  draftHref,
   pending,
   onReport,
 }: {
   snap: Snap;
   game: Game;
+  draftHref: string;
   pending: boolean;
   onReport: (winnerTeamId: string) => void;
 }) {
   const canReport = snap.viewer.teamId !== null || snap.viewer.isAdmin;
+  const drafted = game.draft.state === "complete" || game.draft.state === "skipped";
+  if (!drafted) {
+    const step = Math.min(game.draft.actions.length + 1, 20);
+    return (
+      <div className="space-y-3 text-center">
+        <p>
+          Game {game.gameNumber} draft: {DRAFT_STATUS[game.draft.state]}
+          {game.draft.state === "drafting" ? ` (step ${step}/20)` : ""}.
+        </p>
+        <Link href={draftHref} className={buttonVariants({ className: "h-11 px-6" })}>
+          Open draft room
+        </Link>
+      </div>
+    );
+  }
   return (
     <div className="space-y-3 text-center">
       <p>
@@ -534,12 +567,14 @@ function sideNote(g: Game, teamName: (id: string | null) => string): string {
 function GamesList({
   snap,
   teamName,
+  draftHref,
   pending,
   onReport,
   onFlag,
 }: {
   snap: Snap;
   teamName: (id: string | null) => string;
+  draftHref: (gameNumber: number) => string;
   pending: boolean;
   onReport: (gameNumber: number, winnerTeamId: string) => void;
   onFlag: (gameNumber: number) => void;
@@ -565,6 +600,14 @@ function GamesList({
                 {teamName(g.redTeamId)} red
               </span>
               <span className="text-muted-foreground text-xs">{sideNote(g, teamName)}</span>
+              {g.draft.state !== "skipped" ? (
+                <Link
+                  href={draftHref(g.gameNumber)}
+                  className="text-xs underline-offset-2 hover:underline"
+                >
+                  {g.draft.state === "complete" ? "Draft" : "Draft room →"}
+                </Link>
+              ) : null}
             </div>
             {g.winnerTeamId ? (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pl-16 sm:pl-[4.75rem]">

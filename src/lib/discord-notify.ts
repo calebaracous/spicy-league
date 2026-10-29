@@ -5,9 +5,10 @@ import { and, asc, eq, inArray, isNull, ne, or } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users } from "@/db/schema/auth";
 import { teams } from "@/db/schema/drafts";
-import { matchGames } from "@/db/schema/match-day";
+import { matchDraftActions, matchGames } from "@/db/schema/match-day";
 import { matches, matchSubstitutions, type Match } from "@/db/schema/matches";
 import { seasons, type Season } from "@/db/schema/seasons";
+import { getChampionCatalog } from "@/lib/champions";
 import { discordConfig, postMessage, startThread, type DiscordConfig } from "@/lib/discord-api";
 import {
   channelMention,
@@ -260,9 +261,13 @@ export async function notifyMatchSides(
     where: and(eq(matchGames.matchId, matchId), eq(matchGames.gameNumber, gameNumber)),
   });
   if (!game?.blueTeamId || !game.redTeamId) return report;
-  const byId = await teamsById(match.seasonId);
+  const [byId, season] = await Promise.all([
+    teamsById(match.seasonId),
+    db.query.seasons.findFirst({ where: eq(seasons.id, match.seasonId) }),
+  ]);
   const blue = byId.get(game.blueTeamId)?.name ?? "?";
   const red = byId.get(game.redTeamId)?.name ?? "?";
+  const room = season ? ` Draft room: ${matchUrl(season.slug, matchId)}/games/${gameNumber}` : "";
   const how =
     game.sideChosenVia === "rps"
       ? " (won rock paper scissors)"
@@ -273,7 +278,7 @@ export async function notifyMatchSides(
     await postMessage(
       cfg,
       match.discordThreadId,
-      `🔵 Game ${gameNumber}: **${blue}** on blue, 🔴 **${red}** on red${how}.`,
+      `🔵 Game ${gameNumber}: **${blue}** on blue, 🔴 **${red}** on red${how}.${room}`,
     );
   } catch (err) {
     report.errors.push(describe(err));
@@ -309,6 +314,49 @@ export async function notifyGameResult(
     lines.push(`${name(next.sideChooserTeamId)} picks the side for game ${gameNumber + 1}.`);
   try {
     await postMessage(cfg, match.discordThreadId, lines.join(" "));
+  } catch (err) {
+    report.errors.push(describe(err));
+  }
+  return report;
+}
+
+/** A note in the match thread when a game's draft completes: both sides' picks and bans. */
+export async function notifyDraftRecap(
+  matchId: string,
+  gameNumber: number,
+): Promise<DiscordSyncReport> {
+  const report = emptyReport();
+  const cfg = discordConfig();
+  if (!cfg) return report;
+  const match = await db.query.matches.findFirst({ where: eq(matches.id, matchId) });
+  if (!match?.discordThreadId) return report;
+  const game = await db.query.matchGames.findFirst({
+    where: and(eq(matchGames.matchId, matchId), eq(matchGames.gameNumber, gameNumber)),
+  });
+  if (!game?.blueTeamId || !game.redTeamId) return report;
+  const [byId, actions, catalog] = await Promise.all([
+    teamsById(match.seasonId),
+    db.query.matchDraftActions.findMany({ where: eq(matchDraftActions.gameId, game.id) }),
+    getChampionCatalog(),
+  ]);
+  const name = (key: string | null) =>
+    key ? (catalog?.champions.find((c) => c.key === key)?.name ?? key) : "—";
+  const line = (side: "blue" | "red", teamId: string) => {
+    const mine = actions.filter((a) => a.side === side).sort((a, b) => a.step - b.step);
+    const picks = mine.filter((a) => a.kind === "pick").map((a) => name(a.championKey));
+    const bans = mine.filter((a) => a.kind === "ban").map((a) => name(a.championKey));
+    return `${side === "blue" ? "🔵" : "🔴"} **${byId.get(teamId)?.name ?? "?"}**: ${picks.join(", ")} · bans ${bans.join(", ")}`;
+  };
+  try {
+    await postMessage(
+      cfg,
+      match.discordThreadId,
+      [
+        `📝 Game ${gameNumber} draft:`,
+        line("blue", game.blueTeamId),
+        line("red", game.redTeamId),
+      ].join("\n"),
+    );
   } catch (err) {
     report.errors.push(describe(err));
   }

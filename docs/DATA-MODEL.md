@@ -47,6 +47,10 @@ files are in git history before the squash commit):
   `rps_throw`, `side_chosen_via`) and `users.stats_opt_in_at`.
 - `0017_match_games_results.sql` — seasons.playoff_best_of / final_best_of;
   match_games result columns (see match-day.ts section).
+- `0018_match_draft.sql` — `match_draft_actions` (+ enums `match_draft_state`,
+  `draft_side`, `draft_kind`; hand-written partial unique index on
+  `(game_id, champion_key)`), `match_games` draft-clock columns,
+  `seasons.disabled_champions`.
 
 **Why the baseline's `when` is old.** Drizzle's migrator applies a journal
 entry only if its `when` is greater than the newest `created_at` in
@@ -176,6 +180,10 @@ Auth, not queried directly by app code.
 - `fearlessDraft` boolean, default false (migration `0015_fearless_draft`) —
   series are played in fearless draft. Display only; see
   [MATCHES.md](MATCHES.md) → Fearless draft.
+- `disabledChampions` text[], default `{}` (migration `0018_match_draft`) —
+  Data Dragon keys (`MonkeyKing`, not "Wukong") the match-day draft room
+  won't offer. LoL only; edited in the admin season form, see
+  [MATCHES.md](MATCHES.md) → Disabled champions.
 - `discordCategoryId` (migration `0010`) — Discord category holding the
   season's team channels, created by `syncTeamRoles`.
 - `championTeamId` — set by `confirmMatch` when the **final** is
@@ -303,7 +311,15 @@ cascade from `matches`; team/user FKs are `set null`.
   `resultReportedAt`, `resultFlaggedBy` / `resultFlaggedAt`.
   `tournamentCode` / `riotMatchId` reserved for the Riot Tournament API.
   Game 1 is inserted when RPS finishes; game N+1 when game N's winner is
-  recorded and the series isn't decided.
+  recorded and the series isn't decided. Draft clock since `0018`:
+  `draftState` (`match_draft_state`: `waiting | countdown | drafting |
+  complete | skipped`), `blueReadyAt` / `redReadyAt`, `draftStartsAt`,
+  `stepDeadline`, `blueHover` / `redHover`, `draftCompletedAt`.
+- `match_draft_actions` — one row per draft step taken, unique `(gameId,
+  step)`; `side` / `kind`, `championKey` (Data Dragon key; null = skipped
+  ban), `actedBy` (null when `auto`), `auto`. Partial unique `(gameId,
+  championKey) WHERE championKey IS NOT NULL`, hand-written in
+  `0018_match_draft.sql` (not in the Drizzle schema).
 
 ## stats.ts — accountLinks, riotStatSnapshots, leetifyStatSnapshots
 

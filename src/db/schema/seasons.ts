@@ -52,6 +52,9 @@ export const seasons = pgTable(
     // team has a majority (docs/MATCH-DAY.md); reporting is winner + score.
     playoffBestOf: integer("playoff_best_of").notNull().default(3),
     finalBestOf: integer("final_best_of").notNull().default(5),
+    // Data Dragon keys the match-day draft room won't offer (new releases,
+    // bugged champions). Expected to be rarely used.
+    disabledChampions: text("disabled_champions").array().notNull().default([]),
     // Fearless draft: a champion picked in one game of a series can't be
     // picked again by either team in that series. Display only (the site
     // doesn't run champ select); shown wherever the series format is.

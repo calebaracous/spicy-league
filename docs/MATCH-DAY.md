@@ -1,4 +1,4 @@
-# Match day: RPS side select, game results
+# Match day: RPS side select, draft room, game results
 
 What's **shipped** of match day. The full plan (per-game results, our own
 draft room, stats, Riot Tournament API) and every agreed decision live in
@@ -7,7 +7,7 @@ draft room, stats, Riot Tournament API) and every agreed decision live in
 Shipped: **phase 1** — rock paper scissors decides who picks game 1's side,
 plus the stats opt-in; **phase 2** — per-game results, the loser picks the
 next side, the match confirms itself when the series is decided, and the
-admin Edit result tool. LoL seasons only (`matchDayApplies(season)`); CS2
+admin Edit result tool; **phase 3** — our own pick/ban draft room per game. LoL seasons only (`matchDayApplies(season)`); CS2
 match pages are unchanged.
 
 ## Flow
@@ -81,6 +81,50 @@ captains ready up (one seat per team) ─▶ round: 10s to throw ─▶ reveal 3
   changed semi re-teams an unplayed final and a changed final re-crowns the
   champion; clears flags; logs `match.result_edited`.
 
+## Draft room (phase 3)
+
+Every game with sides set has a draft room at
+`/seasons/[slug]/matches/[matchId]/games/[n]` (public; captains act). The
+card shows the draft's status with **Open draft room** while it isn't done,
+and captains can only record that game's winner once the draft is
+`complete` or `skipped` (admins always can).
+
+- **Clock** (`src/lib/draft-clock.ts`, pure, `tests/unit/draft-clock.test.ts`):
+  `match_games.draftState` `waiting` → both sides `readyDraft` (captain of
+  that side, or an admin for either; un-ready allowed while waiting) →
+  `countdown` (3s, `draftStartsAt`) → `drafting` (30s `stepDeadline` per
+  step) → `complete` after 20 steps. `skipped` = an admin let the game go
+  ahead without a draft here. Lapsed steps are applied lazily by
+  `settleMatchDay` like RPS: the side's hover locks if it's still available,
+  otherwise a **ban is skipped** and a **pick is random** (`resolveTimeout`).
+  Without the champion list a timed-out step waits for the next tick.
+- **Order** (`DRAFT_SEQUENCE`, `src/lib/draft-room.ts`): bans B R B R B R,
+  picks B R R B B R, bans R B R B, picks R B B R. The step on the clock is
+  `actions + 1`, never stored.
+- **Actions** (`match-day-actions.ts`): `hoverChampion(n, step, key|null)`
+  (shown to everyone, locks on timeout) and `lockChampion(n, step,
+  key|null)` (null = skip a ban) for the side on the clock — its captains or
+  an admin; the `step` argument makes a late click fail. Admin:
+  `adminUndoDraftStep` (back one step, fresh 30s), `adminSetDraft(n,
+  "skipped" | "restart")`.
+- **Availability** (`draftAvailability`, `availableChampions`): the Data
+  Dragon catalogue (`getChampionCatalog`, daily revalidate) minus this
+  game's bans/picks, `seasons.disabledChampions` (admin season form,
+  `resolveChampionKeys`) and, when `fearlessApplies`, every champion
+  **picked** in an earlier game of the match (earlier bans don't carry
+  over). The grid greys and labels them Banned / Picked / Fearless /
+  Disabled.
+- **Storage**: `match_draft_actions` (one row per step, `championKey` null =
+  skipped ban, `auto` = taken by the clock); a champion appears once per
+  game (hand-written partial unique index in `0018_match_draft.sql`).
+- **UI** (`_components/draft-room.tsx`): status bar (ready boxes →
+  countdown → "BLUE BAN 2 · step n/20" + timer → done), blue and red
+  columns (5 ban slots, 5 pick slots, the on-the-clock hover shown faded),
+  champion grid with search; Lock in / Skip ban sticky above the grid on
+  your turn; admin Undo / Skip / Restart. Icons are plain `<img>` from Data
+  Dragon (no next/image optimisation). Same stream as the card; countdown
+  ticks re-render only the status bar.
+
 ## State + deadlines
 
 Tables in `src/db/schema/match-day.ts` (migration `0016_match_day`):
@@ -88,7 +132,10 @@ Tables in `src/db/schema/match-day.ts` (migration `0016_match_day`):
 throwing | revealed | done`, `round`, `throwDeadline`, `revealUntil`,
 current throws, `history` jsonb of finished rounds, `winnerTeamId`) and
 `match_games` (one row per game: sides, and since `0017_match_games_results`
-`winnerTeamId`, `resultReportedBy/At`, `resultFlaggedBy/At`;
+`winnerTeamId`, `resultReportedBy/At`, `resultFlaggedBy/At`; since
+`0018_match_draft` the draft clock — `draftState`, ready stamps,
+`draftStartsAt`, `stepDeadline`, hovers, `draftCompletedAt`) and
+`match_draft_actions`;
 `tournamentCode` / `riotMatchId` reserved for phase 6). See
 [DATA-MODEL.md](DATA-MODEL.md).
 
@@ -113,7 +160,7 @@ never chains through phantom rounds.
 `/api/matches/[matchId]/stream` — the draft / 10-man SSE pattern
 ([DRAFT.md](DRAFT.md)), but **1s** while something ticks
 (`matchDayIsHot`: a live round or reveal, a readied seat, an open side
-pick) and **2s** idle. The hash ignores `serverNow`. The viewer
+pick, a draft counting down or running, a readied draft side) and **2s** idle. The hash ignores `serverNow`. The viewer
 (`getMatchDayViewer`) is resolved once per connection because the snapshot
 is per viewer: **throws are hidden until the round is revealed** — the
 stream sends `thrown: boolean` and only the viewer's own `myThrow`.
@@ -138,7 +185,8 @@ series result stays).
 ## Discord
 
 `notifyMatchSides(matchId, gameNumber)` posts "🔵 Game 1: X on blue, 🔴 Y on
-red (won rock paper scissors)" in the match thread — from `pickSide`, and
+red (won rock paper scissors). Draft room: <link>" in the match thread —
+from `pickSide`, and
 from `resolveExpired` when the clock picked at random.
 `notifyGameResult(matchId, gameNumber)` posts "🏁 Game 1: X won. Series: …"
 and who picks the next side; a decided series then gets the usual
@@ -160,9 +208,3 @@ group matches and a best-of-3 semifinal, and prints their URLs. Both captains us
 from `.env.development.local` (generated on first run, never printed).
 Re-running resets the matches and wipes their RPS / side / game data. Use two
 browsers (or a private window) to play both captains.
-
-## Groundwork (not wired yet)
-
-`src/lib/draft-room.ts` (20-step draft sequence, fearless availability,
-timeout resolution, icon URLs; `tests/unit/draft-room.test.ts`) and
-`src/lib/champions.ts` (Data Dragon catalogue) for phase 3's draft room.

@@ -69,6 +69,18 @@ and upcoming Format card, the season page header, the match page subtitle,
 the Discord match-thread opener and the team schedule post.
 `fearlessApplies(season, stage)` leaves it off tiebreakers (one game).
 
+## Disabled champions (`seasons.disabledChampions`)
+
+Data Dragon keys the match-day draft room won't offer (new releases, bugged
+champions; [design/MATCH-DAY.md](design/MATCH-DAY.md) decision 11). Admin
+season **edit** form, LoL seasons only: one comma-separated input prefilled
+with display names. `updateSeason` resolves entries by name or key
+(`resolveChampionKeys` in `src/lib/champions.ts`: case, spaces and
+punctuation ignored) and stores sorted, deduped keys; blank = none. Unknown
+names bounce back with `?error=unknown-champions&champions=…` (nothing
+saved); if Data Dragon is unreachable the rest saves and the list is kept
+(`error=champions-unavailable`).
+
 ## Group stage scheduling
 
 `generateSchedule(seasonId)` in `src/lib/schedule.ts`:

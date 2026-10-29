@@ -23,6 +23,7 @@ import { Label } from "@/components/ui/label";
 import { LocalDateTimeInput, LocalTime } from "@/components/ui/local-time";
 import { Textarea } from "@/components/ui/textarea";
 import { formatPrizeSplit } from "@/lib/prize-pool";
+import { getChampionCatalog } from "@/lib/champions";
 import { FlashToast } from "@/components/flash-toast";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { GAME_LABELS, SEASON_STATE_LABELS, nextStates } from "@/lib/seasons";
@@ -39,6 +40,7 @@ type SearchParams = Promise<{
   discord?: string;
   discordError?: string;
   discordNote?: string;
+  champions?: string;
 }>;
 type Params = Promise<{ slug: string }>;
 
@@ -48,6 +50,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   "invalid-state": "That state isn't recognized.",
   "bad-transition": "That transition isn't allowed from the current state.",
   "not-found": "Season not found.",
+  "unknown-champions": "Nothing was saved. These aren't champion names:",
+  "champions-unavailable":
+    "Couldn't load the champion list from Data Dragon, so disabled champions weren't changed. Other changes were saved; try again later.",
   "discord-not-configured":
     "The Discord bot isn't set up: add DISCORD_BOT_TOKEN and DISCORD_GUILD_ID (docs/DISCORD.md).",
 };
@@ -69,7 +74,7 @@ export default async function EditSeasonPage({
   searchParams: SearchParams;
 }) {
   const { slug } = await params;
-  const { saved, error, discord, discordError, discordNote } = await searchParams;
+  const { saved, error, discord, discordError, discordNote, champions } = await searchParams;
 
   const season = await db.query.seasons.findFirst({
     where: eq(seasons.slug, slug),
@@ -78,11 +83,19 @@ export default async function EditSeasonPage({
 
   const updateWithSlug = updateSeason.bind(null, slug);
   const transitionWithSlug = transitionSeasonState.bind(null, slug);
-  const errorMessage = error ? ERROR_MESSAGES[error] : null;
+  const errorMessage = error
+    ? `${ERROR_MESSAGES[error] ?? ""}${error === "unknown-champions" && champions ? ` ${champions}.` : ""}`
+    : null;
   const available = nextStates(season.state);
   const discordReady = discordConfig() !== null;
   const discordRoster = await getDiscordRoster(season.id);
   const syncDiscordWithSlug = syncDiscordRoles.bind(null, slug);
+  // Stored as Data Dragon keys; shown as names (keys if the catalogue is down).
+  const championCatalog =
+    season.game === "lol" && season.disabledChampions.length ? await getChampionCatalog() : null;
+  const disabledChampionNames = season.disabledChampions
+    .map((key) => championCatalog?.champions.find((c) => c.key === key)?.name ?? key)
+    .join(", ");
 
   return (
     <div className="page flex-1 space-y-6 [--page-max:48rem]">
@@ -395,6 +408,21 @@ export default async function EditSeasonPage({
                 </span>
               </span>
             </label>
+            {season.game === "lol" ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="disabledChampions">Disabled champions (draft room)</Label>
+                <Input
+                  id="disabledChampions"
+                  name="disabledChampions"
+                  placeholder="None"
+                  defaultValue={disabledChampionNames}
+                />
+                <p className="text-muted-foreground text-xs">
+                  Champions the match-day draft room won&apos;t offer, e.g. a new release or a
+                  bugged champion. Names separated by commas (Wukong, Kai&apos;Sa).
+                </p>
+              </div>
+            ) : null}
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5">
                 <Label htmlFor="prizePool">Prize pool ($)</Label>

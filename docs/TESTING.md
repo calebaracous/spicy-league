@@ -57,6 +57,8 @@ for real seasons, and delete it (`delete from users where username =
 - `discord-ticker.test.ts` — `plainMessageText` (mentions, markdown, spoilers, timestamps, truncation) and `tickerItems` (which messages the home-page ticker shows)
 - `discord-verify.test.ts` — Ed25519 interaction signatures (real key pair)
 - `rps.test.ts` — RPS outcomes and the lazy state machine (reveal, void replay + AFK reset, catch-up)
+- `draft-clock.test.ts` — draft room clock: ready → countdown → steps, timeout locks the hover / skips a ban / random pick, completion, lazy catch-up
+- `champions.test.ts` — `resolveChampionKeys` for the admin disabled-champions field
 - `series.test.ts` — `bestOfFor` per stage, `seriesScore` (Bo1, Bo2 draw, Bo3/Bo5 majority), `loserOf`
 - `draft-room.test.ts` — 20-step draft order, fearless availability, timeout resolution, Data Dragon parsing
 
@@ -200,7 +202,13 @@ as duo captains, away = P2) and drives [MATCH-DAY.md](MATCH-DAY.md):
   captain while game 3's side pick is open → 0–2 confirms the match
   (`state`, winner, scores, game 3 row gone); the losing captain flags game
   2 after the confirm; the admin's Edit result sets game 2 + series 2–1,
-  confirms and clears the flag.
+  confirms and clears the flag. (Drafts are marked skipped: results wait for
+  the draft.)
+- Draft room (fearless Bo3 semi, game 1 seeded with Ahri picked): Ahri is
+  greyed "Fearless"; both captains ready → countdown → BLUE BAN 1 for blue
+  only; blue locks Garen (greyed "Banned" for red); red hovers Lux and lets
+  the 30s run out → Lux locks with `auto`; blue skips a ban (null); an admin
+  skips the rest and the card offers the result. ~45s of real waiting.
 - A late admin pick (admin board frozen at pick 1 after the captain has
   picked) is rejected with `stale-pick`, not credited to the next captain.
 - Two picks at the same moment (captain + admin): exactly one lands as

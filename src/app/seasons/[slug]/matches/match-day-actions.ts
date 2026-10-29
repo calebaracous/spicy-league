@@ -4,16 +4,20 @@ import { and, asc, eq } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { users } from "@/db/schema/auth";
-import { matchGames, matchRps } from "@/db/schema/match-day";
+import { matchDraftActions, matchGames, matchRps } from "@/db/schema/match-day";
 import { matches } from "@/db/schema/matches";
 import { seasons } from "@/db/schema/seasons";
 import { requireAdmin, requireAuth } from "@/lib/auth-helpers";
-import { notifyGameResult, notifyMatchSides } from "@/lib/discord-notify";
+import { notifyDraftRecap, notifyGameResult, notifyMatchSides } from "@/lib/discord-notify";
 import { syncInBackground } from "@/lib/discord-roles";
 import { logEvent, matchEventData } from "@/lib/events";
+import { afterStep, DRAFT_STEP_MS } from "@/lib/draft-clock";
+import { nextStep, stepAt } from "@/lib/draft-room";
 import {
+  draftAvailability,
   getMatchDaySnapshot,
   getMatchDayViewer,
+  loadDraftActions,
   matchDayApplies,
   settleMatchDay,
   type MatchDaySnapshot,
@@ -269,6 +273,9 @@ export async function reportGameWinner(
         .orderBy(asc(matchGames.gameNumber));
       const game = games.find((g) => g.gameNumber === gameNumber);
       if (!game?.blueTeamId) throw new MatchDayError("That game's sides aren't set yet.");
+      if (!isAdmin && game.draftState !== "complete" && game.draftState !== "skipped") {
+        throw new MatchDayError(`Finish game ${gameNumber}'s draft first.`);
+      }
       if (game.winnerTeamId === winnerTeamId) return null;
       const next = games.find((g) => g.gameNumber === gameNumber + 1);
       if (game.winnerTeamId && next?.blueTeamId && !isAdmin) {
@@ -363,6 +370,243 @@ export async function flagGameResult(
       actorId: userId,
       seasonId,
       data: { ...(await matchEventData(matchId)), gameNumber },
+    });
+  });
+}
+
+// ── Draft room ───────────────────────────────────────────────────────────────
+
+type Side = "blue" | "red";
+
+/** Locks the match, settles the clock, and loads the game plus every game's actions. */
+async function lockGame(tx: Tx, slug: string, matchId: string, gameNumber: number, now: Date) {
+  const { season, match } = await lockMatch(tx, slug, matchId);
+  await settleMatchDay(tx, match, now);
+  const games = await tx
+    .select()
+    .from(matchGames)
+    .where(eq(matchGames.matchId, matchId))
+    .orderBy(asc(matchGames.gameNumber));
+  const game = games.find((g) => g.gameNumber === gameNumber);
+  if (!game?.blueTeamId || !game.redTeamId) {
+    throw new MatchDayError("That game's sides aren't set yet.");
+  }
+  const actionsByGame = await loadDraftActions(
+    tx,
+    games.map((g) => g.id),
+  );
+  return { season, match, games, game, actionsByGame, actions: actionsByGame.get(game.id) ?? [] };
+}
+
+/** Which side of `game` the user captains, if either. */
+async function captainDraftSide(
+  seasonId: string,
+  game: { blueTeamId: string | null; redTeamId: string | null },
+  userId: string,
+): Promise<Side | null> {
+  const teamId = await getCaptainedTeamId(seasonId, userId);
+  return teamId === game.blueTeamId ? "blue" : teamId === game.redTeamId ? "red" : null;
+}
+
+/**
+ * A captain readies (or un-readies) their side for the draft; an admin can do
+ * either side. Both ready → a 3s countdown, then step 1's 30s clock.
+ */
+export async function readyDraft(
+  slug: string,
+  matchId: string,
+  gameNumber: number,
+  side: string,
+  ready = true,
+): Promise<MatchDayActionResult> {
+  const session = await requireAuth();
+  const userId = session.user.id;
+  const isAdmin = session.user.role === "admin";
+  return run(matchId, async () => {
+    if (side !== "blue" && side !== "red") throw new MatchDayError("Pick a side.");
+    const now = new Date();
+    await db.transaction(async (tx) => {
+      const { season, match, game } = await lockGame(tx, slug, matchId, gameNumber, now);
+      const mine = await captainDraftSide(season.id, game, userId);
+      if (mine !== side && !isAdmin) throw new MatchDayError("You can only ready your own side.");
+      if (game.draftState !== "waiting") throw new MatchDayError("The draft has already started.");
+      const stamp = ready ? now : null;
+      await tx
+        .update(matchGames)
+        .set(side === "blue" ? { blueReadyAt: stamp } : { redReadyAt: stamp })
+        .where(eq(matchGames.id, game.id));
+      await settleMatchDay(tx, match, now);
+    });
+  });
+}
+
+/** Shared checks for hover / lock: the draft is running, `step` is current, the user may act for it. */
+async function onTheClock(
+  tx: Tx,
+  slug: string,
+  matchId: string,
+  gameNumber: number,
+  step: number,
+  userId: string,
+  isAdmin: boolean,
+  now: Date,
+) {
+  const ctx = await lockGame(tx, slug, matchId, gameNumber, now);
+  if (ctx.game.draftState !== "drafting") throw new MatchDayError("The draft isn't running.");
+  if (step !== nextStep(ctx.actions)) throw new MatchDayError("Too late, that step is done.");
+  const current = stepAt(step)!;
+  const mine = await captainDraftSide(ctx.season.id, ctx.game, userId);
+  if (mine !== current.side && !isAdmin) throw new MatchDayError("It's not your turn.");
+  const available = await draftAvailability(
+    tx,
+    ctx.match,
+    ctx.games,
+    ctx.actionsByGame,
+    gameNumber,
+  );
+  if (!available) throw new MatchDayError("Couldn't load the champion list. Try again.");
+  return { ...ctx, current, available: available(ctx.actions) };
+}
+
+/** Shows the side's current choice to everyone; null clears it. It locks on timeout. */
+export async function hoverChampion(
+  slug: string,
+  matchId: string,
+  gameNumber: number,
+  step: number,
+  championKey: string | null,
+): Promise<MatchDayActionResult> {
+  const session = await requireAuth();
+  return run(matchId, async () => {
+    const now = new Date();
+    await db.transaction(async (tx) => {
+      const { game, current, available } = await onTheClock(
+        tx,
+        slug,
+        matchId,
+        gameNumber,
+        step,
+        session.user.id,
+        session.user.role === "admin",
+        now,
+      );
+      if (championKey && !available.includes(championKey)) {
+        throw new MatchDayError("That champion isn't available.");
+      }
+      await tx
+        .update(matchGames)
+        .set(current.side === "blue" ? { blueHover: championKey } : { redHover: championKey })
+        .where(eq(matchGames.id, game.id));
+    });
+  });
+}
+
+/** Locks a champion for the current step; null skips a ban. */
+export async function lockChampion(
+  slug: string,
+  matchId: string,
+  gameNumber: number,
+  step: number,
+  championKey: string | null,
+): Promise<MatchDayActionResult> {
+  const session = await requireAuth();
+  const userId = session.user.id;
+  return run(matchId, async () => {
+    const now = new Date();
+    const completed = await db.transaction(async (tx) => {
+      const { game, actions, current, available } = await onTheClock(
+        tx,
+        slug,
+        matchId,
+        gameNumber,
+        step,
+        userId,
+        session.user.role === "admin",
+        now,
+      );
+      if (championKey === null && current.kind === "pick") {
+        throw new MatchDayError("Pick a champion.");
+      }
+      if (championKey !== null && !available.includes(championKey)) {
+        throw new MatchDayError("That champion isn't available.");
+      }
+      const action = { ...current, championKey };
+      await tx.insert(matchDraftActions).values({ ...action, gameId: game.id, actedBy: userId });
+      const clock = afterStep(current.side, [...actions, action], now);
+      await tx.update(matchGames).set(clock).where(eq(matchGames.id, game.id));
+      return clock.draftState === "complete";
+    });
+    if (completed) {
+      syncInBackground("draft recap", () => notifyDraftRecap(matchId, gameNumber));
+    }
+  });
+}
+
+/** Admin: take back the last step (that side gets a fresh 30s). */
+export async function adminUndoDraftStep(
+  slug: string,
+  matchId: string,
+  gameNumber: number,
+): Promise<MatchDayActionResult> {
+  await requireAdmin();
+  return run(matchId, async () => {
+    const now = new Date();
+    await db.transaction(async (tx) => {
+      const { game, actions } = await lockGame(tx, slug, matchId, gameNumber, now);
+      if (game.winnerTeamId) throw new MatchDayError("That game already has a result.");
+      const last = actions.at(-1);
+      if (!last) throw new MatchDayError("Nothing to undo.");
+      await tx
+        .delete(matchDraftActions)
+        .where(and(eq(matchDraftActions.gameId, game.id), eq(matchDraftActions.step, last.step)));
+      await tx
+        .update(matchGames)
+        .set({
+          draftState: "drafting",
+          stepDeadline: new Date(now.getTime() + DRAFT_STEP_MS),
+          draftCompletedAt: null,
+          blueHover: null,
+          redHover: null,
+        })
+        .where(eq(matchGames.id, game.id));
+    });
+  });
+}
+
+/** Admin: let the game go ahead without a draft here, or start its draft over. */
+export async function adminSetDraft(
+  slug: string,
+  matchId: string,
+  gameNumber: number,
+  to: "skipped" | "restart",
+): Promise<MatchDayActionResult> {
+  await requireAdmin();
+  return run(matchId, async () => {
+    const now = new Date();
+    await db.transaction(async (tx) => {
+      const { game } = await lockGame(tx, slug, matchId, gameNumber, now);
+      if (game.winnerTeamId) throw new MatchDayError("That game already has a result.");
+      if (to === "skipped") {
+        await tx
+          .update(matchGames)
+          .set({ draftState: "skipped", stepDeadline: null, blueHover: null, redHover: null })
+          .where(eq(matchGames.id, game.id));
+        return;
+      }
+      await tx.delete(matchDraftActions).where(eq(matchDraftActions.gameId, game.id));
+      await tx
+        .update(matchGames)
+        .set({
+          draftState: "waiting",
+          blueReadyAt: null,
+          redReadyAt: null,
+          draftStartsAt: null,
+          stepDeadline: null,
+          blueHover: null,
+          redHover: null,
+          draftCompletedAt: null,
+        })
+        .where(eq(matchGames.id, game.id));
     });
   });
 }

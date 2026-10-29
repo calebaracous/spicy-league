@@ -12,6 +12,7 @@ import { discordConfig } from "@/lib/discord-api";
 import { syncSignupRoles } from "@/lib/discord-ping-roles";
 import { syncCaptainRole, syncInBackground } from "@/lib/discord-roles";
 import { syncSeasonDiscord } from "@/lib/discord-sync";
+import { getChampionCatalog, resolveChampionKeys } from "@/lib/champions";
 import { deleteOldTeamChannels, emailUnmatchedPlayers, syncNicknames } from "@/lib/discord-admin";
 import { canTransition, isValidSlug, SEASON_STATES } from "@/lib/seasons";
 import { parsePrizeSplit } from "@/lib/prize-pool";
@@ -136,12 +137,43 @@ function comparable(row: Record<string, unknown>): Record<string, unknown> {
   );
 }
 
+/**
+ * The edit form's "Disabled champions" field (LoL seasons only), names or
+ * Data Dragon keys separated by commas → keys. Undefined = leave the stored
+ * list alone: the field wasn't on the form, or the catalogue couldn't be
+ * fetched (`unavailable`). Unknown names bounce back to the form.
+ */
+async function parseDisabledChampions(
+  slug: string,
+  formData: FormData,
+): Promise<{ keys?: string[]; unavailable: boolean }> {
+  const input = formData.get("disabledChampions");
+  if (typeof input !== "string") return { unavailable: false };
+  if (!input.trim()) return { keys: [], unavailable: false };
+  const catalog = await getChampionCatalog();
+  if (!catalog) return { unavailable: true };
+  const { keys, unknown } = resolveChampionKeys(input, catalog.champions);
+  if (unknown.length) {
+    const params = new URLSearchParams({
+      error: "unknown-champions",
+      champions: unknown.join(", ").slice(0, 300),
+    });
+    redirect(`/admin/seasons/${slug}?${params}`);
+  }
+  return { keys, unavailable: false };
+}
+
 export async function updateSeason(slug: string, formData: FormData) {
   const session = await requireAdmin();
   const parsed = parseSeasonInput(formData);
   if (!parsed.success) {
     redirect(`/admin/seasons/${slug}?error=invalid`);
   }
+  const disabled = await parseDisabledChampions(slug, formData);
+  const values = {
+    ...parsed.data,
+    ...(disabled.keys ? { disabledChampions: disabled.keys } : {}),
+  };
 
   const existing = await db.query.seasons.findFirst({ where: eq(seasons.slug, slug) });
   if (!existing) redirect("/admin?error=not-found");
@@ -157,9 +189,9 @@ export async function updateSeason(slug: string, formData: FormData) {
 
   await db
     .update(seasons)
-    .set({ ...parsed.data, updatedAt: new Date() })
+    .set({ ...values, updatedAt: new Date() })
     .where(eq(seasons.id, existing.id));
-  const after = comparable(parsed.data);
+  const after = comparable(values);
   const before = comparable(existing);
   const changes = diffFields(
     Object.fromEntries(Object.keys(after).map((k) => [k, before[k]])),
@@ -176,7 +208,10 @@ export async function updateSeason(slug: string, formData: FormData) {
   revalidatePath("/admin");
   revalidatePath("/seasons");
   revalidatePath(`/seasons/${parsed.data.slug}`);
-  redirect(`/admin/seasons/${parsed.data.slug}?saved=1`);
+  // Everything else saved; say why the champion list didn't change.
+  redirect(
+    `/admin/seasons/${parsed.data.slug}?saved=1${disabled.unavailable ? "&error=champions-unavailable" : ""}`,
+  );
 }
 
 export async function transitionSeasonState(slug: string, formData: FormData) {

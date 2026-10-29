@@ -127,6 +127,13 @@
       "when": 1793237087647,
       "tag": "0017_match_games_results",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1793239489982,
+      "tag": "0018_match_draft",
+      "breakpoints": true
     }
   ]
 }
