@@ -9,9 +9,9 @@ staging ──► Vercel Preview    ──► Neon branch `staging`  (scrubbed c
 ```
 
 - **URL**: <https://spicy-league-git-staging-calebaracous-projects.vercel.app>
-  (Vercel's branch alias — always the latest `staging` deploy). Behind
-  Vercel's preview protection: sign in to Vercel to open it, or make a
-  shareable link from the deployment page.
+  (Vercel's branch alias — always the latest `staging` deploy). **Public**:
+  the project has Vercel Authentication off, so anyone with the URL can open
+  it (Settings → Deployment Protection turns it on for previews).
 - **Database**: Neon project `noisy-art-42161312`, branch `staging`
   (`br-mute-wave-amb0iht8`, endpoint `ep-fancy-dream-amdavwxs`), a child of
   `main`. Copy-on-write, so it starts as an exact copy of production and

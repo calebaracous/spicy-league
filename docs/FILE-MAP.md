@@ -129,8 +129,8 @@ Rendered by `src/app/page.tsx`:
 - `src/app/signin/check-email/page.tsx` — "verify your email" confirmation page.
 - `src/app/forgot-password/page.tsx` + `_components/forgot-password-form.tsx` — trigger reset email.
 - `src/app/reset-password/page.tsx` + `_components/reset-password-form.tsx` — consume reset token.
-- `src/app/profile/page.tsx` — private profile + account-link UI. Contains inline `saveProfile`, `saveOpggUrl`, `saveDiscordUsername` (highlighted card while unset), `saveTenManPings`, `saveCaptainInterest` ("Captaining" card) and `doSignOut` server actions and the `ERROR_MESSAGES` map.
-- `src/app/profile/account-actions.ts` — `linkRiotAccount`, `unlinkRiotAccount` (by `linkId`), `linkCs2Account`, `unlinkCs2Account`, `manualRefreshStats` (rate-limited).
+- `src/app/profile/page.tsx` — private profile + account-link UI. Contains inline `saveProfile`, `saveOpggUrl`, `saveDiscordUsername` (highlighted card while unset), `saveTenManPings`, `saveCaptainInterest` ("Captaining" card) and `doSignOut` server actions and the `ERROR_MESSAGES` map. Ends with a link to the delete-account card on the public profile.
+- `src/app/profile/account-actions.ts` — `linkRiotAccount`, `unlinkRiotAccount` (by `linkId`), `linkCs2Account`, `unlinkCs2Account`, `manualRefreshStats` (rate-limited), `deleteOwnAccount` (type-your-username confirm, signs out, then `deleteAccount`).
 - `src/app/profile/_components/link-forms.tsx` — client `RiotLinkForm` / `Cs2LinkForm` (`useActionState`, inline errors, input kept).
 - `src/app/profile/constants.ts` — `MAX_RIOT_ACCOUNTS = 3`.
 
@@ -140,8 +140,9 @@ Rendered by `src/app/page.tsx`:
 - `src/app/history/_components/zoomable-image.tsx` — client; tap a screenshot to open it full-size in a native `<dialog>`.
 - `src/app/users/page.tsx` — public player directory ("Players" in the nav).
 - `src/app/users/_components/player-directory.tsx` — client; search box, A–Z jump bar, grouped player rows with stats + rank.
-- `src/app/users/[username]/page.tsx` — public profile; per-Riot-account rank + top champs, Steam/Leetify links. Admins also get the "Admin tools" card (`?saved=` / `?error=` flash).
-- `src/app/users/[username]/_components/admin-account-tools.tsx` — admin-only card: edit Discord username, set/clear the matched Discord user ID, link/unlink Riot accounts, refresh stats (no rate limit). `ADMIN_ERROR_MESSAGES`.
+- `src/app/users/[username]/page.tsx` — public profile; per-Riot-account rank + top champs, Steam/Leetify links. The owner gets a "Delete account" card (`#delete-account`, or the `deletionBlocker` sentence instead). Admins also get the "Admin tools" card (`?saved=` / `?error=` flash).
+- `src/app/users/[username]/_components/admin-account-tools.tsx` — admin-only card: edit Discord username, set/clear the matched Discord user ID, link/unlink Riot accounts, refresh stats (no rate limit), delete the account (not on their own page). `ADMIN_ERROR_MESSAGES`.
+- `src/app/users/[username]/_components/delete-account-form.tsx` — client; type-the-username confirm form for account deletion, shared by the owner's card and the admin tools.
 - `src/app/users/[username]/admin-actions.ts` — `requireAdmin` actions behind that card; the target is the hidden `userId` field.
 - `src/app/users/[username]/_components/stats-tabs.tsx` — client tab switcher (LoL / CS2).
 - `src/app/terms/page.tsx`, `src/app/privacy/page.tsx` — static legal pages using `LegalPage`.
@@ -183,7 +184,7 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/prize-pool.ts` — `prizePayouts` (dollars per place from `seasons.prizePool` / `prizeSplit`), `parsePrizeSplit` ("75/25"), `formatPrizeSplit`, `formatUsd`, `describePayouts`.
 - `src/lib/draft.ts` — `TEAM_SIZE`, `PICKS_PER_TEAM`, `picksForTeam`, `snakeOrder` (skips full teams), `groupCaptainTeams` / `loadCaptainTeams` (solo + duo captains), `teamForPick`, `totalPicks`, `getDraftSnapshot` (incl. solo-queue rank per pool player), `finalizeDraft`. See [DRAFT.md](DRAFT.md).
 - `src/lib/standings.ts` — pure `rankStandings`: points (2/1/0), head-to-head mini-table, series wins, game diff, tiebreaker games; shared ranks + `tiebreakersNeeded`. `PLAYOFF_SPOTS`.
-- `src/lib/match-format.ts` — pure: `isDraw` / `hasResult` / `resultFor`, `BO2_RESULTS`, `GROUP_BEST_OF_OPTIONS`, `formatStructure`, `roundLabel`.
+- `src/lib/match-format.ts` — pure: `isDraw` / `hasResult` / `resultFor`, `BO2_RESULTS`, `GROUP_BEST_OF_OPTIONS`, `formatStructure`, `FEARLESS_DRAFT_RULE` / `fearlessApplies`, `roundLabel`.
 - `src/lib/schedule.ts` — `buildRoundRobin` (circle method), `generateSchedule`, `computeStandings` (DB wrapper around `rankStandings`), `seedPlayoffs` (refuses with `needs-tiebreaker`), `createTiebreakers`, `getTeamForCaptain` (captain *or* rostered member), `getCaptainedTeamId` (captains only, either of a duo). See [MATCHES.md](MATCHES.md).
 - `src/lib/homepage.ts` — `getHomepageData()` (discriminated union of 6 home states), podium builder.
 - `src/lib/rank.ts` — pure LoL rank helpers: `formatRank` ("Gold II · 45 LP"), `formatTier` ("Gold II"), `rankScore` (lower = better), `bestRankPerUser` (best solo rank across a user's linked accounts — use it anywhere one rank per player is shown), `capitalize`.
@@ -195,12 +196,13 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/riot-links.ts` — `hasRiotLink(userId)`: whether a user has a linked Riot account.
 - `src/lib/riot-id.ts` — pure `parseRiotId(raw)`: `GameName#TAG` → parts or null.
 - `src/lib/account-edits.ts` — `setDiscordUsername`, `setDiscordUserId`, `addRiotLink`, `removeRiotLink` for any user + actor; shared by `/profile` and the admin tools on `/users/[username]`. Admin edits log the player as `subjectUserId`.
+- `src/lib/account-deletion.ts` — `deletionBlocker` (admins, seasons under way, captains, unfinished 10-mans) and `deleteAccount`: anonymizes a player with league history to "Deleted player", hard-deletes anyone else; logs `user.deleted`, drops Discord ping roles.
 - `src/lib/signup-gate.ts` — `missingSignupRequirements(userId, season)`: the season signup gate (Discord username + membership in the league server always, Riot link for LoL). The server check fails open.
 - `src/lib/discord.ts` — pure `normalizeDiscordUsername` + `DISCORD_USERNAME_HELP`; shared by account signup and the profile form. `normalizeDiscordUserId` (17–20 digit snowflake) for the admin override.
 - `src/lib/discord-api.ts` — Discord REST client for the bot (`discordConfig`, members, roles, channels, threads, messages, nicknames); sits through short 429s (5s, 15s for member role adds/removes). See [DISCORD.md](DISCORD.md).
 - `src/lib/discord-plan.ts` — pure role-sync decisions: `pickExactMember`, `roleHolderChanges`, `staleTeamRoles`.
 - `src/lib/discord-roles.ts` — shared bot plumbing (`grant`, `revoke`, `leagueRoleId`, `syncExclusiveRole`, `syncInBackground` via `after()`, `mergeReports`), `syncCaptainRole`, `syncTeamRoles` (team roles + private text/voice channels), `renameTeamInDiscord`.
-- `src/lib/discord-ping-roles.ts` — Signed up / Sub list (`syncSignupRoles`, `updateSignupRolesForUser`), Champion (`syncChampionRole`), 10-man (`setTenManRole`, `syncTenManRole`).
+- `src/lib/discord-ping-roles.ts` — Signed up / Sub list (`syncSignupRoles`, `updateSignupRolesForUser`), Champion (`syncChampionRole`), 10-man (`setTenManRole`, `syncTenManRole`), `removeLeagueRoles` (account deleted).
 - `src/lib/discord-notify.ts` — match threads (`ensureMatchThreads`), team schedules (`postTeamSchedules`), result / sub-decision notes (`notifyMatchEvent`, `notifySubDecision`), sub-list and 10-man pings (`pingSubList`, `pingTenMan`), `sendDailyReminders`.
 - `src/lib/discord-sync.ts` — `syncSeasonDiscord`: every sync, for the admin button.
 - `src/lib/discord-admin.ts` — admin card roster (`getDiscordRoster`), `syncNicknames`, `deleteOldTeamChannels`, `emailUnmatchedPlayers`.
@@ -230,6 +232,7 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/components/site-header-client.tsx` — sticky nav (live pill inline — "Live" below xl, full label at xl — then Seasons / History / 10-man / Players / Admin), scroll blur, mobile hamburger overlay (also shows the pill).
 - `src/components/site-footer.tsx` — async server component; nav links (Seasons / History / 10-man / Players), session-aware Account links, Terms / Privacy, Riot "Legal Jibber Jabber" / Valve footage notice.
 - `src/components/legal-page.tsx` — `LegalPage` chrome for `/terms` + `/privacy`.
+- `src/components/player-link.tsx` — `PlayerLink`: profile link, or plain text for a deleted (username-less) player. Rosters, lineups, captains.
 - `src/components/flash-toast.tsx` — client; turns a `?saved=` flag into a sonner toast and removes it from the URL.
 - `src/components/season-nav.tsx` — `SeasonNav` tabs for `/seasons/[slug]/*`, gated by season state.
 - `src/components/use-turn-alert.ts` — client hooks: `useSnapshotStream` (SSE + connection status), `useTurnAlert` (title flash + chime on your pick), `useTurnSoundPref`.

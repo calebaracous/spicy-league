@@ -16,7 +16,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { LocalTime } from "@/components/ui/local-time";
 import { FlashToast } from "@/components/flash-toast";
-import { BO2_RESULTS, isDraw, roundLabel, type Bo2Result } from "@/lib/match-format";
+import {
+  BO2_RESULTS,
+  FEARLESS_DRAFT_RULE,
+  fearlessApplies,
+  isDraw,
+  roundLabel,
+  type Bo2Result,
+} from "@/lib/match-format";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { getCaptainedTeamId, getTeamForCaptain } from "@/lib/schedule";
 import { SUB_ERROR_MESSAGES } from "@/lib/substitution-rules";
@@ -149,6 +156,9 @@ export default async function MatchDetailPage({
         <p className="text-muted-foreground text-sm">
           {season.name} · {roundLabel(match.stage, match.round)}
           {bo2 ? " · Best of 2" : match.stage === "tiebreaker" ? " · Best of 1" : ""}
+          {fearlessApplies(season, match.stage) ? (
+            <span title={`Fearless draft: ${FEARLESS_DRAFT_RULE}`}> · Fearless draft</span>
+          ) : null}
           {match.scheduledAt ? (
             <>
               {" "}

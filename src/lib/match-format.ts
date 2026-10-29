@@ -59,6 +59,21 @@ export function formatStructure(groupBestOf: number): string {
     : "Round-robin group stage, then the top 4 play single-elimination playoffs";
 }
 
+/**
+ * `seasons.fearlessDraft`, explained once for every page and Discord post
+ * that shows it. Lowercase, no full stop: callers write "Fearless draft: …".
+ */
+export const FEARLESS_DRAFT_RULE =
+  "once a champion is picked in a series, neither team can pick it again in that series";
+
+/**
+ * Whether a match's series is long enough for fearless draft to matter.
+ * Tiebreakers are a single game, so it never applies to them.
+ */
+export function fearlessApplies(season: { fearlessDraft: boolean }, stage: MatchStage): boolean {
+  return season.fearlessDraft && stage !== "tiebreaker";
+}
+
 export function roundLabel(stage: MatchStage, round: number): string {
   if (stage === "final") return "Final";
   if (stage === "semis") return "Semifinal";

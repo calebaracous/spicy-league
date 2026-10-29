@@ -36,6 +36,11 @@ const seasonInputSchema = z
     game: gameSchema,
     // See seasons.groupBestOf. Only 1 and 2 have a reporting flow.
     groupBestOf: z.enum(["1", "2"]).transform(Number),
+    // Checkbox: "on" when ticked, absent otherwise.
+    fearlessDraft: z
+      .string()
+      .nullish()
+      .transform((v) => v === "on"),
     description: z
       .string()
       .max(5000)
@@ -73,6 +78,7 @@ function parseSeasonInput(formData: FormData) {
     slug: formData.get("slug"),
     game: formData.get("game"),
     groupBestOf: formData.get("groupBestOf"),
+    fearlessDraft: formData.get("fearlessDraft"),
     description: formData.get("description"),
     rules: formData.get("rules"),
     signupOpensAt: formData.get("signupOpensAt"),

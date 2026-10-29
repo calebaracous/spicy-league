@@ -1,0 +1,1 @@
+ALTER TABLE "seasons" ADD COLUMN "fearless_draft" boolean DEFAULT false NOT NULL;

@@ -14,6 +14,7 @@ import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { Input } from "@/components/ui/input";
 import { FlashToast } from "@/components/flash-toast";
 import { SeasonNav } from "@/components/season-nav";
+import { PlayerLink } from "@/components/player-link";
 import { computeStandings, getCaptainedTeamId } from "@/lib/schedule";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { GAME_LABELS, openSignupKind } from "@/lib/seasons";
@@ -165,12 +166,12 @@ export default async function TeamsPage({
                         <span className="text-muted-foreground w-7 shrink-0 font-mono text-xs">
                           {m.pickNumber === null ? "C" : `#${m.pickNumber}`}
                         </span>
-                        <Link
-                          href={`/users/${m.username}`}
+                        <PlayerLink
+                          username={m.username}
                           className="min-w-0 flex-1 truncate underline-offset-2 hover:underline"
                         >
                           {m.name ?? m.username}
-                        </Link>
+                        </PlayerLink>
                         {season.game === "lol" && prefs.primaryRole ? (
                           <span className="text-muted-foreground shrink-0 text-xs">
                             {ROLE_LABELS[prefs.primaryRole] ?? prefs.primaryRole}

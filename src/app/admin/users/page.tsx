@@ -25,6 +25,12 @@ const ERROR_MESSAGES: Record<string, string> = {
   "cannot-ban-admin": "Admins can't be banned. Remove their admin role first.",
 };
 
+const SAVED_MESSAGES: Record<string, string> = {
+  banned: "Player banned.",
+  unbanned: "Ban lifted.",
+  deleted: "Account deleted.",
+};
+
 const FILTERS = [
   { id: "all", label: "All" },
   { id: "banned", label: "Banned" },
@@ -102,9 +108,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: S
         </p>
       </header>
 
-      {saved ? (
-        <FlashToast message={saved === "banned" ? "Player banned." : "Ban lifted."} />
-      ) : null}
+      {saved ? <FlashToast message={SAVED_MESSAGES[saved] ?? "Saved."} /> : null}
       {errorMessage ? (
         <Alert variant="destructive">
           <AlertDescription>{errorMessage}</AlertDescription>

@@ -42,6 +42,7 @@ files are in git history before the squash commit):
 - `0013_captain_interest.sql` — `users.captain_interest` (boolean, default false).
 - `0014_prize_pool.sql` — nullable `seasons.prize_pool` (int) and
   `seasons.prize_split` (int[]).
+- `0015_fearless_draft.sql` — `seasons.fearless_draft` (boolean, default false).
 
 **Why the baseline's `when` is old.** Drizzle's migrator applies a journal
 entry only if its `when` is greater than the newest `created_at` in
@@ -155,6 +156,9 @@ Auth, not queried directly by app code.
   `seasonInputSchema`). Display only: season page tiles, `/seasons` card,
   `PrizePoolLine` in the signup / draft / live home sections. Payouts are
   computed (`prizePayouts`), never stored.
+- `fearlessDraft` boolean, default false (migration `0015_fearless_draft`) —
+  series are played in fearless draft. Display only; see
+  [MATCHES.md](MATCHES.md) → Fearless draft.
 - `discordCategoryId` (migration `0010`) — Discord category holding the
   season's team channels, created by `syncTeamRoles`.
 - `championTeamId` — set by `confirmMatch` when the **final** is
@@ -338,8 +342,33 @@ memberships, teams they captain (and therefore those teams' matches), draft
 picks (both as captain AND as picked), 10-man signups/votes/captaincies/
 picks, account links and stat snapshots. Removing a player's 10-man picks
 leaves gaps in that session's pick numbers — acceptable for history.
-There is no user-delete UI. Don't delete users without thinking through
-season and 10-man state.
+Because of that, account deletion never hard-deletes a player with history
+(next section). Don't `DELETE FROM users` by hand without the same checks.
+
+## Deleting an account
+
+`src/lib/account-deletion.ts`, from the owner's "Delete account" card on
+`/users/[username]` (`deleteOwnAccount`) or the admin tools there
+(`adminDeleteAccount`). Both make you type the username.
+
+- **Refused** (`deletionBlocker`) for admins, anyone signed up for or
+  captaining a season past `signups_closed` that isn't `complete`, a captain
+  in a season that hasn't started, and anyone in an unfinished 10-man.
+- **No league history** (no team membership, captained team, draft pick,
+  captaincy, sub appearance or 10-man) → `DELETE FROM users`; the cascades
+  remove sessions, password, signups and linked accounts.
+- **League history** → **anonymized**, row kept: `name = "Deleted player"`,
+  `username = null` (so no public profile, and the player directory skips
+  them), email `deleted-<id>@deleted.invalid`, profile/Discord fields
+  cleared; sessions, `accounts`, account links and stat snapshots deleted;
+  signups for pre-draft seasons deleted, the rest keep only role prefs
+  (notes/quandary cleared). Rosters, results and 10-man history stay intact.
+  Pages that link players use `PlayerLink` so a null username renders as
+  plain text.
+- Self-deletion signs out first so the response clears the session cookies
+  (otherwise the 5-minute cookie cache keeps them "signed in"), then
+  redirects to `/?account-deleted=1`. Events keep the old username in
+  `user.deleted` data until the 60-day prune.
 
 ## Invariants enforced in code, not DB
 

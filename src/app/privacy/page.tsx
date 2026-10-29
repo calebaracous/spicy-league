@@ -227,12 +227,17 @@ export default function PrivacyPage() {
         data, and to object to certain processing.
       </p>
       <p>
-        To make a request, email{" "}
+        You can delete your account yourself from your public profile page (there&rsquo;s a link at
+        the bottom of your profile). This removes your profile, sign-in, Discord and game account
+        details, and any signups for seasons that haven&rsquo;t started. If you have played in past
+        seasons or 10-mans, those rosters and results are kept in anonymised form, shown as
+        &ldquo;Deleted player&rdquo;, so past seasons remain coherent. While you are in a season
+        that is under way or an unfinished 10-man, deletion waits until it is over.
+      </p>
+      <p>
+        To make any other request, email{" "}
         <a href="mailto:contact@spicyleague.dev">contact@spicyleague.dev</a>&nbsp;from the address
-        on your account. We will respond within 30 days. Note that deleting an account also removes
-        its signups, draft picks, and team memberships &mdash; if you are a captain in an active
-        season, we will contact you to arrange a replacement first. Historical results may be
-        retained in anonymised form so past seasons remain coherent.
+        on your account. We will respond within 30 days.
       </p>
 
       <h2>9. Children</h2>

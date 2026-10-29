@@ -37,6 +37,17 @@ Change it before group results come in — it changes how matches are reported
 and ranked. Copy that describes the format comes from `formatStructure()`
 (home upcoming section, season page header).
 
+## Fearless draft (`seasons.fearlessDraft`)
+
+Boolean per season (migration `0015_fearless_draft`, admin season form
+checkbox). Fearless draft = once a champion is picked in a series, neither
+team can pick it again in that series. **Display only** — the site doesn't
+run champ select, so nothing enforces it. Season 12 uses it. Shown, worded by
+`FEARLESS_DRAFT_RULE` (`src/lib/match-format.ts`), on: the home signup banner
+and upcoming Format card, the season page header, the match page subtitle,
+the Discord match-thread opener and the team schedule post.
+`fearlessApplies(season, stage)` leaves it off tiebreakers (one game).
+
 ## Group stage scheduling
 
 `generateSchedule(seasonId)` in `src/lib/schedule.ts`:

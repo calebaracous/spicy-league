@@ -3,18 +3,21 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { ADMIN_ERROR_MESSAGES, AdminAccountTools } from "./_components/admin-account-tools";
+import { DeleteAccountForm } from "./_components/delete-account-form";
 import { MatchHistory } from "./_components/match-history";
 import { StatsTabs } from "./_components/stats-tabs";
 import { db } from "@/db/client";
 import { users } from "@/db/schema/auth";
 import { auth } from "@/auth";
+import { deleteOwnAccount } from "@/app/profile/account-actions";
+import { deletionBlocker } from "@/lib/account-deletion";
 import { accountLinks, riotStatSnapshots } from "@/db/schema/stats";
 import { formatRank } from "@/lib/rank";
 import { opggUrlForRiotId } from "@/lib/opgg";
 import { getChampionName } from "@/lib/riot-api";
 import { getPlayerMatchHistory } from "@/lib/substitutions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FlashToast } from "@/components/flash-toast";
 import { LocalTime } from "@/components/ui/local-time";
 import { Separator } from "@/components/ui/separator";
@@ -83,6 +86,9 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
   // Discord is for contacting players, so only signed-in visitors see it.
   const discordUsername = viewer?.user ? user.discordUsername : null;
   const isAdmin = viewer?.user.role === "admin";
+  const isOwner = viewer?.user.id === user.id;
+  // Only the owner and admins see the delete controls, so only they pay for the check.
+  const blocker = isOwner || isAdmin ? await deletionBlocker(user.id) : null;
   const errorMessage = isAdmin && error ? (ADMIN_ERROR_MESSAGES[error] ?? null) : null;
   const hasLolData = riotLinks.length > 0 || !!user.opggUrl;
   const derivedOpgg = new Set(riotLinks.map((l) => opggUrlForRiotId(l.externalHandle)));
@@ -223,11 +229,34 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
 
       <MatchHistory matches={history} />
 
+      {isOwner ? (
+        <Card id="delete-account" className="border-destructive/40 scroll-mt-24">
+          <CardHeader>
+            <CardTitle>Delete account</CardTitle>
+            <CardDescription>
+              Removes your profile, sign-in, Discord and Riot details, and any signups for seasons
+              that haven&apos;t started. If you&apos;ve played in past seasons or 10-mans, those
+              rosters and results stay, shown as &ldquo;Deleted player&rdquo;. This can&apos;t be
+              undone.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {blocker ? (
+              <p className="text-muted-foreground text-sm">{blocker}</p>
+            ) : (
+              <DeleteAccountForm username={user.username} deleteAction={deleteOwnAccount} />
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
+
       {isAdmin ? (
         <AdminAccountTools
-          user={user}
+          user={{ ...user, username: user.username }}
           riotLinks={riotLinks}
           lastRefreshed={riotSnapshots[0]?.capturedAt ?? null}
+          deletionBlocker={isOwner ? null : blocker}
+          isSelf={isOwner}
         />
       ) : null}
     </div>
