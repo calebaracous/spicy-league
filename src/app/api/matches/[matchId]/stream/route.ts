@@ -13,11 +13,11 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
 // Same pattern as the draft and 10-man streams (docs/DRAFT.md), but 1s while
-// something is ticking (RPS rounds, side pick clocks) and 5s when idle, so an
+// something is ticking (RPS rounds, side pick clocks) and 2s when idle, so an
 // open match page between games doesn't hammer the DB. Polling also drives
 // the deadlines: getMatchDaySnapshot settles whatever has lapsed.
 const HOT_MS = 1000;
-const IDLE_MS = 5000;
+const IDLE_MS = 2000;
 
 // serverNow changes every tick; hashing it would push an update every poll.
 function snapshotHash(snap: MatchDaySnapshot | null): string {

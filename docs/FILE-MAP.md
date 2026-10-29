@@ -91,7 +91,7 @@ Rendered by `src/app/page.tsx`:
 - `src/app/seasons/[slug]/matches/[matchId]/_components/lineups.tsx` — `MatchLineups`: rosters with subs, sub requests, request form.
 - `src/app/seasons/[slug]/matches/[matchId]/_components/match-day.tsx` — `MatchDayCard`: live RPS side select (ready up, throws + countdown, reveal/roast, blue/red pick). See [MATCH-DAY.md](MATCH-DAY.md).
 - `src/app/seasons/[slug]/matches/match-day-actions.ts` — `readyRps`, `unreadyRps`, `throwRps`, `pickSide`, `adminResetMatchDay` (return `{ error }`, lock the match row, settle deadlines first).
-- `src/app/api/matches/[matchId]/stream/route.ts` — match-day SSE stream (1s live / 5s idle, per-viewer snapshot).
+- `src/app/api/matches/[matchId]/stream/route.ts` — match-day SSE stream (1s live / 2s idle, per-viewer snapshot).
 - `src/app/users/[username]/_components/match-history.tsx` — profile match history list (Sub / Sat out tags).
 - `src/app/seasons/[slug]/teams/page.tsx` — team rosters with roles, record, "Your team" highlight. Captains (and admins) get a "Rename team" form on their card.
 - `src/app/seasons/[slug]/teams/actions.ts` — `renameTeam`: captain of that team (until complete) or admin; name rules + per-season uniqueness; renames the Discord role/channels in the background.

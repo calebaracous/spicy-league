@@ -68,11 +68,15 @@ never chains through phantom rounds.
 `/api/matches/[matchId]/stream` — the draft / 10-man SSE pattern
 ([DRAFT.md](DRAFT.md)), but **1s** while something ticks
 (`matchDayIsHot`: a live round or reveal, a readied seat, an open side
-pick) and **5s** idle. The hash ignores `serverNow`. The viewer
+pick) and **2s** idle. The hash ignores `serverNow`. The viewer
 (`getMatchDayViewer`) is resolved once per connection because the snapshot
 is per viewer: **throws are hidden until the round is revealed** — the
 stream sends `thrown: boolean` and only the viewer's own `myThrow`.
 Clients count down from the deadlines, corrected by `serverNow`.
+Every action also returns the caller's fresh snapshot (even with an
+expected error), which the card applies at once — waiting for the next poll
+used to eat seconds of the 10s throw window. Stream frames and action
+results race, so the card keeps whichever has the later `serverNow`.
 
 ## UI
 

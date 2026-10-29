@@ -32,21 +32,33 @@ const RED = "#ef4444";
 
 type Snap = MatchDaySnapshot;
 
-function useAction() {
+/** Where the card is; an error from an earlier phase stops showing once it moves on. */
+function phaseKey(snap: Snap): string {
+  const r = snap.rps;
+  return `${r?.state ?? "none"}:${r?.round ?? 0}:${snap.games.map((g) => g.blueTeamId ?? "-").join()}`;
+}
+
+/** Runs an action and applies the snapshot it returns straight away. */
+function useAction(snap: Snap, apply: (next: Snap) => void) {
   const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; phase: string } | null>(null);
   function run(action: () => Promise<MatchDayActionResult>) {
     setError(null);
     startTransition(async () => {
       try {
         const result = await action();
-        if (result?.error) setError(result.error);
+        if (result?.snap) apply(result.snap);
+        if (result?.error) {
+          setError({ message: result.error, phase: phaseKey(result.snap ?? snap) });
+        }
       } catch {
-        setError("Something went wrong. Refresh the page and try again.");
+        setError({ message: "Something went wrong. Refresh the page and try again.", phase: "" });
       }
     });
   }
-  return { pending, error, run };
+  const shown =
+    error && (error.phase === "" || error.phase === phaseKey(snap)) ? error.message : null;
+  return { pending, error: shown, run };
 }
 
 /** Milliseconds left until `deadline` on the server's clock, re-rendered ~5×/s. */
@@ -94,8 +106,11 @@ export function MatchDayCard({
   matchId: string;
 }) {
   const [snap, setSnap] = useState<Snap>(initial);
-  const liveStatus = useSnapshotStream<Snap>(`/api/matches/${matchId}/stream`, setSnap);
-  const { pending, error, run } = useAction();
+  // Action results and stream frames race; keep whichever the server made last.
+  const apply = (next: Snap) =>
+    setSnap((prev) => (Date.parse(next.serverNow) >= Date.parse(prev.serverNow) ? next : prev));
+  const liveStatus = useSnapshotStream<Snap>(`/api/matches/${matchId}/stream`, apply);
+  const { pending, error, run } = useAction(snap, apply);
 
   const game1 = snap.games.find((g) => g.gameNumber === 1) ?? null;
   const teamName = (id: string | null) =>
@@ -265,7 +280,9 @@ function RpsRoundView({
           </div>
         ))}
       </div>
-      {mySide ? (
+      {mySide && ms === 0 && !viewer.myThrow ? (
+        <p className="text-muted-foreground text-center">Time&apos;s up…</p>
+      ) : mySide ? (
         viewer.myThrow ? (
           <p className="text-center">
             You threw {THROW_EMOJI[viewer.myThrow]} {THROW_LABEL[viewer.myThrow]}. Waiting for the

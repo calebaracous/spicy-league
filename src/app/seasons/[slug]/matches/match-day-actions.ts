@@ -1,7 +1,6 @@
 "use server";
 
 import { and, eq } from "drizzle-orm";
-import { revalidatePath } from "next/cache";
 
 import { db } from "@/db/client";
 import { users } from "@/db/schema/auth";
@@ -12,7 +11,13 @@ import { requireAdmin, requireAuth } from "@/lib/auth-helpers";
 import { notifyMatchSides } from "@/lib/discord-notify";
 import { syncInBackground } from "@/lib/discord-roles";
 import { logEvent } from "@/lib/events";
-import { matchDayApplies, settleMatchDay } from "@/lib/match-day";
+import {
+  getMatchDaySnapshot,
+  getMatchDayViewer,
+  matchDayApplies,
+  settleMatchDay,
+  type MatchDaySnapshot,
+} from "@/lib/match-day";
 import { isRpsThrow } from "@/lib/rps";
 import { getCaptainedTeamId } from "@/lib/schedule";
 
@@ -22,18 +27,26 @@ import { getCaptainedTeamId } from "@/lib/schedule";
 // stripped in production. Each mutation locks the match row first, then
 // settles lapsed deadlines, so it acts on the same state the clock says.
 
-export type MatchDayActionResult = { error?: string };
+// Every result carries the caller's fresh snapshot (also after an expected
+// error, e.g. "Too late"), so the card updates at once instead of waiting
+// for the stream's next poll — that lag ate into the 10s throw window. No
+// revalidatePath: only the card shows this state, and a page refresh per
+// click re-rendered the whole match page and re-ran every link prefetch.
+export type MatchDayActionResult = { error?: string; snap?: MatchDaySnapshot | null };
 
 class MatchDayError extends Error {}
 
-async function run(fn: () => Promise<void>): Promise<MatchDayActionResult> {
+async function run(matchId: string, fn: () => Promise<void>): Promise<MatchDayActionResult> {
+  let error: string | undefined;
   try {
     await fn();
-    return {};
   } catch (err) {
-    if (err instanceof MatchDayError) return { error: err.message };
-    throw err;
+    if (!(err instanceof MatchDayError)) throw err;
+    error = err.message;
   }
+  const match = await db.query.matches.findFirst({ where: eq(matches.id, matchId) });
+  const snap = match ? await getMatchDaySnapshot(matchId, await getMatchDayViewer(match)) : null;
+  return { error, snap };
 }
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -72,10 +85,6 @@ async function displayName(tx: Tx, userId: string): Promise<string> {
   return u?.name ?? u?.username ?? "Your co-captain";
 }
 
-function revalidate(slug: string, matchId: string) {
-  revalidatePath(`/seasons/${slug}/matches/${matchId}`);
-}
-
 /**
  * A captain takes their team's RPS seat. The first captain of a team to ready
  * up plays; a co-captain gets an error naming them. Both seats ready → round 1.
@@ -83,7 +92,7 @@ function revalidate(slug: string, matchId: string) {
 export async function readyRps(slug: string, matchId: string): Promise<MatchDayActionResult> {
   const session = await requireAuth();
   const userId = session.user.id;
-  return run(async () => {
+  return run(matchId, async () => {
     const now = new Date();
     await db.transaction(async (tx) => {
       const { season, match } = await lockMatch(tx, slug, matchId);
@@ -109,7 +118,6 @@ export async function readyRps(slug: string, matchId: string): Promise<MatchDayA
         .where(eq(matchRps.matchId, matchId));
       await settleMatchDay(tx, match, now);
     });
-    revalidate(slug, matchId);
   });
 }
 
@@ -117,7 +125,7 @@ export async function readyRps(slug: string, matchId: string): Promise<MatchDayA
 export async function unreadyRps(slug: string, matchId: string): Promise<MatchDayActionResult> {
   const session = await requireAuth();
   const userId = session.user.id;
-  return run(async () => {
+  return run(matchId, async () => {
     const now = new Date();
     await db.transaction(async (tx) => {
       await lockMatch(tx, slug, matchId);
@@ -135,7 +143,6 @@ export async function unreadyRps(slug: string, matchId: string): Promise<MatchDa
           .where(eq(matchRps.matchId, matchId));
       }
     });
-    revalidate(slug, matchId);
   });
 }
 
@@ -151,7 +158,7 @@ export async function throwRps(
 ): Promise<MatchDayActionResult> {
   const session = await requireAuth();
   const userId = session.user.id;
-  return run(async () => {
+  return run(matchId, async () => {
     if (!isRpsThrow(choice)) throw new MatchDayError("Pick rock, paper or scissors.");
     const now = new Date();
     await db.transaction(async (tx) => {
@@ -177,7 +184,6 @@ export async function throwRps(
       // Both in → reveal now rather than waiting out the clock.
       await settleMatchDay(tx, match, now);
     });
-    revalidate(slug, matchId);
   });
 }
 
@@ -190,7 +196,7 @@ export async function pickSide(
 ): Promise<MatchDayActionResult> {
   const session = await requireAuth();
   const userId = session.user.id;
-  return run(async () => {
+  return run(matchId, async () => {
     if (side !== "blue" && side !== "red") throw new MatchDayError("Pick blue or red.");
     const now = new Date();
     await db.transaction(async (tx) => {
@@ -221,7 +227,6 @@ export async function pickSide(
         .where(eq(matchGames.id, game.id));
     });
     syncInBackground("match sides", () => notifyMatchSides(matchId, gameNumber));
-    revalidate(slug, matchId);
   });
 }
 
@@ -231,7 +236,7 @@ export async function adminResetMatchDay(
   matchId: string,
 ): Promise<MatchDayActionResult> {
   const session = await requireAdmin();
-  return run(async () => {
+  return run(matchId, async () => {
     const season = await db.query.seasons.findFirst({ where: eq(seasons.slug, slug) });
     const match = season
       ? await db.query.matches.findFirst({
@@ -249,6 +254,5 @@ export async function adminResetMatchDay(
       seasonId: season.id,
       data: { matchId },
     });
-    revalidate(slug, matchId);
   });
 }
