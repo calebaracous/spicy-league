@@ -179,7 +179,10 @@ server actions to find them. Examples:
   #20). It's a form field, not a `missingSignupRequirements` gate: the box
   is pre-checked when already opted in. These
   rules only gate *new* signups; existing rows are never revisited, so
-  unlinking or opting out on `/profile` later doesn't affect a signup.
+  unlinking on `/profile` later doesn't affect a signup. Opting out of
+  public stats is blocked until every LoL season the player signed up for
+  is `complete` (players who signed up before the opt-in existed may have
+  none; admins chase them).
   Pre-requirement LoL signups aren't forced to opt in; the admin signups
   page flags them ("Public stats" column + not-opted-in count) for admins to
   chase by hand. `submitSignup` is the only code path that inserts

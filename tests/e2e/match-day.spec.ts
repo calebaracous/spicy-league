@@ -275,7 +275,7 @@ test("Bo3 semi: results, loser's side pick, a correction, auto-confirm, flag, ad
   });
 });
 
-test("Draft room: ready, countdown, lock, timeout locks the hover, skipped ban, fearless", async ({
+test("Draft room: ready, countdown, lock, timeout locks the hover, skipped ban, pick pause, fearless", async ({
   browser,
 }) => {
   test.setTimeout(150_000);
@@ -327,6 +327,20 @@ test("Draft room: ready, countdown, lock, timeout locks the hover, skipped ban, 
   };
   const champ = (p: Page, title: string) =>
     p.getByRole("button").and(p.getByTitle(title, { exact: true }));
+  // Bans get a minute and picks two: pull the current step's deadline in
+  // rather than wait it out.
+  const expireStep = (inMs: number) =>
+    db
+      .update(schema.matchGames)
+      .set({ stepDeadline: new Date(Date.now() + inMs) })
+      .where(eq(schema.matchGames.matchId, matchId))
+      .then(() =>
+        db
+          .select()
+          .from(schema.matchGames)
+          .where(eq(schema.matchGames.matchId, matchId))
+          .then((rows) => rows.find((g) => g.gameNumber === 2)!),
+      );
 
   await test.step("fearless greys out last game's pick; spectators can't choose", async () => {
     await expect(champ(blue, "Ahri: Fearless")).toBeDisabled();
@@ -352,7 +366,10 @@ test("Draft room: ready, countdown, lock, timeout locks the hover, skipped ban, 
 
   await test.step("red hovers Lux and lets the clock run out: Lux locks", async () => {
     await champ(red, "Lux").click();
-    await expect(spectator.getByText("BLUE BAN 2")).toBeVisible({ timeout: 45_000 });
+    await expect(red.getByRole("button", { name: "Lock in" })).toBeEnabled();
+    // Only game 2 is live; game 1 is complete, so its deadline is ignored.
+    await expireStep(2_000);
+    await expect(spectator.getByText("BLUE BAN 2")).toBeVisible({ timeout: 20_000 });
     const taken = await actions();
     expect(taken.map((a) => [a.step, a.championKey, a.auto])).toEqual([
       [1, "Garen", false],
@@ -364,6 +381,31 @@ test("Draft room: ready, countdown, lock, timeout locks the hover, skipped ban, 
     await blue.getByRole("button", { name: "Skip ban" }).click();
     await expect(red.getByText("RED BAN 2")).toBeVisible({ timeout: SSE_TIMEOUT });
     expect((await actions())[2]).toMatchObject({ step: 3, championKey: null, auto: false });
+  });
+
+  await test.step("a pick with nothing hovered pauses until someone locks it", async () => {
+    // Fast-forward: steps 4–6 are skipped bans, so blue's first pick is next.
+    const g2 = await expireStep(60_000);
+    await db.insert(schema.matchDraftActions).values(
+      [4, 5, 6].map((step) => ({
+        gameId: g2.id,
+        step,
+        side: step % 2 === 0 ? ("red" as const) : ("blue" as const),
+        kind: "ban" as const,
+        championKey: null,
+      })),
+    );
+    await expireStep(-1_000);
+    await expect(spectator.getByText(/Paused: time ran out/)).toBeVisible({
+      timeout: SSE_TIMEOUT,
+    });
+    await expect(spectator.getByText("BLUE PICK 1")).toBeVisible();
+    expect((await actions()).length).toBe(6);
+    await blue.reload();
+    await champ(blue, "Jinx").click();
+    await blue.getByRole("button", { name: "Lock in" }).click();
+    await expect(spectator.getByText("RED PICK 1")).toBeVisible({ timeout: SSE_TIMEOUT });
+    expect((await actions())[6]).toMatchObject({ step: 7, championKey: "Jinx", auto: false });
   });
 
   await test.step("an admin skips the rest; the card offers the result", async () => {
@@ -395,6 +437,7 @@ test("Draft recap: a captain assigns their picks to lineup players", async ({ br
 
   // Home's captain can assign blue's picks, not red's.
   const assign = card(p1).getByRole("button", { name: "Assign players" });
+  await expect(card(p1).getByRole("button", { name: "I played…" })).toHaveCount(0);
   await expect(assign).toHaveCount(1);
   await assign.click();
   const selects = card(p1).getByRole("combobox");
@@ -412,6 +455,54 @@ test("Draft recap: a captain assigns their picks to lineup players", async ({ br
   expect(by(7)).toBe(ids.get(P(1).username));
   expect(by(10)).toBe(ids.get(P(3).username));
   expect(by(8)).toBeNull();
+});
+
+test("Draft recap: a lineup player claims their own pick", async ({ browser }) => {
+  const { url, matchId, awayId } = await seedMatch("claim", { game1Sides: true });
+  const ids = await userIdsByUsername([P(4).username, P(5).username]);
+  // P4 and P5 were drafted onto away (red), so they're in its lineup but not captains.
+  await db.insert(schema.teamMembers).values([
+    { teamId: awayId, userId: ids.get(P(4).username)!, pickNumber: 2 },
+    { teamId: awayId, userId: ids.get(P(5).username)!, pickNumber: 3 },
+  ]);
+  const [game] = await db
+    .update(schema.matchGames)
+    .set({ draftState: "complete" })
+    .where(eq(schema.matchGames.matchId, matchId))
+    .returning();
+  await db.insert(schema.matchDraftActions).values([
+    { gameId: game.id, step: 7, side: "blue", kind: "pick", championKey: "Garen" },
+    { gameId: game.id, step: 8, side: "red", kind: "pick", championKey: "Jinx" },
+    {
+      gameId: game.id,
+      step: 9,
+      side: "red",
+      kind: "pick",
+      championKey: "Lux",
+      assignedUserId: ids.get(P(5).username)!,
+    },
+  ]);
+  const p4 = await signedInPage(browser, P(4).username);
+  await p4.goto(url);
+
+  await card(p4).getByRole("button", { name: "I played…" }).click();
+  // Lux is P5's; only Jinx is up for grabs.
+  await expect(card(p4).getByRole("button", { name: "Lux" })).toHaveCount(0);
+  await expect(card(p4).getByRole("button", { name: "Garen" })).toHaveCount(0);
+  await card(p4).getByRole("button", { name: "Jinx" }).click();
+  await expect(card(p4).getByRole("button", { name: "Change mine" })).toBeVisible({
+    timeout: SSE_TIMEOUT,
+  });
+  await expect(card(p4)).toContainText("E2E P04");
+
+  const picks = await db
+    .select()
+    .from(schema.matchDraftActions)
+    .where(eq(schema.matchDraftActions.gameId, game.id));
+  const by = (step: number) => picks.find((a) => a.step === step)!.assignedUserId;
+  expect(by(8)).toBe(ids.get(P(4).username));
+  expect(by(9)).toBe(ids.get(P(5).username));
+  expect(by(7)).toBeNull();
 });
 
 test("Champion stats: season page, team filter and the player's profile", async ({ browser }) => {

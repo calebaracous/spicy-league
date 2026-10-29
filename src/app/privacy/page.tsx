@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="October 28, 2026">
+    <LegalPage title="Privacy Policy" updated="October 29, 2026">
       <p>
         This policy explains what personal data Spicy League collects when you use{" "}
         <a href="https://www.spicyleague.dev">www.spicyleague.dev</a> or interact with our Discord
@@ -87,11 +87,13 @@ export default function PrivacyPage() {
           top champion mastery from the Riot Games API. These are shown on your public profile.
         </li>
         <li>
-          Per-player stats from League of Legends games played in Spicy League (KDA, CS, damage,
-          champions played and similar), fetched from the Riot Games API, are shown publicly only if
-          you opt in. Opting in is required to sign up for a League of Legends season; you can opt
-          out at any time on your profile page, which hides your per-player stats (team and champion
-          totals still show) without affecting your existing signups.
+          Per-player stats from League of Legends games played in Spicy League (KDA, CS, damage and
+          similar), fetched from the Riot Games API, are shown publicly only if you opt in. Opting
+          in is required to sign up for a League of Legends season, and stays on until every season
+          you&apos;re signed up for has ended; after that you can opt out on your profile page,
+          which hides your per-player stats (team and champion totals still show). Which champion
+          you played in a league game, as recorded by your team&apos;s draft, is league data and is
+          shown on your profile either way.
         </li>
         <li>
           If you link a Steam or Leetify account, we store the identifier or profile URL you

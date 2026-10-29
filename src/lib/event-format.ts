@@ -65,6 +65,7 @@ export const EVENT_TYPES = {
   "match.game_result_flagged": "matches",
   "match.result_edited": "matches",
   "match.riot_flag": "matches",
+  "match.draft_paused": "matches",
   "sub.requested": "matches",
   "sub.withdrawn": "matches",
   "sub.decided": "matches",
@@ -324,6 +325,11 @@ export function describeEvent(e: EventView): Segment[] {
       return match("edited the result of");
     case "match.riot_flag":
       return [`Riot flagged game ${str(d.gameNumber)} of `, ...match("").slice(2)];
+    case "match.draft_paused":
+      return [
+        `The game ${str(d.gameNumber)} draft paused on a missed pick in `,
+        ...match("").slice(2),
+      ];
     case "sub.requested":
       return [...match("requested a sub for"), " (", subject, ")"];
     case "sub.withdrawn":

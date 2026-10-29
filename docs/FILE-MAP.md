@@ -32,9 +32,10 @@ Trivial shadcn primitives get a single entry at the bottom.
 - `tests/unit/opgg.test.ts` — OP.GG URL derivation from Riot IDs.
 - `tests/unit/player-stats.test.ts` — directory W–D–L tallies (subs, sat-out, Bo2 draws, 10-man) and rank helpers (`bestRankPerUser`).
 - `tests/unit/season-schedule.test.ts` — `seasonSchedule` ordering, skipping unset dates, group stage range.
-- `tests/unit/draft-clock.test.ts` — draft clock: ready/countdown/steps, hover lock vs skipped ban vs random pick on timeout, completion.
+- `tests/unit/draft-clock.test.ts` — draft clock: ready/countdown/steps, 60s bans / 2-minute picks, hover lock vs skipped ban vs paused pick on timeout, completion.
 - `tests/unit/champions.test.ts` — `resolveChampionKeys` (names/keys, punctuation, unknowns).
 - `tests/unit/champion-stats.test.ts` — champion/side/player aggregation, team filter, unrecorded results.
+- `tests/unit/riot-player-stats.test.ts` — scoreboard opt-in gating and team totals, averages, KDA.
 - `tests/unit/riot-tournament-parse.test.ts` — callback body, Match-v5 winner/player lines, draft-vs-played mismatches.
 - `tests/unit/series.test.ts` — `bestOfFor`, `seriesScore`, `loserOf`.
 - `tests/unit/rps.test.ts` — RPS outcomes and the lazy state machine (reveal, void replay, AFK reset, catch-up).
@@ -59,6 +60,7 @@ Trivial shadcn primitives get a single entry at the bottom.
 - `scripts/riot-tournament-setup.mjs` — registers a Riot tournament provider (stub without `RIOT_TOURNAMENT_API_KEY`) for `<site>/api/riot/tournament-callback?token=…` and prints `RIOT_TOURNAMENT_PROVIDER_ID`. See MATCH-DAY.md.
 - `scripts/season-12-setup.mjs` — one-off: deletes every season + 10-man and obvious test users (numbered bot usernames / test email domains, never admins), then creates Spicy League Season 12 (Bo2 group stage). Dry run unless `--apply`. Needs migrations 0005 and 0007.
 - `scripts/seed-rps-test.mjs` — staging only: two test captains + season `rps-test` (two Bo2 group matches, a Bo3 semi) for trying match day by hand; re-running resets them. See MATCH-DAY.md.
+- `scripts/seed-riot-stats-test.mjs` — staging only: fake Riot player stats on the `rps-test` season's first match (Scoreboard / profile averages by hand).
 - `scripts/seed-test-season.ts` — refuses to run without `ALLOW_TEST_SEED=1` (guards against seeding production). Seeds `test-s1` LoL season with 4 captain + 16 bot accounts (re-runnable; cleans first). Run with `ALLOW_TEST_SEED=1 npx tsx --env-file=.env.development.local scripts/seed-test-season.ts` (staging). Credentials are in the file header.
 - `scripts/staging-scrub.mjs` — `npm run staging:scrub` (also the tail of `staging:reset`): rewrites real emails to Resend's test inbox, deletes sessions/verification tokens, clears OAuth tokens on the staging DB; refuses the production endpoint. See STAGING.md.
 
@@ -99,12 +101,14 @@ Rendered by `src/app/page.tsx`:
 - `src/app/seasons/[slug]/matches/[matchId]/_components/match-day.tsx` — `MatchDayCard`: live RPS side select (ready up, throws + countdown, reveal/roast, blue/red pick). See [MATCH-DAY.md](MATCH-DAY.md).
 - `src/app/seasons/[slug]/champions/page.tsx` — season champion stats (side win rates, per-champion table, `?team=` scouting filter).
 - `src/app/seasons/[slug]/matches/[matchId]/games/[n]/page.tsx` — the match-day draft room for game n (snapshot + champion catalogue → `DraftRoom`).
-- `src/app/seasons/[slug]/matches/[matchId]/_components/draft-recap.tsx` — `DraftRecap`: a drafted game's picks (with players) and bans on the match-day card, plus the Assign players form.
+- `src/app/seasons/[slug]/matches/[matchId]/_components/draft-recap.tsx` — `DraftRecap`: a drafted game's picks (with players) and bans on the match-day card, plus the Assign players form and players' "I played…" claim.
+- `src/app/seasons/[slug]/matches/[matchId]/_components/riot-scoreboard.tsx` — `RiotScoreboard`: per-game Riot stats tables (opted-in players' numbers, team totals).
 - `src/app/seasons/[slug]/matches/[matchId]/_components/draft-room.tsx` — `DraftRoom`: ready boxes, countdown, step banner + timer, blue/red ban and pick slots, champion grid with search, Lock in / Skip ban, admin Undo / Skip / Restart.
-- `src/app/seasons/[slug]/matches/match-day-actions.ts` — `readyRps`, `unreadyRps`, `throwRps`, `pickSide`, `reportGameWinner` (auto-confirms a decided series; waits for the draft), `flagGameResult`, `readyDraft`, `hoverChampion`, `lockChampion`, `adminUndoDraftStep`, `adminSetDraft`, `assignPicks`, `getLobbyCode`, `adminResetMatchDay` (return `{ error, snap }`, lock the match row, settle deadlines first).
+- `src/app/seasons/[slug]/matches/match-day-actions.ts` — `readyRps`, `unreadyRps`, `throwRps`, `pickSide`, `reportGameWinner` (auto-confirms a decided series; waits for the draft), `flagGameResult`, `readyDraft`, `hoverChampion`, `lockChampion`, `adminUndoDraftStep`, `adminSetDraft`, `assignPicks`, `claimPick`, `getLobbyCode`, `adminResetMatchDay` (return `{ error, snap }`, lock the match row, settle deadlines first).
 - `src/app/api/matches/[matchId]/stream/route.ts` — match-day SSE stream (1s live / 2s idle, per-viewer snapshot).
 - `src/app/api/riot/tournament-callback/route.ts` — Riot tournament callback (token check → `applyTournamentCallback`; 503 = retry).
 - `src/app/users/[username]/_components/league-champions.tsx` — `LeagueChampions`: champions a player was assigned in league drafts, with W–L.
+- `src/app/users/[username]/_components/league-riot-stats.tsx` — `LeagueRiotStats`: per-season Riot averages for opted-in players.
 - `src/app/users/[username]/_components/match-history.tsx` — profile match history list (Sub / Sat out tags).
 - `src/app/seasons/[slug]/teams/page.tsx` — team rosters with roles, record, "Your team" highlight. Captains (and admins) get a "Rename team" form on their card.
 - `src/app/seasons/[slug]/teams/actions.ts` — `renameTeam`: captain of that team (until complete) or admin; name rules + per-season uniqueness; renames the Discord role/channels in the background.
@@ -211,7 +215,8 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/backdrop-clips.ts` — home-row backdrop clip registry (`backdropClip(game, index)`, `placeholderBackdrop(game)` for the still-art "Signups open" row, `otherGame`). LoL clips `lol-1..3` are live (`loopSources(id)` → WebM + MP4); CS2 clips still have `sources: []`.
 - `src/lib/live-season.ts` — `getLiveSeason`, `LIVE_STATE_COPY`, `liveSeasonHref`. Used by header pill + home hero.
 - `src/lib/champion-stats.ts` — pure: `championStats` (picks/bans/presence/W–L per champion, optional team filter + bans against), `sideStats` (blue/red, RPS winner game 1), `playerChampions`, `percent`.
-- `src/lib/season-stats.ts` — loads completed drafts of confirmed matches for the stats pages (`loadSeasonDraftGames`, `loadPlayerDraftGames`).
+- `src/lib/season-stats.ts` — loads completed drafts of confirmed matches for the stats pages (`loadSeasonDraftGames`, `loadPlayerDraftGames`), and Riot game lines (`loadMatchRiotStats`, `loadPlayerRiotLines`).
+- `src/lib/riot-player-stats.ts` — pure: Riot per-player lines → `scoreboard` (opt-in gated rows, team totals), `playerAverages`, `kdaRatio`.
 - `src/lib/match-day-results.ts` — `recordGameWinner` (next side pick or auto-confirm; shared by the captains' buttons and the Riot callback), `GameResultError`.
 - `src/lib/riot-tournament.ts` — Riot Tournament API client: `registerTournament`, `createLobbyCode` (blind pick, spectators on), `getMatch` (Match-v5); stub without `RIOT_TOURNAMENT_API_KEY`.
 - `src/lib/riot-tournament-parse.ts` — pure: `parseTournamentCallback`, `riotMatchId`, `parseMatchResult`, `draftMismatches`.
@@ -220,7 +225,7 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/match-results.ts` — `applyConfirmEffects` (final after both semis, re-teams an unplayed final, champion, Discord, revalidation) and `confirmWithResult` (set + confirm in one go); used by `confirmMatch`, match day's auto-confirm and `adminEditResult`.
 - `src/lib/rps.ts` — pure RPS rules: `roundOutcome`, `advanceRps` / `settleRps` (lazy deadline state machine), timings, `griefLine`, `randomSide`.
 - `src/lib/match-day.ts` — `settleMatchDay` (apply lapsed deadlines under the match lock), `resolveExpired` (SKIP LOCKED), `getMatchDaySnapshot` (per viewer, throws hidden until reveal), `getMatchDayViewer`, `matchDayApplies`, `matchDayIsHot`.
-- `src/lib/draft-clock.ts` — pure draft clock: `advanceDraft` / `settleDraft` (ready → 3s countdown → 30s steps → complete; timeouts lock the hover, skip a ban or pick at random), `afterStep`.
+- `src/lib/draft-clock.ts` — pure draft clock: `advanceDraft` / `settleDraft` (ready → 3s countdown → 60s bans / 2-minute picks → complete; timeouts lock the hover, else skip a ban or pause on a pick), `afterStep`, `deadlineFor`, `draftPaused`.
 - `src/lib/draft-room.ts` — pure draft-room rules: `DRAFT_SEQUENCE`, availability incl. fearless, `resolveTimeout`, `draftBoard`, `championIconUrl`.
 - `src/lib/champions.ts` — Data Dragon champion catalogue (`getChampionCatalog`, `parseChampionJson`, `resolveChampionKeys` for the admin disabled-champions field), daily revalidate.
 - `src/lib/ten-man.ts` — `PICK_ORDER_C1_C2`, `getActiveTenMan`, `getTenManSnapshot`, `getRecentTenMans`, `electCaptains`. See [TEN-MAN.md](TEN-MAN.md).

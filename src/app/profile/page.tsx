@@ -7,6 +7,7 @@ import { Cs2LinkForm, RiotLinkForm } from "./_components/link-forms";
 import { MAX_RIOT_ACCOUNTS } from "./constants";
 import { db } from "@/db/client";
 import { users } from "@/db/schema/auth";
+import { seasons, seasonSignups } from "@/db/schema/seasons";
 import { accountLinks, riotStatSnapshots } from "@/db/schema/stats";
 import { signOut } from "@/auth";
 import { cookies } from "next/headers";
@@ -42,7 +43,24 @@ const ERROR_MESSAGES: Record<string, string> = {
   "name-too-long": "Display name must be 50 characters or fewer.",
   "discord-invalid": `That isn't a valid Discord username. ${DISCORD_USERNAME_HELP}.`,
   "discord-taken": "That Discord username is already on another account.",
+  "stats-locked": "You can opt out of public stats once your League season ends.",
 };
+
+/**
+ * The unfinished LoL season this user is signed up for, if any: they agreed to
+ * public stats to sign up, so they can't opt out until it's complete.
+ */
+async function statsOptOutLockedBy(userId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ name: seasons.name })
+    .from(seasonSignups)
+    .innerJoin(seasons, eq(seasons.id, seasonSignups.seasonId))
+    .where(
+      and(eq(seasonSignups.userId, userId), eq(seasons.game, "lol"), ne(seasons.state, "complete")),
+    )
+    .limit(1);
+  return row?.name ?? null;
+}
 
 export default async function ProfilePage({ searchParams }: { searchParams: SearchParams }) {
   const session = await requireOnboarded();
@@ -71,6 +89,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
   ]);
 
   const lastRefreshed = riotSnapshots[0]?.capturedAt ?? null;
+  const optOutLockedBy = user.statsOptInAt ? await statsOptOutLockedBy(user.id) : null;
   const canAddRiot = riotLinks.length < MAX_RIOT_ACCOUNTS;
 
   async function saveProfile(formData: FormData) {
@@ -188,12 +207,16 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
   }
 
   // Public per-player Riot stats from league games (Riot policy: opt-in
-  // only). LoL season signups require it; opting out here never touches
-  // existing signups. Re-opting in restarts the timestamp.
+  // only). LoL season signups require it, and it stays on until every LoL
+  // season they're signed up for is complete. Re-opting in restarts the
+  // timestamp.
   async function saveStatsOptIn(formData: FormData) {
     "use server";
     const session = await requireOnboarded();
     const on = formData.get("statsOptIn") === "on";
+    if (!on && (await statsOptOutLockedBy(session.user.id))) {
+      redirect("/profile?error=stats-locked");
+    }
     const updated = await db
       .update(users)
       .set({ statsOptInAt: on ? new Date() : null, updatedAt: new Date() })
@@ -487,18 +510,25 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
           <form action={saveStatsOptIn} className="space-y-1.5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <label className="flex items-center gap-2 text-sm">
-                <input type="checkbox" name="statsOptIn" defaultChecked={!!user.statsOptInAt} />
+                <input
+                  type="checkbox"
+                  name="statsOptIn"
+                  defaultChecked={!!user.statsOptInAt}
+                  disabled={!!optOutLockedBy}
+                />
                 Show my per-player stats from league games publicly
               </label>
-              <PendingSubmitButton variant="outline" size="sm">
-                Save
-              </PendingSubmitButton>
+              {optOutLockedBy ? null : (
+                <PendingSubmitButton variant="outline" size="sm">
+                  Save
+                </PendingSubmitButton>
+              )}
             </div>
             <p className="text-muted-foreground text-xs">
-              KDA, CS, damage, champions played and similar, from Riot, for Spicy League games.
-              Required to sign up for a League of Legends season. If you opt out, your per-player
-              stats are hidden (team and champion totals still show); seasons you&apos;ve already
-              signed up for aren&apos;t affected.
+              KDA, CS, damage and similar, from Riot, for Spicy League games. Required to sign up
+              for a League of Legends season, and you can&apos;t opt out until that season ends. If
+              you opt out, your per-player stats are hidden (team and champion totals still show).
+              {optOutLockedBy ? <> You&apos;re signed up for {optOutLockedBy}.</> : null}
               {user.statsOptInAt ? (
                 <>
                   {" "}

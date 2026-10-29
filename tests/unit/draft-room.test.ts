@@ -16,17 +16,6 @@ import {
   type DraftAction,
 } from "@/lib/draft-room";
 
-/** Small deterministic PRNG (mulberry32) so random picks are reproducible. */
-function seeded(seed: number): () => number {
-  let a = seed;
-  return () => {
-    a = (a + 0x6d2b79f5) | 0;
-    let t = Math.imul(a ^ (a >>> 15), 1 | a);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
 /** Actions for the first `keys.length` steps, taking each key in order. */
 function take(keys: (string | null)[]): DraftAction[] {
   return keys.map((championKey, i) => ({ ...DRAFT_SEQUENCE[i], championKey }));
@@ -166,49 +155,16 @@ describe("unavailableReason", () => {
 });
 
 describe("resolveTimeout", () => {
-  const ban = stepAt(1)!;
-  const pick = stepAt(7)!;
   const available = ["Ahri", "Garen", "Jinx", "Lux"];
 
   it("locks the hovered champion when it's still available", () => {
-    expect(resolveTimeout({ step: ban, hover: "Jinx", available })).toBe("Jinx");
-    expect(resolveTimeout({ step: pick, hover: "Lux", available })).toBe("Lux");
+    expect(resolveTimeout({ hover: "Jinx", available })).toBe("Jinx");
   });
 
-  it("hover taken or missing: a ban is skipped", () => {
-    expect(resolveTimeout({ step: ban, hover: "Zed", available })).toBeNull();
-    expect(resolveTimeout({ step: ban, hover: null, available })).toBeNull();
-  });
-
-  it("hover taken or missing: a pick is random from the available pool", () => {
-    const rng = () => 0.6; // floor(0.6 * 4) = 2
-    expect(resolveTimeout({ step: pick, hover: "Zed", available, rng })).toBe("Jinx");
-    expect(resolveTimeout({ step: pick, hover: undefined, available, rng })).toBe("Jinx");
-  });
-
-  it("random picks are uniform-ish, reproducible, and always available", () => {
-    const run = () => {
-      const rng = seeded(42);
-      return Array.from({ length: 400 }, () =>
-        resolveTimeout({ step: pick, hover: null, available, rng }),
-      );
-    };
-    const picks = run();
-    expect(picks).toEqual(run());
-    for (const k of available) {
-      const n = picks.filter((p) => p === k).length;
-      expect(n).toBeGreaterThan(60);
-      expect(n).toBeLessThan(140);
-    }
-  });
-
-  it("rng edge values stay in range", () => {
-    expect(resolveTimeout({ step: pick, hover: null, available, rng: () => 0 })).toBe("Ahri");
-    expect(resolveTimeout({ step: pick, hover: null, available, rng: () => 1 })).toBe("Lux");
-  });
-
-  it("empty pool: null for a pick too", () => {
-    expect(resolveTimeout({ step: pick, hover: null, available: [] })).toBeNull();
+  it("hover taken or missing: nothing (a skipped ban, a paused pick)", () => {
+    expect(resolveTimeout({ hover: "Zed", available })).toBeNull();
+    expect(resolveTimeout({ hover: null, available })).toBeNull();
+    expect(resolveTimeout({ hover: undefined, available: [] })).toBeNull();
   });
 });
 

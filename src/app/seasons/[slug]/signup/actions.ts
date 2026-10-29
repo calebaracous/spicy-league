@@ -88,7 +88,8 @@ export async function submitSignup(slug: string, formData: FormData) {
 
   // LoL signups must agree to public per-player stats from league games (Riot
   // policy: custom-game history is only shown publicly with opt-in). Like the
-  // other gates it only applies to new signups; /profile can opt out later.
+  // other gates it only applies to new signups; /profile can opt out once
+  // every LoL season they're signed up for is complete.
   const statsOptIn = formData.get("statsOptIn") === "on";
   if (season.game === "lol" && !statsOptIn) redirect(`/seasons/${slug}/signup?error=stats-opt-in`);
 

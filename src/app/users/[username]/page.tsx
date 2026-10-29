@@ -5,6 +5,7 @@ import { notFound } from "next/navigation";
 import { ADMIN_ERROR_MESSAGES, AdminAccountTools } from "./_components/admin-account-tools";
 import { DeleteAccountForm } from "./_components/delete-account-form";
 import { LeagueChampions } from "./_components/league-champions";
+import { LeagueRiotStats } from "./_components/league-riot-stats";
 import { MatchHistory } from "./_components/match-history";
 import { StatsTabs } from "./_components/stats-tabs";
 import { db } from "@/db/client";
@@ -19,7 +20,8 @@ import { getChampionName } from "@/lib/riot-api";
 import { getPlayerMatchHistory } from "@/lib/substitutions";
 import { playerChampions } from "@/lib/champion-stats";
 import { getChampionCatalog } from "@/lib/champions";
-import { loadPlayerDraftGames } from "@/lib/season-stats";
+import { playerAverages } from "@/lib/riot-player-stats";
+import { loadPlayerDraftGames, loadPlayerRiotLines } from "@/lib/season-stats";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FlashToast } from "@/components/flash-toast";
@@ -86,11 +88,17 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
     }),
   );
 
-  const [history, viewer, draftGames] = await Promise.all([
+  const [history, viewer, draftGames, riotLines] = await Promise.all([
     getPlayerMatchHistory(user.id),
     auth(),
     loadPlayerDraftGames(user.id),
+    // Riot per-player numbers are public only with the stats opt-in (decision 20).
+    user.statsOptInAt ? loadPlayerRiotLines(user.id) : Promise.resolve([]),
   ]);
+  const riotSeasons = riotLines.flatMap(({ season, lines }) => {
+    const stats = playerAverages(lines);
+    return stats ? [{ ...season, stats }] : [];
+  });
   // Champions played in league games (match-day draft assignments).
   const leagueChamps = playerChampions(draftGames, user.id);
   const catalog = leagueChamps.length ? await getChampionCatalog() : null;
@@ -243,6 +251,8 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
         version={catalog?.version ?? null}
         names={new Map(catalog?.champions.map((c) => [c.key, c.name]) ?? [])}
       />
+
+      <LeagueRiotStats seasons={riotSeasons} />
 
       <MatchHistory matches={history} />
 

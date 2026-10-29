@@ -122,7 +122,8 @@ wiring in `src/lib/auth.ts`).
     policy: custom-game history is public only with opt-in); null = not opted
     in. Stamped by `submitSignup` (required for LoL signups, player and sub;
     keeps an earlier timestamp) and the `/profile` toggle (`saveStatsOptIn`,
-    off → null). Opting out never touches existing signups. Admin signups
+    off → null; refused while signed up for an unfinished LoL season).
+    Opting out never touches existing signups. Admin signups
     page shows it per LoL signup plus a not-opted-in count; anonymized
     deletions clear it. Display gating: [design/MATCH-DAY.md](design/MATCH-DAY.md) #20.
   - `bannedAt`, `banReason`, `banExpiresAt`, `bannedBy` — league ban

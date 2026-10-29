@@ -96,12 +96,16 @@ and captains can only record that game's winner once the draft is
 - **Clock** (`src/lib/draft-clock.ts`, pure, `tests/unit/draft-clock.test.ts`):
   `match_games.draftState` `waiting` → both sides `readyDraft` (captain of
   that side, or an admin for either; un-ready allowed while waiting) →
-  `countdown` (3s, `draftStartsAt`) → `drafting` (30s `stepDeadline` per
-  step) → `complete` after 20 steps. `skipped` = an admin let the game go
-  ahead without a draft here. Lapsed steps are applied lazily by
-  `settleMatchDay` like RPS: the side's hover locks if it's still available,
-  otherwise a **ban is skipped** and a **pick is random** (`resolveTimeout`).
-  Without the champion list a timed-out step waits for the next tick.
+  `countdown` (3s, `draftStartsAt`) → `drafting` (`stepDeadline`: **60s per
+  ban, 2 minutes per pick**, `stepMs` / `deadlineFor`) → `complete` after 20
+  steps. `skipped` = an admin let the game go ahead without a draft here.
+  Lapsed steps are applied lazily by `settleMatchDay` like RPS: the side's
+  hover locks if it's still available (`resolveTimeout`), otherwise a **ban
+  is skipped** and a **pick pauses the draft**: `stepDeadline` goes null
+  (`draftPaused`), a `match.draft_paused` event tells admins, and it waits
+  until that side's captain or an admin locks the pick, which restarts the
+  clock. The room and the card say "paused". Without the champion list a
+  timed-out step waits for the next tick.
 - **Order** (`DRAFT_SEQUENCE`, `src/lib/draft-room.ts`): bans B R B R B R,
   picks B R R B B R, bans R B R B, picks R B B R. The step on the clock is
   `actions + 1`, never stored.
@@ -109,7 +113,8 @@ and captains can only record that game's winner once the draft is
   (shown to everyone, locks on timeout) and `lockChampion(n, step,
   key|null)` (null = skip a ban) for the side on the clock — its captains or
   an admin; the `step` argument makes a late click fail. Admin:
-  `adminUndoDraftStep` (back one step, fresh 30s), `adminSetDraft(n,
+  `adminUndoDraftStep` (back one step, fresh clock for that step; also
+  how an admin un-pauses without picking), `adminSetDraft(n,
   "skipped" | "restart")`.
 - **Availability** (`draftAvailability`, `availableChampions`): the Data
   Dragon catalogue (`getChampionCatalog`, daily revalidate) minus this
@@ -144,6 +149,10 @@ and captains can only record that game's winner once the draft is
   player); works after the match is confirmed too. Optional — it only feeds
   per-player champion stats. Stored in `match_draft_actions.assignedUserId`
   (migration `0019_draft_pick_players`).
+- **Players claim their own**: other lineup players get **I played…** on
+  their side's recap → `claimPick(slug, matchId, gameNumber, step|null)`:
+  they can take a pick nobody has or move off their own (null = none), not
+  one a teammate has — captains fix that with Assign players.
 - **Discord**: when a draft completes (last step by hand in `lockChampion`,
   or by the clock in `resolveExpired`), `notifyDraftRecap` posts both
   sides' picks and bans in the match thread.
@@ -165,7 +174,8 @@ Aggregation is pure (`src/lib/champion-stats.ts`,
 - **Profiles** (`/users/[username]`): "League champions" — champions the
   player was assigned in confirmed matches, with games and W–L
   (`playerChampions`, `_components/league-champions.tsx`). Shown for
-  everyone (our data); Riot per-player stats will be the opt-in ones.
+  everyone, opted in or not (our data); the Riot numbers below are the
+  opt-in ones.
 
 ## Riot Tournament API (phase 6)
 
@@ -203,8 +213,16 @@ and codes, never any callbacks).
 - **Flags** (`match.riot_flag` in the events inbox): champions a side
   played but didn't draft (`draftMismatches`; ids compared case-insensitively
   — Match-v5 says "FiddleSticks"), and players in neither lineup.
-- **Not built yet**: showing the stored per-player Riot stats (opt-in only,
-  decision 20) and team totals on match/profile pages.
+- **Display** (decision 20; shaping pure in `src/lib/riot-player-stats.ts`,
+  `tests/unit/riot-player-stats.test.ts`; loaders `loadMatchRiotStats` /
+  `loadPlayerRiotLines` in `src/lib/season-stats.ts`):
+  - Match page **Scoreboard** card (`_components/riot-scoreboard.tsx`) under
+    the match-day card, one table per Riot game: champion + player per row,
+    K/D/A, CS, gold, damage, vision. A player who hasn't opted in (or isn't
+    linked) shows "Stats hidden" — champion still shown; team totals always.
+  - Profiles: **League game stats** (`_components/league-riot-stats.tsx`),
+    per-season per-game averages + KDA and W–L, confirmed matches only, only
+    loaded for players with `statsOptInAt`.
 
 ## State + deadlines
 
@@ -276,9 +294,12 @@ and who picks the next side; a decided series then gets the usual
 ## Stats opt-in
 
 `users.statsOptInAt` — required to sign up for a LoL season, toggle on
-`/profile`, "Public stats" column on the admin signups page. Nothing reads
-it for display yet (per-player Riot stats are phase 6). See
-[SEASON-LIFECYCLE.md](SEASON-LIFECYCLE.md) and decision 20 in the design doc.
+`/profile`, "Public stats" column on the admin signups page. Gates the Riot
+numbers above. **Opting out is locked** while the player is signed up for a
+LoL season that isn't `complete` (`statsOptOutLockedBy` in
+`src/app/profile/page.tsx`: checkbox disabled, the action refuses with
+`?error=stats-locked`). See [SEASON-LIFECYCLE.md](SEASON-LIFECYCLE.md) and
+decision 20 in the design doc.
 
 ## Trying it by hand (staging)
 
@@ -288,4 +309,7 @@ it for display yet (per-player Riot stats are phase 6). See
 group matches and a best-of-3 semifinal, and prints their URLs. Both captains use `TEST_CAPTAIN_PASSWORD`
 from `.env.development.local` (generated on first run, never printed).
 Re-running resets the matches and wipes their RPS / side / game data. Use two
-browsers (or a private window) to play both captains.
+browsers (or a private window) to play both captains. `node
+scripts/seed-riot-stats-test.mjs` then fakes a Riot game on the first
+group match (rps_cap_a opted in, rps_cap_b not) to see the Scoreboard;
+profile averages only count once that match is confirmed.

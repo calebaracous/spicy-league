@@ -8,12 +8,14 @@ import { LiveStatusDot } from "@/components/live-status";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useSnapshotStream } from "@/components/use-turn-alert";
+import type { DraftSide } from "@/lib/draft-room";
 import type { MatchDaySnapshot } from "@/lib/match-day";
 import { bestOfLabel } from "@/lib/match-format";
 import { griefLine, RPS_THROWS, type RpsRound, type RpsThrow } from "@/lib/rps";
 import {
   adminResetMatchDay,
   assignPicks,
+  claimPick,
   flagGameResult,
   getLobbyCode,
   pickSide,
@@ -147,6 +149,14 @@ export function MatchDayCard({
   const draftHref = (n: number) => `/seasons/${slug}/matches/${matchId}/games/${n}`;
   const teamName = (id: string | null) =>
     id === snap.home.teamId ? snap.home.name : id === snap.away.teamId ? snap.away.name : "?";
+  // A lineup player who isn't that team's captain (or an admin) claims their own pick.
+  const claimSideFor = (g: Game): DraftSide | null => {
+    const me = snap.viewer.userId;
+    if (!me || snap.viewer.isAdmin) return null;
+    const plays = (teamId: string | null) =>
+      !!teamId && teamId !== snap.viewer.teamId && !!lineups[teamId]?.some((p) => p.userId === me);
+    return plays(g.blueTeamId) ? "blue" : plays(g.redTeamId) ? "red" : null;
+  };
 
   return (
     <Card>
@@ -236,10 +246,13 @@ export function MatchDayCard({
                     (snap.viewer.teamId !== null &&
                       snap.viewer.teamId === (side === "blue" ? g.blueTeamId : g.redTeamId))
                   }
+                  claimSide={claimSideFor(g)}
+                  viewerId={snap.viewer.userId}
                   pending={pending}
                   onAssign={(side, assignments) =>
                     run(() => assignPicks(slug, matchId, g.gameNumber, side, assignments))
                   }
+                  onClaim={(step) => run(() => claimPick(slug, matchId, g.gameNumber, step))}
                 />
               ) : null
             }
@@ -557,7 +570,11 @@ function ResultPrompt({
       <div className="space-y-3 text-center">
         <p>
           Game {game.gameNumber} draft: {DRAFT_STATUS[game.draft.state]}
-          {game.draft.state === "drafting" ? ` (step ${step}/20)` : ""}.
+          {game.draft.state === "drafting" ? ` (step ${step}/20)` : ""}
+          {game.draft.state === "drafting" && !game.draft.stepDeadline
+            ? ", paused for an admin"
+            : ""}
+          .
         </p>
         <Link href={draftHref} className={buttonVariants({ className: "h-11 px-6" })}>
           Open draft room

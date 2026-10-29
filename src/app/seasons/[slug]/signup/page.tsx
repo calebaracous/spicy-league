@@ -438,8 +438,7 @@ export default async function SignupPage({
                     {statsOptedIn
                       ? "You've already opted in. "
                       : "Required for League of Legends seasons. "}
-                    You can opt out later on your profile; your stats are then hidden but your
-                    signup stays.
+                    It stays on until this season ends; after that you can opt out on your profile.
                   </span>
                 </span>
               </label>

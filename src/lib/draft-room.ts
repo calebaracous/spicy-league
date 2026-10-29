@@ -89,25 +89,17 @@ export function availableChampions({
 }
 
 /**
- * What a step locks when its clock runs out (decision 6): the hovered champion
- * if it's still available; otherwise a ban is skipped (null, the pro rule) and
- * a pick is a uniformly random available champion (null only if none are left).
+ * What a lapsed step locks: the side's hover if it's still available, else
+ * null (a skipped ban; a pick pauses the draft — docs/MATCH-DAY.md).
  */
 export function resolveTimeout({
-  step,
   hover,
   available,
-  rng = Math.random,
 }: {
-  step: Pick<DraftStep, "kind">;
   hover: string | null | undefined;
   available: readonly string[];
-  rng?: () => number;
 }): string | null {
-  if (hover && available.includes(hover)) return hover;
-  if (step.kind === "ban" || available.length === 0) return null;
-  const i = Math.min(Math.floor(rng() * available.length), available.length - 1);
-  return available[i];
+  return hover && available.includes(hover) ? hover : null;
 }
 
 export type DraftBoardSide = { bans: (string | null)[]; picks: string[] };

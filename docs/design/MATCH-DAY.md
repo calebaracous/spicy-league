@@ -14,7 +14,7 @@ captains ready up ─▶ RPS (rounds until someone wins) ─▶ winner picks sid
       │
       ▼
 game N draft room: both captains ready ─▶ 3s countdown ─▶ 20-step pick/ban,
-      │                                     30s per step (fearless: earlier picks greyed)
+      │                                     60s per ban, 2 min per pick (fearless: earlier picks greyed)
       ▼
 game N played in the LoL client (tournament code) ─▶ Riot callback records the winner
       │                                              (manual report as fallback)
@@ -37,8 +37,8 @@ majority. `bestOfFor(season, stage)` + `seriesScore(bestOf, games, teams)` in
 | 3 | No throw by the deadline | The round is **replayed**, and the reveal roasts whoever didn't throw as a griefer (random line from a small list, e.g. "{name} griefed RPS. Unbelievable."). If neither threw, both get roasted. |
 | 4 | Ties | Show the reveal ~3s, then a new round. Single winning round, no Bo3. |
 | 5 | Side picker timer | **60s**, then a random side, marked "auto". |
-| 6 | Draft step timeout | Hovered champion locks. No hover: a **ban is skipped** (pro rule), a **pick is random** from the available pool. |
-| 7 | Draft start | Both sides press Ready in the room, then a **3s countdown** for everyone, then step 1's 30s clock. No clock while someone is missing. |
+| 6 | Draft step timeout | Hovered champion locks. No hover: a **ban is skipped** (pro rule), a **pick pauses the draft** until that side or an admin locks it (changed 2026-10-29; was a random pick). Steps: **60s per ban, 2 minutes per pick** (was 30s). |
+| 7 | Draft start | Both sides press Ready in the room, then a **3s countdown** for everyone, then step 1's clock. No clock while someone is missing. |
 | 8 | Who acts in the draft | Either captain of the side's team (duo-aware, like the season draft). Admins can act for either side ("Admin — picking for X" pill, as in the 10-man). Admins cannot throw RPS. |
 | 9 | Fearless | Hard fearless: any champion **picked** by either team earlier in the match is unavailable to both, including the last game of a Bo5. Bans reset each game. Off when `fearlessApplies(season, stage)` is false. |
 | 10 | Who sees the draft room | Public read-only (spectators welcome); only captains/admins act. Link posted to the match's Discord thread. |

@@ -57,9 +57,10 @@ for real seasons, and delete it (`delete from users where username =
 - `discord-ticker.test.ts` — `plainMessageText` (mentions, markdown, spoilers, timestamps, truncation) and `tickerItems` (which messages the home-page ticker shows)
 - `discord-verify.test.ts` — Ed25519 interaction signatures (real key pair)
 - `rps.test.ts` — RPS outcomes and the lazy state machine (reveal, void replay + AFK reset, catch-up)
-- `draft-clock.test.ts` — draft room clock: ready → countdown → steps, timeout locks the hover / skips a ban / random pick, completion, lazy catch-up
+- `draft-clock.test.ts` — draft room clock: ready → countdown → steps, 60s bans / 2-minute picks, timeout locks the hover / skips a ban / pauses a pick, completion, lazy catch-up
 - `champions.test.ts` — `resolveChampionKeys` for the admin disabled-champions field
 - `champion-stats.test.ts` — `championStats` (presence, W–L, blue/red, team filter + bans against), `sideStats`, `playerChampions`
+- `riot-player-stats.test.ts` — scoreboard hides non-opted-in players' numbers, team totals, per-game averages, KDA
 - `riot-tournament-parse.test.ts` — Riot callback body, Match-v5 → winner side + player lines, draft-vs-played mismatches (casing)
 - `series.test.ts` — `bestOfFor` per stage, `seriesScore` (Bo1, Bo2 draw, Bo3/Bo5 majority), `loserOf`
 - `draft-room.test.ts` — 20-step draft order, fearless availability, timeout resolution, Data Dragon parsing
@@ -208,12 +209,15 @@ as duo captains, away = P2) and drives [MATCH-DAY.md](MATCH-DAY.md):
   the draft.)
 - Draft room (fearless Bo3 semi, game 1 seeded with Ahri picked): Ahri is
   greyed "Fearless"; both captains ready → countdown → BLUE BAN 1 for blue
-  only; blue locks Garen (greyed "Banned" for red); red hovers Lux and lets
-  the 30s run out → Lux locks with `auto`; blue skips a ban (null); an admin
-  skips the rest and the card offers the result. ~45s of real waiting.
+  only; blue locks Garen (greyed "Banned" for red); red hovers Lux and its
+  clock runs out (the test pulls the deadline in) → Lux locks with `auto`;
+  blue skips a ban (null); steps 4–6 seeded, blue's first pick runs out with
+  nothing hovered → "Paused", then blue locks Jinx and red's pick starts; an
+  admin skips the rest and the card offers the result.
 - Draft recap (completed draft seeded): home's captain sees one "Assign
   players" (blue only), assigns Garen → P01 and Lux → P03; the red pick
-  stays unassigned.
+  stays unassigned. A non-captain away player (P04) gets "I played…" and can
+  only claim the red pick nobody has (not P05's Lux, not blue's Garen).
 - Champion stats (confirmed match, seeded draft + assignment): the season
   champions page shows Garen 1–0 and Jinx 0–1; the away-team filter hides
   Garen and lists bans against them; P01's profile lists Garen.

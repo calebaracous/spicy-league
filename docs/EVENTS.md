@@ -51,6 +51,7 @@ Where each type is logged:
 | | `match.reported/confirmed/disputed/reset` | `src/app/seasons/[slug]/matches/actions.ts` |
 | | `match.side_select_reset` (admin wiped RPS + game sides), `match.game_result` / `match.game_result_flagged` (`gameNumber`), `match.confirmed` with `auto: true` when a series decides itself | `src/app/seasons/[slug]/matches/match-day-actions.ts` |
 | | `match.result_edited` (admin Edit result, with `score`) | `src/app/seasons/[slug]/matches/actions.ts` |
+| | `match.draft_paused` (a draft pick ran out with nothing hovered; no actor) | `src/lib/match-day.ts` (`settleDrafts`) |
 | | `match.riot_flag` (Riot game: champions played but not drafted, players in neither lineup); `match.game_result` with `riot: true` and no actor | `src/lib/riot-results.ts`, `src/lib/match-day-results.ts` |
 | | `sub.requested/withdrawn/decided/pinged` | `src/app/seasons/[slug]/matches/sub-actions.ts` |
 | | `team.renamed` | `src/app/seasons/[slug]/teams/actions.ts` |

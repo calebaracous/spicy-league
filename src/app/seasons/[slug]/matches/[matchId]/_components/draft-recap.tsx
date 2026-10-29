@@ -8,7 +8,8 @@ import type { MatchDaySnapshot } from "@/lib/match-day";
 
 // A game's finished draft on the match-day card (docs/MATCH-DAY.md, phase 4):
 // each side's picks with who played them, bans faded, and — for that team's
-// captains or an admin — "Assign players" to record who played what.
+// captains or an admin — "Assign players" to record who played what. Other
+// lineup players get "I played…" to claim their own pick.
 
 type Game = MatchDaySnapshot["games"][number];
 export type ChampionNames = { version: string; names: Record<string, string> };
@@ -50,18 +51,26 @@ export function DraftRecap({
   champions,
   lineups,
   canAssign,
+  claimSide,
+  viewerId,
   pending,
   onAssign,
+  onClaim,
 }: {
   game: Game;
   champions: ChampionNames;
   /** Who played for each team in this match, by team id. */
   lineups: Record<string, LineupOption[]>;
   canAssign: (side: DraftSide) => boolean;
+  /** The side the viewer played on, when they can claim (not assign) its picks. */
+  claimSide: DraftSide | null;
+  viewerId: string | null;
   pending: boolean;
   onAssign: (side: DraftSide, assignments: Record<number, string | null>) => void;
+  onClaim: (step: number | null) => void;
 }) {
   const [editing, setEditing] = useState<DraftSide | null>(null);
+  const [claiming, setClaiming] = useState(false);
   const name = (key: string) => champions.names[key] ?? key;
   const sides: { side: DraftSide; teamId: string | null }[] = [
     { side: "blue", teamId: game.blueTeamId },
@@ -121,7 +130,54 @@ export function DraftRecap({
                   {picks.some((a) => a.assignedUserId) ? "Edit players" : "Assign players"}
                 </Button>
               ) : null}
+              {game.draft.state === "complete" && claimSide === side && !claiming ? (
+                <Button
+                  variant="ghost"
+                  size="xs"
+                  className="self-center"
+                  onClick={() => setClaiming(true)}
+                >
+                  {picks.some((a) => a.assignedUserId === viewerId) ? "Change mine" : "I played…"}
+                </Button>
+              ) : null}
             </div>
+            {claimSide === side && claiming ? (
+              <div className="bg-muted/30 flex flex-wrap items-center gap-1.5 rounded-lg border p-2 text-sm">
+                <span className="text-muted-foreground text-xs">Which did you play?</span>
+                {picks
+                  .filter((a) => !a.assignedUserId || a.assignedUserId === viewerId)
+                  .map((a) => (
+                    <Button
+                      key={a.step}
+                      size="xs"
+                      variant={a.assignedUserId === viewerId ? "default" : "outline"}
+                      disabled={pending}
+                      onClick={() => {
+                        onClaim(a.step);
+                        setClaiming(false);
+                      }}
+                    >
+                      {name(a.championKey!)}
+                    </Button>
+                  ))}
+                {picks.some((a) => a.assignedUserId === viewerId) ? (
+                  <Button
+                    size="xs"
+                    variant="ghost"
+                    disabled={pending}
+                    onClick={() => {
+                      onClaim(null);
+                      setClaiming(false);
+                    }}
+                  >
+                    None of these
+                  </Button>
+                ) : null}
+                <Button size="xs" variant="ghost" onClick={() => setClaiming(false)}>
+                  Cancel
+                </Button>
+              </div>
+            ) : null}
             {editing === side ? (
               <AssignForm
                 picks={picks.map((a) => ({

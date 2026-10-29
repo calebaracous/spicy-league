@@ -7,7 +7,7 @@ import { LiveStatusDot } from "@/components/live-status";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useSnapshotStream } from "@/components/use-turn-alert";
-import { DRAFT_COUNTDOWN_MS, DRAFT_STEP_MS } from "@/lib/draft-clock";
+import { DRAFT_BAN_MS, DRAFT_COUNTDOWN_MS, DRAFT_PICK_MS, stepMs } from "@/lib/draft-clock";
 import {
   championIconUrl,
   draftBoard,
@@ -28,7 +28,8 @@ import {
 import { BLUE, Countdown, RED, useAction, useCountdown } from "./match-day";
 
 // The match-day draft room (docs/MATCH-DAY.md, phase 3): both captains ready
-// up → 3s countdown → 20 pick/ban steps, 30s each. Server-authoritative like
+// up → 3s countdown → 20 pick/ban steps (60s bans, 2-minute picks; a missed
+// pick pauses for an admin). Server-authoritative like
 // the card: deadlines come from the snapshot, timeouts are applied on the
 // server, and every action returns a fresh snapshot.
 
@@ -299,7 +300,7 @@ function StatusBar({
   onReady: (side: DraftSide, ready: boolean) => void;
 }) {
   const { draft } = game;
-  const stepMs = useCountdown(
+  const stepLeftMs = useCountdown(
     draft.state === "drafting" ? draft.stepDeadline : null,
     snap.serverNow,
   );
@@ -310,8 +311,10 @@ function StatusBar({
       <Card>
         <CardContent className="space-y-3 py-4 text-sm">
           <p className="text-center">
-            Both captains ready up to start. Each step then has 30 seconds: a ban with nothing
-            chosen is skipped, a pick with nothing chosen is random.
+            Both captains ready up to start. Each ban then has {DRAFT_BAN_MS / 1000} seconds and
+            each pick {DRAFT_PICK_MS / 60_000} minutes. When time runs out the hovered champion
+            locks in; with nothing hovered a ban is skipped and the draft pauses on a pick until an
+            admin steps in.
           </p>
           <div className="grid grid-cols-2 gap-3">
             {(["blue", "red"] as const).map((side) => {
@@ -364,6 +367,7 @@ function StatusBar({
   }
   if (draft.state === "drafting" && step) {
     const n = draft.actions.filter((a) => a.side === step.side && a.kind === step.kind).length + 1;
+    const paused = !draft.stepDeadline;
     return (
       <Card style={{ borderColor: SIDE_COLOR[step.side] }}>
         <CardContent className="space-y-2 py-4">
@@ -384,7 +388,14 @@ function StatusBar({
                 : "Your turn"}
             </p>
           ) : null}
-          <Countdown ms={stepMs} total={DRAFT_STEP_MS} />
+          {paused ? (
+            <p className="text-center text-sm">
+              Paused: time ran out with no champion chosen. Waiting for this side to lock in, or an
+              admin to pick for them.
+            </p>
+          ) : (
+            <Countdown ms={stepLeftMs} total={stepMs(step.kind)} />
+          )}
         </CardContent>
       </Card>
     );

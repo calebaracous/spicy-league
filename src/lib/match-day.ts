@@ -16,6 +16,7 @@ import {
 import { matches, type Match } from "@/db/schema/matches";
 import { seasons } from "@/db/schema/seasons";
 import { getChampionCatalog } from "@/lib/champions";
+import { logEvent, matchEventData } from "@/lib/events";
 import { notifyDraftRecap, notifyMatchSides } from "@/lib/discord-notify";
 import { syncInBackground } from "@/lib/discord-roles";
 import { settleDraft, type DraftClock, type DraftState } from "@/lib/draft-clock";
@@ -222,10 +223,10 @@ export async function draftAvailability(
 
 /**
  * Draft clocks that have lapsed: countdown → drafting, and timed-out steps
- * (hover locks, else a skipped ban / random pick). Without the champion list
- * a timed-out step waits for the next tick rather than guessing.
+ * (hover locks, else a skipped ban / a paused pick, which tells admins).
+ * Without the champion list a timed-out step waits for the next tick rather
+ * than guessing. Returns the game numbers whose draft the clock just completed.
  */
-/** Returns the game numbers whose draft the clock just completed. */
 async function settleDrafts(tx: Tx, match: MatchTeams, now: Date): Promise<number[]> {
   const games = await tx
     .select()
@@ -247,8 +248,14 @@ async function settleDrafts(tx: Tx, match: MatchTeams, now: Date): Promise<numbe
       if (!fn) continue;
       available = fn;
     }
-    const { clock, taken } = settleDraft(draftClock(g), actions, now, available);
+    const { clock, taken, paused } = settleDraft(draftClock(g), actions, now, available);
     await tx.update(matchGames).set(clock).where(eq(matchGames.id, g.id));
+    if (paused) {
+      await logEvent("match.draft_paused", {
+        seasonId: match.seasonId,
+        data: { ...(await matchEventData(match.id)), gameNumber: g.gameNumber },
+      });
+    }
     if (clock.draftState === "complete") done.push(g.gameNumber);
     if (taken.length) {
       await tx

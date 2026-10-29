@@ -11,7 +11,7 @@ import { requireAdmin, requireAuth } from "@/lib/auth-helpers";
 import { notifyDraftRecap, notifyLobbyCode, notifyMatchSides } from "@/lib/discord-notify";
 import { syncInBackground } from "@/lib/discord-roles";
 import { logEvent, matchEventData } from "@/lib/events";
-import { afterStep, DRAFT_STEP_MS } from "@/lib/draft-clock";
+import { afterStep, deadlineFor } from "@/lib/draft-clock";
 import { nextStep, stepAt } from "@/lib/draft-room";
 import {
   draftAvailability,
@@ -358,7 +358,7 @@ async function captainDraftSide(
 
 /**
  * A captain readies (or un-readies) their side for the draft; an admin can do
- * either side. Both ready → a 3s countdown, then step 1's 30s clock.
+ * either side. Both ready → a 3s countdown, then step 1's clock.
  */
 export async function readyDraft(
   slug: string,
@@ -490,7 +490,7 @@ export async function lockChampion(
   });
 }
 
-/** Admin: take back the last step (that side gets a fresh 30s). */
+/** Admin: take back the last step (that side gets a fresh clock; unpauses too). */
 export async function adminUndoDraftStep(
   slug: string,
   matchId: string,
@@ -511,7 +511,7 @@ export async function adminUndoDraftStep(
         .update(matchGames)
         .set({
           draftState: "drafting",
-          stepDeadline: new Date(now.getTime() + DRAFT_STEP_MS),
+          stepDeadline: deadlineFor(last.step, now),
           draftCompletedAt: null,
           blueHover: null,
           redHover: null,
@@ -617,6 +617,67 @@ export async function assignPicks(
         await tx
           .update(matchDraftActions)
           .set({ assignedUserId: assignments[pick.step] ?? null })
+          .where(eq(matchDraftActions.id, pick.id));
+      }
+    });
+  });
+}
+
+/**
+ * A lineup player says which of their team's picks they played (null: none).
+ * They can take a pick nobody's on yet or move off their own; captains fix
+ * anything else with `assignPicks`. Works after the match is confirmed too.
+ */
+export async function claimPick(
+  slug: string,
+  matchId: string,
+  gameNumber: number,
+  step: number | null,
+): Promise<MatchDayActionResult> {
+  const session = await requireAuth();
+  const userId = session.user.id;
+  return run(matchId, async () => {
+    await db.transaction(async (tx) => {
+      const { match } = await lockMatch(tx, slug, matchId, { finished: true });
+      const [game] = await tx
+        .select()
+        .from(matchGames)
+        .where(and(eq(matchGames.matchId, matchId), eq(matchGames.gameNumber, gameNumber)));
+      if (!game?.blueTeamId || !game.redTeamId || game.draftState !== "complete") {
+        throw new MatchDayError("That game's draft isn't complete.");
+      }
+      const lineups = await getMatchLineups(match);
+      const on = (players: typeof lineups.home) =>
+        players.some((p) => p.userId === userId && !p.satOut);
+      const teamId = on(lineups.home)
+        ? match.homeTeamId
+        : on(lineups.away)
+          ? match.awayTeamId
+          : null;
+      if (!teamId) throw new MatchDayError("Only players in this match can claim a pick.");
+      const side = teamId === game.blueTeamId ? "blue" : "red";
+      const picks = await tx
+        .select()
+        .from(matchDraftActions)
+        .where(
+          and(
+            eq(matchDraftActions.gameId, game.id),
+            eq(matchDraftActions.side, side),
+            eq(matchDraftActions.kind, "pick"),
+          ),
+        );
+      const target = step === null ? null : picks.find((p) => p.step === step);
+      if (step !== null && !target) throw new MatchDayError("That isn't one of your team's picks.");
+      if (target?.assignedUserId && target.assignedUserId !== userId) {
+        throw new MatchDayError("A teammate already has that pick. Ask a captain to fix it.");
+      }
+      for (const pick of picks) {
+        const next =
+          pick.id === target?.id ? userId : pick.assignedUserId === userId ? null : undefined;
+        if (next === undefined || next === pick.assignedUserId) continue;
+        await tx
+          .update(matchDraftActions)
+          .set({ assignedUserId: next })
           .where(eq(matchDraftActions.id, pick.id));
       }
     });

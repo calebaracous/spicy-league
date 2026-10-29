@@ -33,6 +33,9 @@ import { getChampionCatalog } from "@/lib/champions";
 import { getMatchDaySnapshot, inMatchLineup, matchDayApplies } from "@/lib/match-day";
 import { MatchLineups } from "./_components/lineups";
 import { MatchDayCard } from "./_components/match-day";
+import { RiotScoreboard, type ScoreboardGame } from "./_components/riot-scoreboard";
+import { scoreboard } from "@/lib/riot-player-stats";
+import { loadMatchRiotStats } from "@/lib/season-stats";
 
 export const generateMetadata = seasonPageMetadata("Match");
 
@@ -136,16 +139,31 @@ export default async function MatchDetailPage({
       })
     : null;
   const showMatchDay = matchDay && (matchDay.open || matchDay.games.length > 0);
-  // Draft recaps need champion names; only fetched once a game has a draft.
-  const catalog = matchDay?.games.some((g) => g.draft.actions.length > 0)
-    ? await getChampionCatalog()
-    : null;
+  // Riot tournament games' per-player stats (phase 6), if any arrived.
+  const riot = matchDay ? await loadMatchRiotStats(match.id) : null;
+  // Draft recaps and the scoreboard need champion names; only fetched once there's one.
+  const catalog =
+    matchDay?.games.some((g) => g.draft.actions.length > 0) || riot?.games.length
+      ? await getChampionCatalog()
+      : null;
   const champions = catalog
     ? {
         version: catalog.version,
         names: Object.fromEntries(catalog.champions.map((c) => [c.key, c.name])),
       }
     : null;
+  const teamNameOf = (id: string | null | undefined) =>
+    id === match.homeTeamId ? homeTeam?.name : id === match.awayTeamId ? awayTeam?.name : null;
+  const scoreboards: ScoreboardGame[] = (riot?.games ?? []).map(({ gameNumber, lines }) => {
+    const g = matchDay?.games.find((x) => x.gameNumber === gameNumber);
+    return {
+      gameNumber,
+      sides: scoreboard(lines, (id) => !!riot?.players.get(id)?.optedIn).map((side) => ({
+        ...side,
+        teamName: teamNameOf(side.side === "blue" ? g?.blueTeamId : g?.redTeamId) ?? side.side,
+      })),
+    };
+  });
   // Who played (approved subs in, sat-out players out), for assigning picks.
   const playing = (players: typeof lineups.home) =>
     players
@@ -276,6 +294,12 @@ export default async function MatchDetailPage({
           }}
         />
       ) : null}
+
+      <RiotScoreboard
+        games={scoreboards}
+        players={riot?.players ?? new Map()}
+        champions={champions}
+      />
 
       {homeTeam && awayTeam ? (
         <MatchLineups
