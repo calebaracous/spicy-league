@@ -64,6 +64,7 @@ export const EVENT_TYPES = {
   "match.game_result": "matches",
   "match.game_result_flagged": "matches",
   "match.result_edited": "matches",
+  "match.riot_flag": "matches",
   "sub.requested": "matches",
   "sub.withdrawn": "matches",
   "sub.decided": "matches",
@@ -321,6 +322,8 @@ export function describeEvent(e: EventView): Segment[] {
       return match(`flagged the game ${str(d.gameNumber)} result of`);
     case "match.result_edited":
       return match("edited the result of");
+    case "match.riot_flag":
+      return [`Riot flagged game ${str(d.gameNumber)} of `, ...match("").slice(2)];
     case "sub.requested":
       return [...match("requested a sub for"), " (", subject, ")"];
     case "sub.withdrawn":
@@ -388,6 +391,10 @@ export function describeDetails(e: EventView): string[] {
     lines.push('Kept as "Deleted player" on past rosters and results');
   }
   if (e.type === "match.reported" && d.score) lines.push(`Score: ${String(d.score)}`);
+  if (e.type === "match.riot_flag") {
+    if (d.notDrafted) lines.push(`Played but not drafted: ${String(d.notDrafted)}`);
+    if (d.unknownPlayers) lines.push(`Players not in either lineup: ${String(d.unknownPlayers)}`);
+  }
   if (e.type === "sub.requested" && d.reason) lines.push(`Reason: ${String(d.reason)}`);
   if (e.type.startsWith("discord.") && d.note) lines.push(String(d.note));
   if (e.type === "discord.synced") {

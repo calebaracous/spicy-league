@@ -15,6 +15,7 @@ import {
   adminResetMatchDay,
   assignPicks,
   flagGameResult,
+  getLobbyCode,
   pickSide,
   reportGameWinner,
   readyRps,
@@ -212,6 +213,18 @@ export function MatchDayCard({
             snap={snap}
             teamName={teamName}
             draftHref={draftHref}
+            lobby={(g) =>
+              snap.lobbyCodes &&
+              snap.open &&
+              !g.winnerTeamId &&
+              (snap.viewer.inLineup || snap.viewer.isAdmin) ? (
+                <LobbyCode
+                  code={g.tournamentCode}
+                  pending={pending}
+                  onGet={() => run(() => getLobbyCode(slug, matchId, g.gameNumber))}
+                />
+              ) : null
+            }
             recap={(g) =>
               champions && g.draft.actions.length > 0 ? (
                 <DraftRecap
@@ -594,6 +607,7 @@ function GamesList({
   snap,
   teamName,
   draftHref,
+  lobby,
   recap,
   pending,
   onReport,
@@ -602,6 +616,7 @@ function GamesList({
   snap: Snap;
   teamName: (id: string | null) => string;
   draftHref: (gameNumber: number) => string;
+  lobby: (game: Game) => ReactNode;
   recap: (game: Game) => ReactNode;
   pending: boolean;
   onReport: (gameNumber: number, winnerTeamId: string) => void;
@@ -637,7 +652,10 @@ function GamesList({
                 </Link>
               ) : null}
             </div>
-            <div className="pl-16 sm:pl-[4.75rem]">{recap(g)}</div>
+            <div className="space-y-2 pl-16 sm:pl-[4.75rem]">
+              {lobby(g)}
+              {recap(g)}
+            </div>
             {g.winnerTeamId ? (
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pl-16 sm:pl-[4.75rem]">
                 <span>
@@ -679,5 +697,41 @@ function GamesList({
         );
       })}
     </ul>
+  );
+}
+
+/** The game's Riot lobby code for its players (phase 6), or a button to get one. */
+function LobbyCode({
+  code,
+  pending,
+  onGet,
+}: {
+  code: string | null;
+  pending: boolean;
+  onGet: () => void;
+}) {
+  const [copied, setCopied] = useState(false);
+  if (!code) {
+    return (
+      <Button variant="outline" size="xs" disabled={pending} onClick={onGet}>
+        Get lobby code
+      </Button>
+    );
+  }
+  return (
+    <p className="flex flex-wrap items-center gap-2 text-xs">
+      <span className="text-muted-foreground">Lobby code:</span>
+      <code className="bg-muted rounded px-1.5 py-0.5 font-mono">{code}</code>
+      <Button
+        variant="ghost"
+        size="xs"
+        onClick={() => {
+          void navigator.clipboard?.writeText(code).then(() => setCopied(true));
+        }}
+      >
+        {copied ? "Copied" : "Copy"}
+      </Button>
+      <span className="text-muted-foreground">Play → 🏆 → enter code. Lock what you drafted.</span>
+    </p>
   );
 }

@@ -74,6 +74,14 @@ every 24h).
   serverless function, plus Next's fetch cache (`revalidate: 86400`).
   `getChampionName` is lazy — only pulls Data Dragon when first called.
 
+### Tournament API (match day)
+
+Lobby codes and automatic game results for match-day games:
+`src/lib/riot-tournament.ts` (client; stub without a tournament key),
+`src/lib/riot-results.ts` (callback → Match-v5 → result + player stats),
+`/api/riot/tournament-callback`. Setup and flow in
+[MATCH-DAY.md](MATCH-DAY.md) → "Riot Tournament API".
+
 ### Stat snapshot lifecycle
 
 `src/lib/stat-refresh.ts`:

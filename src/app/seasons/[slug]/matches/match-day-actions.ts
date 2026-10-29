@@ -8,7 +8,7 @@ import { matchDraftActions, matchGames, matchRps } from "@/db/schema/match-day";
 import { matches } from "@/db/schema/matches";
 import { seasons } from "@/db/schema/seasons";
 import { requireAdmin, requireAuth } from "@/lib/auth-helpers";
-import { notifyDraftRecap, notifyGameResult, notifyMatchSides } from "@/lib/discord-notify";
+import { notifyDraftRecap, notifyLobbyCode, notifyMatchSides } from "@/lib/discord-notify";
 import { syncInBackground } from "@/lib/discord-roles";
 import { logEvent, matchEventData } from "@/lib/events";
 import { afterStep, DRAFT_STEP_MS } from "@/lib/draft-clock";
@@ -17,16 +17,17 @@ import {
   draftAvailability,
   getMatchDaySnapshot,
   getMatchDayViewer,
+  inMatchLineup,
   loadDraftActions,
   matchDayApplies,
   settleMatchDay,
   type MatchDaySnapshot,
 } from "@/lib/match-day";
-import { confirmWithResult } from "@/lib/match-results";
-import { isRpsThrow, SIDE_PICK_MS } from "@/lib/rps";
+import { GameResultError, recordGameWinner } from "@/lib/match-day-results";
+import { isRpsThrow } from "@/lib/rps";
 import { getCaptainedTeamId } from "@/lib/schedule";
 import { getMatchLineups } from "@/lib/substitutions";
-import { bestOfFor, loserOf, seriesScore } from "@/lib/series";
+import { createLobbyCode, lobbyCodesEnabled, registerTournament } from "@/lib/riot-tournament";
 
 // Match day actions (docs/MATCH-DAY.md). Like the 10-man actions they return
 // `{ error }` for expected failures — they're called from a client component,
@@ -257,81 +258,27 @@ export async function reportGameWinner(
   const userId = session.user.id;
   const isAdmin = session.user.role === "admin";
   return run(matchId, async () => {
-    const now = new Date();
-    const finished = await db.transaction(async (tx) => {
-      const { season, match } = await lockMatch(tx, slug, matchId);
-      if (!isAdmin && !(await captainSide(season.id, match, userId))) {
-        throw new MatchDayError("Only the two teams' captains can record results.");
-      }
-      if (winnerTeamId !== match.homeTeamId && winnerTeamId !== match.awayTeamId) {
-        throw new MatchDayError("Pick one of the two teams.");
-      }
-      await settleMatchDay(tx, match, now);
-      const games = await tx
-        .select()
-        .from(matchGames)
-        .where(eq(matchGames.matchId, matchId))
-        .orderBy(asc(matchGames.gameNumber));
-      const game = games.find((g) => g.gameNumber === gameNumber);
-      if (!game?.blueTeamId) throw new MatchDayError("That game's sides aren't set yet.");
-      if (!isAdmin && game.draftState !== "complete" && game.draftState !== "skipped") {
-        throw new MatchDayError(`Finish game ${gameNumber}'s draft first.`);
-      }
-      if (game.winnerTeamId === winnerTeamId) return null;
-      const next = games.find((g) => g.gameNumber === gameNumber + 1);
-      if (game.winnerTeamId && next?.blueTeamId && !isAdmin) {
-        throw new MatchDayError(
-          `Game ${gameNumber + 1} has started, so ask an admin to correct game ${gameNumber}.`,
-        );
-      }
-      // A corrected result moves the next side pick to the new loser.
-      if (next && !next.blueTeamId) await tx.delete(matchGames).where(eq(matchGames.id, next.id));
-
-      await tx
-        .update(matchGames)
-        .set({
-          winnerTeamId,
-          resultReportedBy: userId,
-          resultReportedAt: now,
-          resultFlaggedBy: null,
-          resultFlaggedAt: null,
+    const season = await db.query.seasons.findFirst({ where: eq(seasons.slug, slug) });
+    const match = season
+      ? await db.query.matches.findFirst({
+          where: and(eq(matches.id, matchId), eq(matches.seasonId, season.id)),
         })
-        .where(eq(matchGames.id, game.id));
-      const results = games.map((g) => (g.id === game.id ? { ...g, winnerTeamId } : g));
-      const score = seriesScore(bestOfFor(season, match.stage), results, match);
-      if (!score.over && !(next && next.blueTeamId)) {
-        await tx.insert(matchGames).values({
-          matchId,
-          gameNumber: gameNumber + 1,
-          sideChooserTeamId: loserOf(winnerTeamId, match),
-          sideDeadline: new Date(now.getTime() + SIDE_PICK_MS),
-        });
-      }
-      return { season, score };
-    });
-    if (!finished) return;
-    const { season, score } = finished;
-    await logEvent("match.game_result", {
-      actorId: userId,
-      seasonId: season.id,
-      data: { ...(await matchEventData(matchId)), gameNumber },
-    });
-    syncInBackground("game result", () => notifyGameResult(matchId, gameNumber));
-    if (score.over) {
-      // The series is decided: report + confirm it with the game count.
-      await confirmWithResult({
-        season,
+      : null;
+    if (!season || !match) throw new MatchDayError("Match not found.");
+    if (!isAdmin && !(await captainSide(season.id, match, userId))) {
+      throw new MatchDayError("Only the two teams' captains can record results.");
+    }
+    try {
+      await recordGameWinner({
         matchId,
-        winnerTeamId: score.winnerTeamId,
-        homeScore: score.homeWins,
-        awayScore: score.awayWins,
+        gameNumber,
+        winnerTeamId,
         actorId: userId,
+        privileged: isAdmin,
       });
-      await logEvent("match.confirmed", {
-        actorId: userId,
-        seasonId: season.id,
-        data: { ...(await matchEventData(matchId)), auto: true },
-      });
+    } catch (err) {
+      if (err instanceof GameResultError) throw new MatchDayError(err.message);
+      throw err;
     }
   });
 }
@@ -673,6 +620,58 @@ export async function assignPicks(
           .where(eq(matchDraftActions.id, pick.id));
       }
     });
+  });
+}
+
+/**
+ * A Riot lobby code for a game (phase 6): created on first ask — the season's
+ * tournament too — and then reused. Lineup players (subs included) and admins
+ * only (decision 17); each team's private Discord channel gets it as well.
+ */
+export async function getLobbyCode(
+  slug: string,
+  matchId: string,
+  gameNumber: number,
+): Promise<MatchDayActionResult> {
+  const session = await requireAuth();
+  const userId = session.user.id;
+  const isAdmin = session.user.role === "admin";
+  return run(matchId, async () => {
+    if (!lobbyCodesEnabled()) throw new MatchDayError("Lobby codes aren't set up.");
+    const created = await db.transaction(async (tx) => {
+      const { season, match } = await lockMatch(tx, slug, matchId);
+      if (!isAdmin && !inMatchLineup(await getMatchLineups(match), userId)) {
+        throw new MatchDayError("Only this match's players can get the lobby code.");
+      }
+      const [game] = await tx
+        .select()
+        .from(matchGames)
+        .where(and(eq(matchGames.matchId, matchId), eq(matchGames.gameNumber, gameNumber)));
+      if (!game?.blueTeamId) throw new MatchDayError("That game's sides aren't set yet.");
+      if (game.winnerTeamId) throw new MatchDayError("That game is already over.");
+      if (game.tournamentCode) return false;
+
+      let tournamentId = season.riotTournamentId;
+      if (!tournamentId) {
+        const t = await registerTournament(season.name);
+        if (!t.ok) throw new MatchDayError("Riot didn't create the tournament. Try again.");
+        tournamentId = t.data;
+        await tx
+          .update(seasons)
+          .set({ riotTournamentId: tournamentId })
+          .where(eq(seasons.id, season.id));
+      }
+      const code = await createLobbyCode(tournamentId, { matchId, gameNumber });
+      if (!code.ok) throw new MatchDayError("Riot didn't create a lobby code. Try again.");
+      await tx
+        .update(matchGames)
+        .set({ tournamentCode: code.data })
+        .where(eq(matchGames.id, game.id));
+      return true;
+    });
+    if (created) {
+      syncInBackground("lobby code", () => notifyLobbyCode(matchId, gameNumber));
+    }
   });
 }
 

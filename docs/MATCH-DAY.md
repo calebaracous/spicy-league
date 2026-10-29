@@ -9,7 +9,9 @@ plus the stats opt-in; **phase 2** — per-game results, the loser picks the
 next side, the match confirms itself when the series is decided, and the
 admin Edit result tool; **phase 3** — our own pick/ban draft room per game;
 **phase 4** — draft recaps (card + Discord) and who-played-what per pick;
-**phase 5** — champion / side stats and per-player champions. LoL seasons only (`matchDayApplies(season)`); CS2
+**phase 5** — champion / side stats and per-player champions; **phase 6** —
+Riot Tournament API lobby codes and automatic results (built against
+tournament-stub-v5; waiting on a tournament-enabled key). LoL seasons only (`matchDayApplies(season)`); CS2
 match pages are unchanged.
 
 ## Flow
@@ -164,6 +166,45 @@ Aggregation is pure (`src/lib/champion-stats.ts`,
   player was assigned in confirmed matches, with games and W–L
   (`playerChampions`, `_components/league-champions.tsx`). Shown for
   everyone (our data); Riot per-player stats will be the opt-in ones.
+
+## Riot Tournament API (phase 6)
+
+Off until `RIOT_TOURNAMENT_PROVIDER_ID` is set ([ENV.md](ENV.md)). Client:
+`src/lib/riot-tournament.ts` — tournament-v5 with `RIOT_TOURNAMENT_API_KEY`,
+otherwise the personal key against **tournament-stub-v5** (real-looking ids
+and codes, never any callbacks).
+
+- **Setup** (once per environment / key): set
+  `RIOT_TOURNAMENT_CALLBACK_SECRET`, run `node
+  scripts/riot-tournament-setup.mjs https://<site>` → it registers a
+  provider whose callback is `<site>/api/riot/tournament-callback?token=<secret>`
+  and prints `RIOT_TOURNAMENT_PROVIDER_ID`. Riot ties providers to the key.
+- **Lobby codes**: `getLobbyCode(n)` — lineup players (subs included) and
+  admins. Creates the season's tournament on first use
+  (`seasons.riotTournamentId`), then one code per game
+  (`match_games.tournamentCode`; Riot: one match per code). Blind pick,
+  team size 5, spectators allowed, no participant restriction (decisions
+  15, 16, 18). Shown on the card only to lineup players and admins
+  (`viewer.inLineup`, the snapshot blanks it for everyone else) and posted
+  in both teams' private Discord channels (`notifyLobbyCode`).
+- **Callback** (`/api/riot/tournament-callback`, `applyTournamentCallback`
+  in `src/lib/riot-results.ts`; parsing pure in
+  `src/lib/riot-tournament-parse.ts`, unit-tested): token check (Riot
+  doesn't sign callbacks) → our game by `shortCode` (unknown → 200,
+  ignored) → Match-v5 `NA1_<gameId>` (not there yet → **503 so Riot
+  retries**) → winner by **which lineup the winning players belong to**
+  (linked Riot accounts' PUUIDs), falling back to the side we recorded if
+  nobody's linked (teams sometimes join the wrong lobby side) →
+  `riotMatchId`, `match_game_player_stats` rows (K/D/A, CS, gold, damage,
+  vision per PUUID, `userId` when linked) → `recordGameWinner` (shared with
+  the captains' buttons, `src/lib/match-day-results.ts`: next side pick or
+  auto-confirm). If the result was already decided by hand it keeps the
+  stats and skips the result.
+- **Flags** (`match.riot_flag` in the events inbox): champions a side
+  played but didn't draft (`draftMismatches`; ids compared case-insensitively
+  — Match-v5 says "FiddleSticks"), and players in neither lineup.
+- **Not built yet**: showing the stored per-player Riot stats (opt-in only,
+  decision 20) and team totals on match/profile pages.
 
 ## State + deadlines
 

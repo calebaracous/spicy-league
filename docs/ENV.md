@@ -33,6 +33,9 @@ builds that don't need runtime secrets.
 | `AUTH_EMAIL_FROM` | email sending | Defaults to `no-reply@spicyleague.dev`. Must be a domain Resend has verified. |
 | `RIOT_PERSONAL_API_KEY` | LoL stats refresh | Preferred over developer key (doesn't expire). |
 | `RIOT_DEVELOPER_API_KEY` | LoL stats refresh (fallback) | Expires every 24h; only for dev. |
+| `RIOT_TOURNAMENT_API_KEY` | Match-day lobby codes on tournament-v5 | Optional. Without it the personal key uses tournament-stub-v5 (no real callbacks). See [MATCH-DAY.md](MATCH-DAY.md). |
+| `RIOT_TOURNAMENT_PROVIDER_ID` | Match-day lobby codes | Unset = no lobby codes. From `scripts/riot-tournament-setup.mjs`; tied to the key it was registered with. |
+| `RIOT_TOURNAMENT_CALLBACK_SECRET` | `/api/riot/tournament-callback` | 16+ chars; part of the provider's callback URL. Unset = every callback is refused. |
 | `CRON_SECRET` | both daily crons | Bearer check in `/api/cron/refresh-stats` and `/api/cron/discord-reminders`. Vercel Cron sends this. Unset → both return 401. |
 | `BLOB_READ_WRITE_TOKEN` | planned uploads | Declared, unused — Vercel Blob isn't wired yet. |
 | `UPSTASH_REDIS_REST_URL` | rate limiting | Missing → `checkRateLimit` fails open (allows all). |

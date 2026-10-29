@@ -148,5 +148,38 @@ export const matchDraftActions = pgTable(
   (t) => [unique("match_draft_actions_game_step_uniq").on(t.gameId, t.step)],
 );
 
+/**
+ * One player's line from Riot's Match-v5 for a tournament-code game (phase 6).
+ * `userId` is matched through linked Riot accounts (null = unknown PUUID,
+ * flagged to admins). Per-player numbers are only shown for players who opted
+ * in to public stats (users.statsOptInAt); team totals are public.
+ */
+export const matchGamePlayerStats = pgTable(
+  "match_game_player_stats",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    gameId: text("game_id")
+      .notNull()
+      .references(() => matchGames.id, { onDelete: "cascade" }),
+    puuid: text("puuid").notNull(),
+    userId: text("user_id").references(() => users.id, { onDelete: "set null" }),
+    side: draftSideEnum("side").notNull(),
+    // Data Dragon key ("MonkeyKing"), from Match-v5's championName.
+    championKey: text("champion_key").notNull(),
+    kills: integer("kills").notNull(),
+    deaths: integer("deaths").notNull(),
+    assists: integer("assists").notNull(),
+    cs: integer("cs").notNull(),
+    gold: integer("gold").notNull(),
+    damage: integer("damage").notNull(),
+    visionScore: integer("vision_score").notNull(),
+    win: boolean("win").notNull(),
+    createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
+  },
+  (t) => [unique("match_game_player_stats_game_puuid_uniq").on(t.gameId, t.puuid)],
+);
+
 export type MatchGame = typeof matchGames.$inferSelect;
 export type MatchDraftAction = typeof matchDraftActions.$inferSelect;

@@ -11,6 +11,13 @@ export const env = createEnv({
     AUTH_EMAIL_FROM: z.email().optional(),
     RIOT_DEVELOPER_API_KEY: z.string().min(1).optional(),
     RIOT_PERSONAL_API_KEY: z.string().min(1).optional(),
+    // Riot Tournament API (docs/MATCH-DAY.md, phase 6). A tournament-enabled
+    // key; without it the personal key is used against tournament-stub-v5.
+    RIOT_TOURNAMENT_API_KEY: z.string().min(1).optional(),
+    // Provider id from scripts/riot-tournament-setup.mjs. Unset = no lobby codes.
+    RIOT_TOURNAMENT_PROVIDER_ID: z.coerce.number().int().positive().optional(),
+    // Shared secret in the callback URL Riot posts game results to.
+    RIOT_TOURNAMENT_CALLBACK_SECRET: z.string().min(16).optional(),
     CRON_SECRET: z.string().min(1).optional(),
     BLOB_READ_WRITE_TOKEN: z.string().min(1).optional(),
     UPSTASH_REDIS_REST_URL: z.url().optional(),
@@ -45,6 +52,9 @@ export const env = createEnv({
     AUTH_EMAIL_FROM: process.env.AUTH_EMAIL_FROM,
     RIOT_DEVELOPER_API_KEY: process.env.RIOT_DEVELOPER_API_KEY,
     RIOT_PERSONAL_API_KEY: process.env.RIOT_PERSONAL_API_KEY,
+    RIOT_TOURNAMENT_API_KEY: process.env.RIOT_TOURNAMENT_API_KEY,
+    RIOT_TOURNAMENT_PROVIDER_ID: process.env.RIOT_TOURNAMENT_PROVIDER_ID,
+    RIOT_TOURNAMENT_CALLBACK_SECRET: process.env.RIOT_TOURNAMENT_CALLBACK_SECRET,
     CRON_SECRET: process.env.CRON_SECRET,
     BLOB_READ_WRITE_TOKEN: process.env.BLOB_READ_WRITE_TOKEN,
     UPSTASH_REDIS_REST_URL: process.env.UPSTASH_REDIS_REST_URL,

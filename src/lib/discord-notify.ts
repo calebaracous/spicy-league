@@ -363,6 +363,42 @@ export async function notifyDraftRecap(
   return report;
 }
 
+/** A game's Riot lobby code, in each team's private channel only (decision 17). */
+export async function notifyLobbyCode(
+  matchId: string,
+  gameNumber: number,
+): Promise<DiscordSyncReport> {
+  const report = emptyReport();
+  const cfg = discordConfig();
+  if (!cfg) return report;
+  const match = await db.query.matches.findFirst({ where: eq(matches.id, matchId) });
+  if (!match) return report;
+  const game = await db.query.matchGames.findFirst({
+    where: and(eq(matchGames.matchId, matchId), eq(matchGames.gameNumber, gameNumber)),
+  });
+  if (!game?.tournamentCode || !game.blueTeamId || !game.redTeamId) return report;
+  const byId = await teamsById(match.seasonId);
+  const blue = byId.get(game.blueTeamId)?.name ?? "?";
+  const red = byId.get(game.redTeamId)?.name ?? "?";
+  const teamRows = await db
+    .select({ channel: teams.discordTextChannelId })
+    .from(teams)
+    .where(inArray(teams.id, [match.homeTeamId, match.awayTeamId]));
+  for (const { channel } of teamRows) {
+    if (!channel) continue;
+    try {
+      await postMessage(
+        cfg,
+        channel,
+        `🎮 Game ${gameNumber} lobby code (${blue} blue vs ${red} red): \`${game.tournamentCode}\`. In the client: Play → 🏆 → enter the code. Lock the champion you drafted.`,
+      );
+    } catch (err) {
+      report.errors.push(describe(err));
+    }
+  }
+  return report;
+}
+
 /** Tells the requesting team's channel how an admin decided their sub request. */
 export async function notifySubDecision(
   subId: string,

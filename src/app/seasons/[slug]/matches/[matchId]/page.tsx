@@ -30,7 +30,7 @@ import { getCaptainedTeamId, getTeamForCaptain } from "@/lib/schedule";
 import { SUB_ERROR_MESSAGES } from "@/lib/substitution-rules";
 import { getMatchLineups, getSubCandidates } from "@/lib/substitutions";
 import { getChampionCatalog } from "@/lib/champions";
-import { getMatchDaySnapshot, matchDayApplies } from "@/lib/match-day";
+import { getMatchDaySnapshot, inMatchLineup, matchDayApplies } from "@/lib/match-day";
 import { MatchLineups } from "./_components/lineups";
 import { MatchDayCard } from "./_components/match-day";
 
@@ -132,6 +132,7 @@ export default async function MatchDetailPage({
             ? captainedTeamId
             : null,
         isAdmin,
+        inLineup: inMatchLineup(lineups, userId),
       })
     : null;
   const showMatchDay = matchDay && (matchDay.open || matchDay.games.length > 0);

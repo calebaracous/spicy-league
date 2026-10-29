@@ -52,6 +52,8 @@ files are in git history before the squash commit):
   `(game_id, champion_key)`), `match_games` draft-clock columns,
   `seasons.disabled_champions`.
 - `0019_draft_pick_players.sql` — `match_draft_actions.assigned_user_id`.
+- `0020_riot_tournament.sql` — `seasons.riot_tournament_id`,
+  `match_game_player_stats`.
 
 **Why the baseline's `when` is old.** Drizzle's migrator applies a journal
 entry only if its `when` is greater than the newest `created_at` in
@@ -322,6 +324,11 @@ cascade from `matches`; team/user FKs are `set null`.
   played it, set by the team's captains after the draft; `0019`). Partial unique `(gameId,
   championKey) WHERE championKey IS NOT NULL`, hand-written in
   `0018_match_draft.sql` (not in the Drizzle schema).
+- `match_game_player_stats` — one row per player per Riot tournament game
+  (`0020`), unique `(gameId, puuid)`: `userId` (via linked Riot accounts;
+  null = unknown), `side`, `championKey`, K/D/A, `cs`, `gold`, `damage`,
+  `visionScore`, `win`. Written by the tournament callback; per-player
+  numbers are public only for players with `users.statsOptInAt`.
 
 ## stats.ts — accountLinks, riotStatSnapshots, leetifyStatSnapshots
 

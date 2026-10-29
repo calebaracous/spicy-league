@@ -38,7 +38,31 @@ CronDelete.
    any time after the draft, even after the match is confirmed. Should
    players be able to set their own champion instead?
 
+9. **Riot Tournament API go-live** (phase 6 is built against Riot's stub).
+   When your tournament key is approved:
+   - set `RIOT_TOURNAMENT_API_KEY` and a `RIOT_TOURNAMENT_CALLBACK_SECRET`
+     (16+ random chars) in Vercel **Production**;
+   - run `node --env-file=.env.production.local
+     scripts/riot-tournament-setup.mjs https://www.spicyleague.dev` and set
+     the printed `RIOT_TOURNAMENT_PROVIDER_ID` in Vercel.
+   Staging currently has a **stub** provider in `.env.development.local` only
+   (local testing); I didn't change any Vercel env vars, so lobby codes are
+   off on the staging deploy until you add those three vars to its Preview
+   env (stub key = your personal key, so just the provider id + secret).
+10. **Showing Riot per-player stats** (K/D/A, CS…) isn't built yet — they're
+    stored per game when the callback arrives. Where do you want them: a
+    scoreboard under each game on the match page, profile averages, both?
+11. **Winner from Riot**: decided by which lineup the winning players are in
+    (via linked Riot accounts), falling back to the lobby side if nobody's
+    linked. If a captain already recorded a different winner, Riot's result
+    doesn't override it (it only records if the game is still open). OK?
+
 ## FYI (no action unless you disagree)
+
+- Callback route checked locally: wrong token → 401, bad body → 400,
+  unknown code → ignored, our code before Match-v5 has the game → 503 (Riot
+  retries). The full "real game finished" path can't be exercised without a
+  real tournament game; its parsing is unit-tested.
 
 - **Flaky e2e (not match day):** in full-suite runs tonight the season-draft
   specs flaked twice at the admin's on-behalf pick (`draft.spec.ts` "admin

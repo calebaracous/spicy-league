@@ -55,6 +55,9 @@ export const seasons = pgTable(
     // Data Dragon keys the match-day draft room won't offer (new releases,
     // bugged champions). Expected to be rarely used.
     disabledChampions: text("disabled_champions").array().notNull().default([]),
+    // Riot Tournament API tournament for this season's lobby codes (phase 6);
+    // registered lazily on the first code. Null until then.
+    riotTournamentId: integer("riot_tournament_id"),
     // Fearless draft: a champion picked in one game of a series can't be
     // picked again by either team in that series. Display only (the site
     // doesn't run champ select); shown wherever the series format is.

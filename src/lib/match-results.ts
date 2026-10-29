@@ -86,7 +86,8 @@ export async function confirmWithResult(opts: {
   winnerTeamId: string | null;
   homeScore: number | null;
   awayScore: number | null;
-  actorId: string;
+  /** Null when Riot's callback decided it. */
+  actorId: string | null;
 }): Promise<Match> {
   const now = new Date();
   const existing = await db.query.matches.findFirst({ where: eq(matches.id, opts.matchId) });

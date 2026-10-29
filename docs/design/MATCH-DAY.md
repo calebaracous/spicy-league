@@ -1,6 +1,6 @@
 # Match day: RPS side select, per-game results, our own draft room
 
-Design + build plan. Phases 1–5 are built (on `staging`); see
+Design + build plan. Phases 1–6 are built (on `staging`; phase 6 against the Riot stub); see
 [../MATCH-DAY.md](../MATCH-DAY.md) for what shipped. When a phase ships, its facts move to
 `docs/MATCH-DAY.md` (and MATCHES / DATA-MODEL / FILE-MAP); this file stays as
 the spec it was built from, like `docs/design/SUBSTITUTIONS.md`.

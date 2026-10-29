@@ -21,7 +21,9 @@ import { syncInBackground } from "@/lib/discord-roles";
 import { settleDraft, type DraftClock, type DraftState } from "@/lib/draft-clock";
 import { availableChampions, type DraftAction } from "@/lib/draft-room";
 import { fearlessApplies } from "@/lib/match-format";
+import { lobbyCodesEnabled } from "@/lib/riot-tournament";
 import { getCaptainedTeamId } from "@/lib/schedule";
+import { getMatchLineups } from "@/lib/substitutions";
 import { bestOfFor, seriesScore, type SeriesScore } from "@/lib/series";
 import {
   advanceRps,
@@ -303,6 +305,8 @@ export type MatchDayViewer = {
   /** The match team this viewer captains (either of a duo), if any. */
   teamId: string | null;
   isAdmin: boolean;
+  /** In either team's lineup for this match (subs included): sees lobby codes. */
+  inLineup: boolean;
 };
 
 type Seat = { userId: string; name: string } | null;
@@ -336,6 +340,8 @@ export type MatchDaySnapshot = {
     /** Who recorded the winner (display name). */
     resultReportedBy: string | null;
     resultFlagged: boolean;
+    /** Riot lobby code; only sent to lineup players and admins (decision 17). */
+    tournamentCode: string | null;
     draft: {
       state: DraftState;
       blueReady: boolean;
@@ -350,6 +356,8 @@ export type MatchDaySnapshot = {
   /** Draft room rules: fearless across this match's games, season-disabled champions. */
   fearless: boolean;
   disabledChampions: string[];
+  /** Riot Tournament API lobby codes are on (a provider is configured). */
+  lobbyCodes: boolean;
   /** Series length and the running score from game results. */
   bestOf: number;
   series: SeriesScore;
@@ -359,16 +367,28 @@ export type MatchDaySnapshot = {
 const iso = (d: Date | null) => (d ? d.toISOString() : null);
 
 /** The signed-in viewer's role in this match's side selection. */
-export async function getMatchDayViewer(
-  match: Pick<Match, "seasonId" | "homeTeamId" | "awayTeamId">,
-): Promise<MatchDayViewer> {
+/** Whether `userId` plays in this match (roster minus sat-out, plus approved subs). */
+export function inMatchLineup(
+  lineups: {
+    home: { userId: string; satOut: boolean }[];
+    away: { userId: string; satOut: boolean }[];
+  },
+  userId: string | null,
+): boolean {
+  return [...lineups.home, ...lineups.away].some((p) => p.userId === userId && !p.satOut);
+}
+
+export async function getMatchDayViewer(match: Match): Promise<MatchDayViewer> {
   const session = await auth();
   const userId = session?.user?.id ?? null;
-  const captained = userId ? await getCaptainedTeamId(match.seasonId, userId) : null;
+  const [captained, lineups] = userId
+    ? await Promise.all([getCaptainedTeamId(match.seasonId, userId), getMatchLineups(match)])
+    : [null, null];
   return {
     userId,
     teamId: captained === match.homeTeamId || captained === match.awayTeamId ? captained : null,
     isAdmin: session?.user?.role === "admin",
+    inLineup: !!lineups && inMatchLineup(lineups, userId),
   };
 }
 
@@ -470,6 +490,7 @@ export async function getMatchDaySnapshot(
       winnerTeamId: g.winnerTeamId,
       resultReportedBy: seat(g.resultReportedBy)?.name ?? null,
       resultFlagged: g.resultFlaggedAt !== null,
+      tournamentCode: viewer.inLineup || viewer.isAdmin ? g.tournamentCode : null,
       draft: {
         state: g.draftState,
         blueReady: !!g.blueReadyAt,
@@ -483,6 +504,7 @@ export async function getMatchDaySnapshot(
     })),
     fearless: season ? fearlessApplies(season, match.stage) : false,
     disabledChampions: season?.disabledChampions ?? [],
+    lobbyCodes: lobbyCodesEnabled(),
     bestOf,
     series: seriesScore(bestOf, games, match),
     viewer: { ...viewer, myThrow },
