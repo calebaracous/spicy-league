@@ -159,7 +159,8 @@ export function DraftRoom({
         </p>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)]">
+      {/* Phones: both teams side by side as compact icon rows, the grid below. */}
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)] md:gap-4">
         <SideColumn
           side="blue"
           name={teamName(game.blueTeamId)}
@@ -169,7 +170,7 @@ export function DraftRoom({
           names={names}
           version={catalog.version}
         />
-        <div className="order-last space-y-3 md:order-none">
+        <div className="order-last col-span-2 space-y-3 md:order-none md:col-span-1">
           {myTurn && step ? (
             <div className="bg-background/95 sticky top-14 z-10 flex flex-wrap items-center gap-2 rounded-lg border p-2 backdrop-blur">
               <span className="text-sm">
@@ -449,7 +450,7 @@ function SideColumn({
   const bans = [...board.bans];
   const picks: (string | null)[] = [...board.picks];
   return (
-    <section className="space-y-3 rounded-lg border p-3" style={{ borderColor: color }}>
+    <section className="space-y-3 rounded-lg border p-2 md:p-3" style={{ borderColor: color }}>
       <h2 className="font-semibold" style={{ color }}>
         {name} <span className="text-muted-foreground text-xs font-normal">{side}</span>
       </h2>
@@ -478,7 +479,7 @@ function SideColumn({
       </div>
       <div>
         <div className="text-muted-foreground mb-1 text-xs uppercase">Picks</div>
-        <ul className="space-y-1.5">
+        <ul className="flex flex-wrap gap-1.5 md:block md:space-y-1.5">
           {Array.from({ length: 5 }, (_, i) => {
             const taken = i < picks.length;
             const active = !taken && i === picks.length && onClock === "pick";
@@ -494,7 +495,13 @@ function SideColumn({
                   active={active}
                   color={color}
                 />
-                <span className={taken ? "text-sm font-medium" : "text-muted-foreground text-sm"}>
+                <span
+                  className={
+                    taken
+                      ? "hidden text-sm font-medium md:inline"
+                      : "text-muted-foreground hidden text-sm md:inline"
+                  }
+                >
                   {key ? (names.get(key) ?? key) : active ? "Picking…" : ""}
                 </span>
               </li>

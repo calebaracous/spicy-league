@@ -5,6 +5,11 @@ live database.** Live still needs migrations `0016`, `0017`, `0018` (all
 additive) before the code ships. Each item is a call I made without you;
 the default is what's built.
 
+**Overnight check-in:** I scheduled an hourly check-in (cron job, this
+session only) that resumes work when usage allows. It stops when the work is
+done or when this session closes; cancel it any time with CronList /
+CronDelete.
+
 ## Needs a decision
 
 1. **Results wait for the draft (phase 3).** Captains can only record a
@@ -27,6 +32,12 @@ the default is what's built.
    plain report form?
 
 ## FYI (no action unless you disagree)
+
+- Draft room, tested in the browser: ready-up, countdown, ban, a hover locking
+  on timeout, admin acting for a side, and the phone layout (teams side by
+  side above the grid). A Lock in clicked at 0:01 can lose the race to the
+  clock: the hovered champion still locks, but the click shows "Too late,
+  that step is done." — correct, slightly confusing; could be softened.
 
 - Your "6) skip" answer was read as "keep the default" (ban skipped, pick =
   hover or random).
