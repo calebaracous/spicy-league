@@ -123,6 +123,8 @@ test("duo captains: setup, draft, teams and subs", async ({ browser }) => {
     await page.getByRole("radio", { name: /Sub only/ }).check();
     await page.getByLabel("Primary role").selectOption("support");
     await page.getByLabel("Moral quandary").fill("No, never.");
+    // LoL signups require the public-stats opt-in (docs/MATCH-DAY.md).
+    await page.getByRole("checkbox", { name: /per-player stats/ }).check();
     await page.getByRole("button", { name: "Submit signup" }).click();
     await page.waitForURL(`**/seasons/${slug}?signed-up=sub`);
     await expect(page.getByText(`You're on the sub list for ${seasonName}.`)).toBeVisible();

@@ -28,6 +28,7 @@ export const EVENT_TYPES = {
   "profile.discord_updated": "accounts",
   "profile.ten_man_pings": "accounts",
   "profile.captain_interest": "accounts",
+  "profile.stats_opt_in": "accounts",
   "riot.linked": "accounts",
   "riot.unlinked": "accounts",
   "cs2.linked": "accounts",
@@ -59,6 +60,7 @@ export const EVENT_TYPES = {
   "match.confirmed": "matches",
   "match.disputed": "matches",
   "match.reset": "matches",
+  "match.side_select_reset": "matches",
   "sub.requested": "matches",
   "sub.withdrawn": "matches",
   "sub.decided": "matches",
@@ -216,6 +218,13 @@ export function describeEvent(e: EventView): Segment[] {
         actor,
         d.enabled ? " is interested in being a captain" : " is no longer interested in captaining",
       ];
+    case "profile.stats_opt_in":
+      return [
+        actor,
+        d.enabled
+          ? " opted in to public per-player stats"
+          : " opted out of public per-player stats",
+      ];
     case "riot.linked":
       return e.subject
         ? [actor, " linked Riot account ", str(d.riotId), " to ", subject]
@@ -298,6 +307,8 @@ export function describeEvent(e: EventView): Segment[] {
       return match("disputed the result of");
     case "match.reset":
       return match("reset");
+    case "match.side_select_reset":
+      return match("reset side selection for");
     case "sub.requested":
       return [...match("requested a sub for"), " (", subject, ")"];
     case "sub.withdrawn":

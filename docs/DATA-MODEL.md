@@ -43,6 +43,8 @@ files are in git history before the squash commit):
 - `0014_prize_pool.sql` — nullable `seasons.prize_pool` (int) and
   `seasons.prize_split` (int[]).
 - `0015_fearless_draft.sql` — `seasons.fearless_draft` (boolean, default false).
+- `0016_match_day.sql` — `match_rps`, `match_games` (+ enums `rps_state`,
+  `rps_throw`, `side_chosen_via`) and `users.stats_opt_in_at`.
 
 **Why the baseline's `when` is old.** Drizzle's migrator applies a journal
 entry only if its `when` is greater than the newest `created_at` in
@@ -106,6 +108,14 @@ wiring in `src/lib/auth.ts`).
     (`submitSignup` writes it for draft-pool signups; sub signups leave it
     alone). Admin-only signal on the admin signups page;
     nothing gates on it and captains are still promoted by hand.
+  - `statsOptInAt` timestamp, nullable (migration `0016_match_day`) — when
+    the player agreed to public per-player Riot stats from league games (Riot
+    policy: custom-game history is public only with opt-in); null = not opted
+    in. Stamped by `submitSignup` (required for LoL signups, player and sub;
+    keeps an earlier timestamp) and the `/profile` toggle (`saveStatsOptIn`,
+    off → null). Opting out never touches existing signups. Admin signups
+    page shows it per LoL signup plus a not-opted-in count; anonymized
+    deletions clear it. Display gating: [design/MATCH-DAY.md](design/MATCH-DAY.md) #20.
   - `bannedAt`, `banReason`, `banExpiresAt`, `bannedBy` — league ban
     (migration `0002_user_bans`). Active while `bannedAt` is set and
     `banExpiresAt` is null or in the future (`isBanActive` in
@@ -268,6 +278,23 @@ rejected/withdrawn request for the same player is reused, not duplicated.
 Only `approved` rows change a lineup. Lineups are **derived**, not stored:
 roster − approved `replacedUserId` + approved `subUserId`.
 
+## match-day.ts — match_rps, match_games
+
+Match day ([MATCH-DAY.md](MATCH-DAY.md)), migration `0016_match_day`. Both
+cascade from `matches`; team/user FKs are `set null`.
+
+- `match_rps` — PK `matchId`, one per match. Seats `homeUserId` /
+  `awayUserId` + `homeReadyAt` / `awayReadyAt`; `state` (`waiting | throwing
+  | revealed | done`), `round`, `throwDeadline`, `revealUntil`, current
+  `homeThrow` / `awayThrow`, `history` jsonb (`RpsRound[]`: round, throws,
+  outcome `home | away | tie | void`), `winnerTeamId`. Transitions are pure
+  (`src/lib/rps.ts`) and applied lazily (`settleMatchDay`).
+- `match_games` — one row per game, unique `(matchId, gameNumber)`.
+  `sideChooserTeamId`, `sideDeadline`, `sideChosenVia` (`rps | loser | auto
+  | admin`), `sideChosenBy`, `sideChosenAt`, `blueTeamId` / `redTeamId`
+  (null until chosen). `tournamentCode` / `riotMatchId` reserved for the
+  Riot Tournament API. Game 1 is inserted when RPS finishes.
+
 ## stats.ts — accountLinks, riotStatSnapshots, leetifyStatSnapshots
 
 ### `accountLinks`
@@ -359,8 +386,8 @@ Because of that, account deletion never hard-deletes a player with history
   remove sessions, password, signups and linked accounts.
 - **League history** → **anonymized**, row kept: `name = "Deleted player"`,
   `username = null` (so no public profile, and the player directory skips
-  them), email `deleted-<id>@deleted.invalid`, profile/Discord fields
-  cleared; sessions, `accounts`, account links and stat snapshots deleted;
+  them), email `deleted-<id>@deleted.invalid`, profile/Discord fields and
+  `statsOptInAt` cleared; sessions, `accounts`, account links and stat snapshots deleted;
   signups for pre-draft seasons deleted, the rest keep only role prefs
   (notes/quandary cleared). Rosters, results and 10-man history stay intact.
   Pages that link players use `PlayerLink` so a null username renders as

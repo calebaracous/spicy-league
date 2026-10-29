@@ -100,6 +100,7 @@ export default async function AdminSignupsPage({
       discordUsername: users.discordUsername,
       discordUserId: users.discordUserId,
       captainInterest: users.captainInterest,
+      statsOptInAt: users.statsOptInAt,
       name: users.name,
       email: users.email,
     })
@@ -175,6 +176,9 @@ export default async function AdminSignupsPage({
   const draftPoolSize = allSignups.filter((s) => s.kind === "player").length;
   const recommended = Math.floor(draftPoolSize / 5);
   const errorMessage = error ? ERROR_MESSAGES[error] : null;
+  // LoL: signups from before the public-stats opt-in became required (or who
+  // opted out on /profile) have no statsOptInAt; admins chase them by hand.
+  const notOptedIn = isLol ? allSignups.filter((s) => !s.statsOptInAt).length : 0;
 
   // Draft-pool players who said they'd like to captain (users.captainInterest)
   // and aren't captains yet. Sub-only signups can't be promoted.
@@ -221,6 +225,9 @@ export default async function AdminSignupsPage({
         <h1 className="text-heading">Signups</h1>
         <p className="text-muted-foreground text-sm">
           {season.name} · {GAME_LABELS[season.game]} · {total} signup{total !== 1 ? "s" : ""}
+          {notOptedIn > 0 ? (
+            <span className="text-destructive"> · {notOptedIn} not opted in to public stats</span>
+          ) : null}
         </p>
       </header>
 
@@ -425,6 +432,7 @@ export default async function AdminSignupsPage({
                     <th className="pr-4 pb-2 font-medium">Signed up as</th>
                     <th className="pr-4 pb-2 font-medium">Discord</th>
                     {isLol ? <th className="pr-4 pb-2 font-medium">Rank</th> : null}
+                    {isLol ? <th className="pr-4 pb-2 font-medium">Public stats</th> : null}
                     <th className="pr-4 pb-2 font-medium">
                       {season.game === "lol" ? "Roles" : "Maps"}
                     </th>
@@ -496,6 +504,15 @@ export default async function AdminSignupsPage({
                                   <div className="text-muted-foreground">{rankHandle}</div>
                                 ) : null}
                               </>
+                            )}
+                          </td>
+                        ) : null}
+                        {isLol ? (
+                          <td className="py-2 pr-4 text-xs whitespace-nowrap">
+                            {s.statsOptInAt ? (
+                              <span className="text-muted-foreground">Opted in</span>
+                            ) : (
+                              <span className="text-destructive">Not opted in</span>
                             )}
                           </td>
                         ) : null}

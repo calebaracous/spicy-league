@@ -65,6 +65,9 @@ mentionable, which the pings below rely on.
 - **Results** in the match thread: *reported* (pings the team that didn't
   report — or both, if an admin reported — so they can flag a wrong result
   to an admin before it's confirmed), *confirmed*, *disputed*, *reset*.
+- **Sides**: once a game's sides are set (RPS winner's pick, or random when
+  the clock ran out), the match thread gets "🔵 Game 1: X on blue, 🔴 Y on
+  red" (`notifyMatchSides`, [MATCH-DAY.md](MATCH-DAY.md)).
 - **Sub decisions**: approved / rejected / revoked, in the requesting team's
   channel.
 - **Ping the Sub list**: a button for captains (and admins) on the match

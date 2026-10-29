@@ -166,6 +166,7 @@ export async function deleteAccount(userId: string, actorId: string): Promise<De
           discordUserId: null,
           tenManPings: false,
           captainInterest: false,
+          statsOptInAt: null,
           eventsSeenAt: null,
           updatedAt: new Date(),
         })

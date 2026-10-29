@@ -24,6 +24,13 @@ One `matches` table covers group, tiebreaker, semis, final. Key fields:
   `src/lib/match-format.ts`, never `winnerTeamId !== null`, to ask "is there
   a result?".
 
+## Side selection
+
+LoL matches get a live rock-paper-scissors card on the match page: the
+winner picks blue/red for game 1. Separate tables (`match_rps`,
+`match_games`), its own actions and SSE stream — see
+[MATCH-DAY.md](MATCH-DAY.md).
+
 ## Group format (`seasons.groupBestOf`)
 
 Per season, set in the admin season form (migration `0007_group_bo2`):

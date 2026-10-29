@@ -32,6 +32,8 @@ Trivial shadcn primitives get a single entry at the bottom.
 - `tests/unit/opgg.test.ts` — OP.GG URL derivation from Riot IDs.
 - `tests/unit/player-stats.test.ts` — directory W–D–L tallies (subs, sat-out, Bo2 draws, 10-man) and rank helpers (`bestRankPerUser`).
 - `tests/unit/season-schedule.test.ts` — `seasonSchedule` ordering, skipping unset dates, group stage range.
+- `tests/unit/rps.test.ts` — RPS outcomes and the lazy state machine (reveal, void replay, AFK reset, catch-up).
+- `tests/unit/draft-room.test.ts` — draft sequence, fearless availability, timeouts, Data Dragon parsing.
 - `tests/unit/standings.test.ts` — `rankStandings`: Bo2 points, head-to-head, series wins, tiebreaker games, shared ranks.
 - `tests/unit/discord.test.ts` — `normalizeDiscordUsername`, `normalizeDiscordUserId`.
 - `tests/unit/riot-id.test.ts` — `parseRiotId` (`GameName#TAG`).
@@ -79,14 +81,17 @@ Rendered by `src/app/page.tsx`:
 
 - `src/app/seasons/page.tsx` — list of non-draft seasons (active + past split); active cards show the prize pool.
 - `src/app/seasons/[slug]/page.tsx` — season detail. `StatusPanel` renders per-state CTA. Prize pool tiles (pool + each place's payout) above the schedule. Looks up champion from `matches` when complete.
-- `src/app/seasons/[slug]/signup/page.tsx` — signup form (LoL: roles, CS2: maps; "interested in being a captain" checkbox, pre-filled from `users.captainInterest`, hidden for sub signups). Not in the league Discord server → a "join the Discord" notice with `DISCORD_INVITE_URL`; missing a Discord username or (LoL) a Riot link → a notice listing what to add on `/profile`; either replaces the form.
-- `src/app/seasons/[slug]/signup/actions.ts` — `submitSignup`, `leaveSubList` (sub signups only; refused while booked in an unplayed match). `submitSignup` validates state + window + one-per-user + Discord username + in the Discord server + Riot link (LoL) + required quandary answer. Draft-pool signups also save the captain checkbox to `users.captainInterest`.
+- `src/app/seasons/[slug]/signup/page.tsx` — signup form (LoL: roles, CS2: maps; "interested in being a captain" checkbox, pre-filled from `users.captainInterest`, hidden for sub signups; LoL: required public-stats opt-in checkbox, pre-checked from `users.statsOptInAt`). Not in the league Discord server → a "join the Discord" notice with `DISCORD_INVITE_URL`; missing a Discord username or (LoL) a Riot link → a notice listing what to add on `/profile`; either replaces the form.
+- `src/app/seasons/[slug]/signup/actions.ts` — `submitSignup`, `leaveSubList` (sub signups only; refused while booked in an unplayed match). `submitSignup` validates state + window + one-per-user + Discord username + in the Discord server + Riot link (LoL) + required quandary answer + public-stats opt-in (LoL). Draft-pool signups also save the captain checkbox to `users.captainInterest`; LoL signups stamp `users.statsOptInAt` if null.
 - `src/app/seasons/[slug]/captains/page.tsx` — announced captain list (duos grouped on one line).
 - `src/app/seasons/[slug]/draft/page.tsx` — live draft viewer. Fetches initial snapshot, renders `<LiveBoard>`.
 - `src/app/seasons/[slug]/draft/live-board.tsx` — client component; SSE-subscribes to `/api/draft/[slug]/stream`; shows solo-queue rank per pool player (LoL).
 - `src/app/seasons/[slug]/draft/actions.ts` — `submitPick`, `startDraft`, `pauseDraft`, `resumeDraft`, `undoLastPick`. Full validation chain in `submitPick` — see [DRAFT.md](DRAFT.md).
 - `src/app/seasons/[slug]/matches/sub-actions.ts` — `requestSub`, `withdrawSub`, `decideSub` (approve / reject / revoke), `pingSubListAction` (Discord Sub list ping).
 - `src/app/seasons/[slug]/matches/[matchId]/_components/lineups.tsx` — `MatchLineups`: rosters with subs, sub requests, request form.
+- `src/app/seasons/[slug]/matches/[matchId]/_components/match-day.tsx` — `MatchDayCard`: live RPS side select (ready up, throws + countdown, reveal/roast, blue/red pick). See [MATCH-DAY.md](MATCH-DAY.md).
+- `src/app/seasons/[slug]/matches/match-day-actions.ts` — `readyRps`, `unreadyRps`, `throwRps`, `pickSide`, `adminResetMatchDay` (return `{ error }`, lock the match row, settle deadlines first).
+- `src/app/api/matches/[matchId]/stream/route.ts` — match-day SSE stream (1s live / 5s idle, per-viewer snapshot).
 - `src/app/users/[username]/_components/match-history.tsx` — profile match history list (Sub / Sat out tags).
 - `src/app/seasons/[slug]/teams/page.tsx` — team rosters with roles, record, "Your team" highlight. Captains (and admins) get a "Rename team" form on their card.
 - `src/app/seasons/[slug]/teams/actions.ts` — `renameTeam`: captain of that team (until complete) or admin; name rules + per-season uniqueness; renames the Discord role/channels in the background.
@@ -114,7 +119,7 @@ Rendered by `src/app/page.tsx`:
 - `src/app/admin/seasons/new/page.tsx` — create season form (incl. prize pool + payout split, also on the edit form).
 - `src/app/admin/seasons/actions.ts` — `createSeason`, `updateSeason`, `transitionSeasonState` (→ `captains_selected` schedules the Discord Captain role sync), and the Discord card's `syncDiscordRoles`, `setDiscordNicknames`, `deleteOldDiscordChannels`, `emailDiscordUnmatched`. zod-validated.
 - `src/app/admin/seasons/[slug]/page.tsx` — edit metadata + state transition buttons + "Discord roles" card (match status per player, Sync button).
-- `src/app/admin/seasons/[slug]/signups/page.tsx` — signup roster (draft pool vs sub only, Discord username + matched ID, LoL best solo rank + Riot ID or "No Riot account linked"), "Wants captain" badge + filter (`?captain=1`) and an "Interested in captaining" list in the Captains card (`users.captainInterest`), captain promotion UI, captains grouped by team with Pair with… / Split for duo captains.
+- `src/app/admin/seasons/[slug]/signups/page.tsx` — signup roster (draft pool vs sub only, Discord username + matched ID, LoL best solo rank + Riot ID or "No Riot account linked", LoL "Public stats" column from `users.statsOptInAt` + a not-opted-in count in the header), "Wants captain" badge + filter (`?captain=1`) and an "Interested in captaining" list in the Captains card (`users.captainInterest`), captain promotion UI, captains grouped by team with Pair with… / Split for duo captains.
 - `src/app/admin/seasons/[slug]/signups/actions.ts` — `promoteCaptain`, `demoteCaptain`, `moveCaptain` (whole team; swap via a `-1` placeholder), `pairCaptain` / `splitCaptain` (duo captains), `removeSignup` (pre-draft only; drops captain spot + renumbers), `getSignupStats`. Captain changes lock once the draft starts; `renumberCaptains` keeps duos on one order.
 - `src/app/admin/seasons/[slug]/draft/page.tsx` — admin draft board with start/pause/resume/undo controls.
 - `src/app/admin/seasons/[slug]/matches/page.tsx` — schedule generation + playoff seeding + confirm/dispute/reset buttons.
@@ -129,7 +134,7 @@ Rendered by `src/app/page.tsx`:
 - `src/app/signin/check-email/page.tsx` — "verify your email" confirmation page.
 - `src/app/forgot-password/page.tsx` + `_components/forgot-password-form.tsx` — trigger reset email.
 - `src/app/reset-password/page.tsx` + `_components/reset-password-form.tsx` — consume reset token.
-- `src/app/profile/page.tsx` — private profile + account-link UI. Contains inline `saveProfile`, `saveOpggUrl`, `saveDiscordUsername` (highlighted card while unset), `saveTenManPings`, `saveCaptainInterest` ("Captaining" card) and `doSignOut` server actions and the `ERROR_MESSAGES` map. Ends with a link to the delete-account card on the public profile.
+- `src/app/profile/page.tsx` — private profile + account-link UI. Contains inline `saveProfile`, `saveOpggUrl`, `saveDiscordUsername` (highlighted card while unset), `saveTenManPings`, `saveCaptainInterest` ("Captaining" card), `saveStatsOptIn` (public per-player stats toggle in the League of Legends card) and `doSignOut` server actions and the `ERROR_MESSAGES` map. Ends with a link to the delete-account card on the public profile.
 - `src/app/profile/account-actions.ts` — `linkRiotAccount`, `unlinkRiotAccount` (by `linkId`), `linkCs2Account`, `unlinkCs2Account`, `manualRefreshStats` (rate-limited), `deleteOwnAccount` (type-your-username confirm, signs out, then `deleteAccount`).
 - `src/app/profile/_components/link-forms.tsx` — client `RiotLinkForm` / `Cs2LinkForm` (`useActionState`, inline errors, input kept).
 - `src/app/profile/constants.ts` — `MAX_RIOT_ACCOUNTS = 3`.
@@ -192,6 +197,10 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/players.ts` — `getPlayerDirectory()`: onboarded users A–Z with career stats, from whole-table queries tallied in memory.
 - `src/lib/backdrop-clips.ts` — home-row backdrop clip registry (`backdropClip(game, index)`, `placeholderBackdrop(game)` for the still-art "Signups open" row, `otherGame`). LoL clips `lol-1..3` are live (`loopSources(id)` → WebM + MP4); CS2 clips still have `sources: []`.
 - `src/lib/live-season.ts` — `getLiveSeason`, `LIVE_STATE_COPY`, `liveSeasonHref`. Used by header pill + home hero.
+- `src/lib/rps.ts` — pure RPS rules: `roundOutcome`, `advanceRps` / `settleRps` (lazy deadline state machine), timings, `griefLine`, `randomSide`.
+- `src/lib/match-day.ts` — `settleMatchDay` (apply lapsed deadlines under the match lock), `resolveExpired` (SKIP LOCKED), `getMatchDaySnapshot` (per viewer, throws hidden until reveal), `getMatchDayViewer`, `matchDayApplies`, `matchDayIsHot`.
+- `src/lib/draft-room.ts` — pure draft-room rules (phase 3, not wired): `DRAFT_SEQUENCE`, availability incl. fearless, `resolveTimeout`, `draftBoard`, `championIconUrl`.
+- `src/lib/champions.ts` — Data Dragon champion catalogue (`getChampionCatalog`, `parseChampionJson`), daily revalidate.
 - `src/lib/ten-man.ts` — `PICK_ORDER_C1_C2`, `getActiveTenMan`, `getTenManSnapshot`, `getRecentTenMans`, `electCaptains`. See [TEN-MAN.md](TEN-MAN.md).
 - `src/lib/riot-links.ts` — `hasRiotLink(userId)`: whether a user has a linked Riot account.
 - `src/lib/riot-id.ts` — pure `parseRiotId(raw)`: `GameName#TAG` → parts or null.
@@ -203,7 +212,7 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/discord-plan.ts` — pure role-sync decisions: `pickExactMember`, `roleHolderChanges`, `staleTeamRoles`.
 - `src/lib/discord-roles.ts` — shared bot plumbing (`grant`, `revoke`, `leagueRoleId`, `syncExclusiveRole`, `syncInBackground` via `after()`, `mergeReports`), `syncCaptainRole`, `syncTeamRoles` (team roles + private text/voice channels), `renameTeamInDiscord`.
 - `src/lib/discord-ping-roles.ts` — Signed up / Sub list (`syncSignupRoles`, `updateSignupRolesForUser`), Champion (`syncChampionRole`), 10-man (`setTenManRole`, `syncTenManRole`), `removeLeagueRoles` (account deleted).
-- `src/lib/discord-notify.ts` — match threads (`ensureMatchThreads`), team schedules (`postTeamSchedules`), result / sub-decision notes (`notifyMatchEvent`, `notifySubDecision`), sub-list and 10-man pings (`pingSubList`, `pingTenMan`), `sendDailyReminders`.
+- `src/lib/discord-notify.ts` — match threads (`ensureMatchThreads`), team schedules (`postTeamSchedules`), result / side / sub-decision notes (`notifyMatchEvent`, `notifyMatchSides`, `notifySubDecision`), sub-list and 10-man pings (`pingSubList`, `pingTenMan`), `sendDailyReminders`.
 - `src/lib/discord-sync.ts` — `syncSeasonDiscord`: every sync, for the admin button.
 - `src/lib/discord-admin.ts` — admin card roster (`getDiscordRoster`), `syncNicknames`, `deleteOldTeamChannels`, `emailUnmatchedPlayers`.
 - `src/lib/discord-format.ts` — pure message formatting (`discordTime`, mentions, `resultLine`, `standingsTable`) and ticker text (`plainMessageText`, `tickerItems`).

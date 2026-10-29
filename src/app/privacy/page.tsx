@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy Policy" updated="October 22, 2026">
+    <LegalPage title="Privacy Policy" updated="October 28, 2026">
       <p>
         This policy explains what personal data Spicy League collects when you use{" "}
         <a href="https://www.spicyleague.dev">www.spicyleague.dev</a> or interact with our Discord
@@ -85,6 +85,13 @@ export default function PrivacyPage() {
           If you link a Riot account, we store your Riot ID (<code>gameName#tagLine</code>) and the
           PUUID that Riot returns for it, and we periodically fetch your public ranked standing and
           top champion mastery from the Riot Games API. These are shown on your public profile.
+        </li>
+        <li>
+          Per-player stats from League of Legends games played in Spicy League (KDA, CS, damage,
+          champions played and similar), fetched from the Riot Games API, are shown publicly only if
+          you opt in. Opting in is required to sign up for a League of Legends season; you can opt
+          out at any time on your profile page, which hides your per-player stats (team and champion
+          totals still show) without affecting your existing signups.
         </li>
         <li>
           If you link a Steam or Leetify account, we store the identifier or profile URL you
@@ -204,7 +211,8 @@ export default function PrivacyPage() {
         Your profile at <code>/users/&lt;username&gt;</code> is publicly visible without signing in.
         It shows your username, display name, pronouns and bio (if set), linked Riot ID, ranked
         standing and top champions, and any OP.GG or Leetify links you have added. Your season
-        signups, team, draft picks, and match results are also public.{" "}
+        signups, team, draft picks, and match results are also public, as are your per-player stats
+        from league games if you have opted in.{" "}
         <strong>
           Your email address, password, IP address, and session data are never shown publicly.
         </strong>

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
 
 export default function TermsPage() {
   return (
-    <LegalPage title="Terms of Service" updated="October 13, 2026">
+    <LegalPage title="Terms of Service" updated="October 28, 2026">
       <p>
         Spicy League (&ldquo;Spicy League&rdquo;, &ldquo;we&rdquo;, &ldquo;us&rdquo;) is a
         community-run platform for organising captains-draft tournaments in League of Legends and
@@ -94,6 +94,9 @@ export default function TermsPage() {
         Linking is entirely your choice and can be undone at any time from your profile page. When
         you link a Riot account, we retrieve publicly available ranked and champion-mastery data
         from the Riot Games API to display on your profile. Only link accounts that belong to you.
+        Signing up for a League of Legends season requires agreeing that your per-player stats from
+        league games may be shown publicly; you can withdraw that agreement on your profile page at
+        any time without affecting existing signups.
       </p>
 
       <h2>6. Your content</h2>

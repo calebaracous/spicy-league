@@ -38,6 +38,9 @@ source of truth for what's shipped.**
   `submitPick` validation chain.
 - `docs/MATCHES.md` — scheduling (circle method), match lifecycle,
   standings + tiebreakers, playoff seeding.
+- `docs/MATCH-DAY.md` — match-day side selection: RPS for game 1's side,
+  lazy deadlines, per-viewer SSE. Plan for the draft room + Tournament API
+  in `docs/design/MATCH-DAY.md`.
 - `docs/TEN-MAN.md` — 10-man pickup flow: lifecycle, transactional
   actions, captain vote/election, fixed snake order, SSE.
 - `docs/EVENTS.md` — the admin events inbox: `events` table, `logEvent`

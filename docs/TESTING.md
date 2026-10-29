@@ -49,6 +49,8 @@ for real seasons, and delete it (`delete from users where username =
 - `discord-format.test.ts` — Discord timestamps, thread names, result lines, the standings table
 - `discord-ticker.test.ts` — `plainMessageText` (mentions, markdown, spoilers, timestamps, truncation) and `tickerItems` (which messages the home-page ticker shows)
 - `discord-verify.test.ts` — Ed25519 interaction signatures (real key pair)
+- `rps.test.ts` — RPS outcomes and the lazy state machine (reveal, void replay + AFK reset, catch-up)
+- `draft-room.test.ts` — 20-step draft order, fearless availability, timeout resolution, Data Dragon parsing
 
 `src/lib/draft.ts`, `schedule.ts` and other server modules import `server-only`, which throws
 outside a Next server bundle; `vitest.config.mts` aliases it to an empty stub
@@ -171,6 +173,20 @@ Seasons seeded straight into `captains_selected` / `drafting`
   test for the SSE change detection (it used to compare only
   `state:picks.length:onClock`). Done as one DB batch for deterministic
   timing.
+
+### `match-day.spec.ts` — RPS side select
+
+Seeds a LoL season in `group_stage` with one scheduled match (home = P1 + P3
+as duo captains, away = P2) and drives [MATCH-DAY.md](MATCH-DAY.md):
+
+- First captain to ready up takes the seat; the co-captain sees who's
+  playing and gets no button. Spectators get no throw buttons.
+- A round: the thrower sees their own throw, the opponent only "✓ Thrown";
+  the reveal names the winner everywhere; the losing team waits while the
+  winning duo's **other** captain picks red; `match_games` game 1 is
+  `sideChosenVia = 'rps'`.
+- A captain who doesn't throw: the 10s clock runs out, the round is void
+  ("No throw", roast naming them) and round 2 starts. ~25s of real waiting.
 - A late admin pick (admin board frozen at pick 1 after the captain has
   picked) is rejected with `stale-pick`, not credited to the next captain.
 - Two picks at the same moment (captain + admin): exactly one lands as

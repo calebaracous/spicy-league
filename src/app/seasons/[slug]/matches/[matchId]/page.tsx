@@ -28,7 +28,9 @@ import { seasonPageMetadata } from "@/lib/season-meta";
 import { getCaptainedTeamId, getTeamForCaptain } from "@/lib/schedule";
 import { SUB_ERROR_MESSAGES } from "@/lib/substitution-rules";
 import { getMatchLineups, getSubCandidates } from "@/lib/substitutions";
+import { getMatchDaySnapshot, matchDayApplies } from "@/lib/match-day";
 import { MatchLineups } from "./_components/lineups";
+import { MatchDayCard } from "./_components/match-day";
 
 export const generateMetadata = seasonPageMetadata("Match");
 
@@ -116,6 +118,19 @@ export default async function MatchDetailPage({
       ? getSubCandidates(match)
       : Promise.resolve([]),
   ]);
+
+  // Side selection (LoL): live while scheduled; afterwards only if it was played.
+  const matchDay = matchDayApplies(season)
+    ? await getMatchDaySnapshot(match.id, {
+        userId,
+        teamId:
+          captainedTeamId === match.homeTeamId || captainedTeamId === match.awayTeamId
+            ? captainedTeamId
+            : null,
+        isAdmin,
+      })
+    : null;
+  const showMatchDay = matchDay && (matchDay.open || matchDay.games.length > 0);
 
   const reportWithIds = reportMatch.bind(null, slug, matchId);
   // Bo2 group series: report one of 2–0 / 1–1 / 0–2 (a 1–1 is a draw).
@@ -214,6 +229,8 @@ export default async function MatchDetailPage({
           </CardContent>
         </Card>
       ) : null}
+
+      {showMatchDay ? <MatchDayCard initial={matchDay} slug={slug} matchId={matchId} /> : null}
 
       {homeTeam && awayTeam ? (
         <MatchLineups

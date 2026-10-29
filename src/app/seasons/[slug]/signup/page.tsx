@@ -63,6 +63,7 @@ const SIGNUP_KINDS = [
 const ERROR_MESSAGES: Record<string, string> = {
   invalid: "Some fields are invalid. Please check your selections.",
   quandary: "Answer the moral quandary to sign up.",
+  "stats-opt-in": "League of Legends signups need the public stats agreement checked.",
 };
 
 const selectClass =
@@ -153,10 +154,11 @@ export default async function SignupPage({
 
   const profile = await db.query.users.findFirst({
     where: eq(users.id, session.user.id),
-    columns: { captainInterest: true, discordUsername: true },
+    columns: { captainInterest: true, discordUsername: true, statsOptInAt: true },
   });
-  // Pre-fills the captain checkbox; the same flag is editable on /profile.
+  // Pre-fill the captain and stats checkboxes; both are editable on /profile.
   const captainInterest = profile?.captainInterest ?? false;
+  const statsOptedIn = !!profile?.statsOptInAt;
   const discordUsername = profile?.discordUsername ?? null;
 
   const missing = isOpen
@@ -417,6 +419,31 @@ export default async function SignupPage({
                 placeholder="Yes or no, and why…"
               />
             </div>
+
+            {season.game === "lol" ? (
+              <label className="flex cursor-pointer items-start gap-3 text-sm">
+                <input
+                  type="checkbox"
+                  name="statsOptIn"
+                  required
+                  defaultChecked={statsOptedIn}
+                  className="mt-0.5"
+                />
+                <span className="space-y-0.5">
+                  <span className="block font-medium">
+                    I agree that my per-player stats from league games (KDA, CS, damage, champions
+                    played, etc.) can be shown publicly on Spicy League
+                  </span>
+                  <span className="text-muted-foreground block text-xs">
+                    {statsOptedIn
+                      ? "You've already opted in. "
+                      : "Required for League of Legends seasons. "}
+                    You can opt out later on your profile; your stats are then hidden but your
+                    signup stays.
+                  </span>
+                </span>
+              </label>
+            ) : null}
 
             <div className="flex justify-end gap-2 pt-1">
               <Link

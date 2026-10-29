@@ -171,9 +171,19 @@ server actions to find them. Examples:
   (`src/lib/signup-gate.ts`), on the page (notices instead of the form: join
   the Discord via `DISCORD_INVITE_URL`, and/or what to add on `/profile`) and
   again in the action. The Discord check is in
-  [DISCORD.md](DISCORD.md#signup-gate-must-be-in-the-server). Every signup needs a non-empty moral-quandary answer. These
+  [DISCORD.md](DISCORD.md#signup-gate-must-be-in-the-server). Every signup needs a non-empty moral-quandary answer. LoL
+  signups (player and sub) also need the **public-stats opt-in** checkbox
+  (`statsOptIn`, `required` on the form; the action redirects with
+  `?error=stats-opt-in` without it) and stamp `users.statsOptInAt` if it's
+  null (Riot policy on custom-game stats, [design/MATCH-DAY.md](design/MATCH-DAY.md)
+  #20). It's a form field, not a `missingSignupRequirements` gate: the box
+  is pre-checked when already opted in. These
   rules only gate *new* signups; existing rows are never revisited, so
-  unlinking later doesn't affect a signup.
+  unlinking or opting out on `/profile` later doesn't affect a signup.
+  Pre-requirement LoL signups aren't forced to opt in; the admin signups
+  page flags them ("Public stats" column + not-opted-in count) for admins to
+  chase by hand. `submitSignup` is the only code path that inserts
+  `season_signups` (admins can remove signups but not add them).
 - `submitPick` — requires `drafts.state = 'in_progress'`.
 - `reportMatch` — does not check season state; just requires the match
   itself is not `confirmed`.

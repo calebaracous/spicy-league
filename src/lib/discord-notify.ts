@@ -5,6 +5,7 @@ import { and, asc, eq, inArray, isNull, ne, or } from "drizzle-orm";
 import { db } from "@/db/client";
 import { users } from "@/db/schema/auth";
 import { teams } from "@/db/schema/drafts";
+import { matchGames } from "@/db/schema/match-day";
 import { matches, matchSubstitutions, type Match } from "@/db/schema/matches";
 import { seasons, type Season } from "@/db/schema/seasons";
 import { discordConfig, postMessage, startThread, type DiscordConfig } from "@/lib/discord-api";
@@ -236,6 +237,41 @@ export async function notifyMatchEvent(
   }
   try {
     await postMessage(cfg, match.discordThreadId, content, ping);
+  } catch (err) {
+    report.errors.push(describe(err));
+  }
+  return report;
+}
+
+/** A note in the match thread once a game's sides are set (docs/MATCH-DAY.md). */
+export async function notifyMatchSides(
+  matchId: string,
+  gameNumber: number,
+): Promise<DiscordSyncReport> {
+  const report = emptyReport();
+  const cfg = discordConfig();
+  if (!cfg) return report;
+  const match = await db.query.matches.findFirst({ where: eq(matches.id, matchId) });
+  if (!match?.discordThreadId) return report;
+  const game = await db.query.matchGames.findFirst({
+    where: and(eq(matchGames.matchId, matchId), eq(matchGames.gameNumber, gameNumber)),
+  });
+  if (!game?.blueTeamId || !game.redTeamId) return report;
+  const byId = await teamsById(match.seasonId);
+  const blue = byId.get(game.blueTeamId)?.name ?? "?";
+  const red = byId.get(game.redTeamId)?.name ?? "?";
+  const how =
+    game.sideChosenVia === "rps"
+      ? " (won rock paper scissors)"
+      : game.sideChosenVia === "auto"
+        ? " (picked at random, the clock ran out)"
+        : "";
+  try {
+    await postMessage(
+      cfg,
+      match.discordThreadId,
+      `🔵 Game ${gameNumber}: **${blue}** on blue, 🔴 **${red}** on red${how}.`,
+    );
   } catch (err) {
     report.errors.push(describe(err));
   }

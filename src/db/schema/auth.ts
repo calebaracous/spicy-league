@@ -35,6 +35,10 @@ export const users = pgTable("users", {
   // Admins only: events after this are "new" in the /admin/events inbox.
   // Set by "Mark all as read"; null means everything is unread.
   eventsSeenAt: timestamp("events_seen_at", { mode: "date" }),
+  // When the player agreed to public per-player Riot stats from league games
+  // (Riot policy: custom-game history is only shown publicly with opt-in).
+  // Required for LoL season signups; null = not opted in. docs/MATCH-DAY.md.
+  statsOptInAt: timestamp("stats_opt_in_at", { mode: "date" }),
   createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { mode: "date" }).defaultNow().notNull(),
 });

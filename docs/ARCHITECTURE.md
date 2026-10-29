@@ -237,6 +237,7 @@ API:
 - `/api/auth/[...all]` — Better Auth handler
 - `/api/draft/[slug]/stream` — season draft SSE stream (2s poll)
 - `/api/ten-man/[id]/stream` — 10-man SSE stream (2s poll)
+- `/api/matches/[matchId]/stream` — match-day (RPS side select) SSE stream, per viewer (1s while live, 5s idle) — [MATCH-DAY.md](MATCH-DAY.md)
 - `/api/cron/refresh-stats` — daily Vercel Cron (06:00 UTC)
 - `/api/cron/discord-reminders` — daily Vercel Cron (15:00 UTC), Discord match reminders
 - `/api/discord/interactions` — Discord slash commands (Ed25519-verified). See [DISCORD.md](DISCORD.md).

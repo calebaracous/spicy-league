@@ -1,4 +1,4 @@
-import { and, eq, ne } from "drizzle-orm";
+import { and, eq, isNotNull, isNull, ne } from "drizzle-orm";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -183,6 +183,29 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
         actorId: session.user.id,
         data: { enabled: on },
       });
+    }
+    redirect("/profile?saved=1");
+  }
+
+  // Public per-player Riot stats from league games (Riot policy: opt-in
+  // only). LoL season signups require it; opting out here never touches
+  // existing signups. Re-opting in restarts the timestamp.
+  async function saveStatsOptIn(formData: FormData) {
+    "use server";
+    const session = await requireOnboarded();
+    const on = formData.get("statsOptIn") === "on";
+    const updated = await db
+      .update(users)
+      .set({ statsOptInAt: on ? new Date() : null, updatedAt: new Date() })
+      .where(
+        and(
+          eq(users.id, session.user.id),
+          on ? isNull(users.statsOptInAt) : isNotNull(users.statsOptInAt),
+        ),
+      )
+      .returning({ id: users.id });
+    if (updated.length) {
+      await logEvent("profile.stats_opt_in", { actorId: session.user.id, data: { enabled: on } });
     }
     redirect("/profile?saved=1");
   }
@@ -458,6 +481,32 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
               <PendingSubmitButton variant="outline">Save</PendingSubmitButton>
             </form>
           </div>
+
+          <Separator />
+
+          <form action={saveStatsOptIn} className="space-y-1.5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <label className="flex items-center gap-2 text-sm">
+                <input type="checkbox" name="statsOptIn" defaultChecked={!!user.statsOptInAt} />
+                Show my per-player stats from league games publicly
+              </label>
+              <PendingSubmitButton variant="outline" size="sm">
+                Save
+              </PendingSubmitButton>
+            </div>
+            <p className="text-muted-foreground text-xs">
+              KDA, CS, damage, champions played and similar, from Riot, for Spicy League games.
+              Required to sign up for a League of Legends season. If you opt out, your per-player
+              stats are hidden (team and champion totals still show); seasons you&apos;ve already
+              signed up for aren&apos;t affected.
+              {user.statsOptInAt ? (
+                <>
+                  {" "}
+                  Opted in <LocalTime date={user.statsOptInAt} preset="date-short" />.
+                </>
+              ) : null}
+            </p>
+          </form>
         </CardContent>
       </Card>
 

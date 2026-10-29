@@ -75,6 +75,8 @@ test("season draft end to end", async ({ browser }) => {
     await page.getByLabel("Primary role").selectOption("mid");
     await page.getByLabel("Secondary role").selectOption("top");
     await page.getByLabel("Moral quandary").fill("No, never.");
+    // LoL signups require the public-stats opt-in (docs/MATCH-DAY.md).
+    await page.getByRole("checkbox", { name: /per-player stats/ }).check();
     await page.getByRole("button", { name: "Submit signup" }).click();
     await page.waitForURL(`**/seasons/${slug}?signed-up=1`);
     // Success is a toast now (FlashToast), not an inline alert.

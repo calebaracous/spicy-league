@@ -1,6 +1,6 @@
 "use server";
 
-import { and, eq, inArray, ne } from "drizzle-orm";
+import { and, eq, inArray, isNull, ne } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
@@ -86,6 +86,12 @@ export async function submitSignup(slug: string, formData: FormData) {
   const quandary = (formData.get("quandary") as string | null)?.trim() ?? "";
   if (!quandary) redirect(`/seasons/${slug}/signup?error=quandary`);
 
+  // LoL signups must agree to public per-player stats from league games (Riot
+  // policy: custom-game history is only shown publicly with opt-in). Like the
+  // other gates it only applies to new signups; /profile can opt out later.
+  const statsOptIn = formData.get("statsOptIn") === "on";
+  if (season.game === "lol" && !statsOptIn) redirect(`/seasons/${slug}/signup?error=stats-opt-in`);
+
   // A double submit can pass the `existing` check above twice (the Discord
   // gate sits between it and here); the unique constraint lets one through.
   const inserted = await db
@@ -120,6 +126,21 @@ export async function submitSignup(slug: string, formData: FormData) {
       await logEvent("profile.captain_interest", {
         actorId: session.user.id,
         data: { enabled: captainInterest },
+      });
+    }
+  }
+
+  // Keep the original opt-in time if they'd already agreed (e.g. on /profile).
+  if (season.game === "lol") {
+    const optedIn = await db
+      .update(users)
+      .set({ statsOptInAt: new Date(), updatedAt: new Date() })
+      .where(and(eq(users.id, session.user.id), isNull(users.statsOptInAt)))
+      .returning({ id: users.id });
+    if (optedIn.length) {
+      await logEvent("profile.stats_opt_in", {
+        actorId: session.user.id,
+        data: { enabled: true },
       });
     }
   }
