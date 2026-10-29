@@ -3,8 +3,9 @@
 //
 //   node scripts/seed-rps-test.mjs
 //
-// Creates two captain accounts, `rps_cap_a` and `rps_cap_b`, sharing the
-// password TEST_CAPTAIN_PASSWORD from .env.development.local (generated and
+// Creates two captain accounts, `rps_cap_a` and `rps_cap_b`, and a drafted
+// (non-captain) Team B player `rps_player_b`, sharing the password
+// TEST_CAPTAIN_PASSWORD from .env.development.local (generated and
 // appended on first run, never printed). Season `rps-test` (LoL, group stage)
 // has Team A (rps_cap_a, plus claudius as duo co-captain if that account
 // exists) vs Team B (rps_cap_b) in three scheduled matches: two best-of-2
@@ -72,6 +73,12 @@ async function upsertCaptain({ username, name, discord }) {
 }
 
 const [capA, capB] = [await upsertCaptain(CAPTAINS[0]), await upsertCaptain(CAPTAINS[1])];
+// A drafted player who isn't a captain: claims their own draft pick ("I played…").
+const playerB = await upsertCaptain({
+  username: "rps_player_b",
+  name: "RPS Player B",
+  discord: "spicy_rps_pb_test",
+});
 const [claudius] = await sql`select id from users where username = 'claudius'`;
 
 const SLUG = "rps-test";
@@ -102,6 +109,9 @@ await sql`update seasons set group_best_of = 2, playoff_best_of = 3 where id = $
 
 const teamA = await upsertTeam("Team A", capA, claudius?.id ?? null);
 const teamB = await upsertTeam("Team B", capB, null);
+await sql`insert into team_members (id, team_id, user_id, pick_number)
+          values (${randomUUID()}, ${teamB}, ${playerB}, 1)
+          on conflict (team_id, user_id) do nothing`;
 
 const existingMatches = await sql`select id from matches where season_id = ${season.id}`;
 if (existingMatches.length === 0) {
@@ -133,7 +143,7 @@ const base = process.env.NEXT_PUBLIC_APP_URL?.includes("localhost")
   ? "https://spicy-league-git-staging-calebaracous-projects.vercel.app"
   : (process.env.NEXT_PUBLIC_APP_URL ?? "");
 console.log(
-  `Season ${SLUG}: Team A (rps_cap_a${claudius ? " + claudius" : ""}) vs Team B (rps_cap_b).`,
+  `Season ${SLUG}: Team A (rps_cap_a${claudius ? " + claudius" : ""}) vs Team B (rps_cap_b + rps_player_b).`,
 );
 for (const m of matches) {
   const label = m.stage === "semis" ? "Semifinal (Bo3)" : `Round ${m.round} (Bo2)`;

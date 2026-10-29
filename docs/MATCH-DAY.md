@@ -305,7 +305,8 @@ decision 20 in the design doc.
 
 `node scripts/seed-rps-test.mjs` (staging only — refuses the production
 `DATABASE_URL`) seeds season `rps-test`: Team A (`rps_cap_a`, plus
-`claudius` as duo co-captain) vs Team B (`rps_cap_b`) in two best-of-2
+`claudius` as duo co-captain) vs Team B (`rps_cap_b`, plus drafted
+non-captain `rps_player_b` for claiming picks) in two best-of-2
 group matches and a best-of-3 semifinal, and prints their URLs. Both captains use `TEST_CAPTAIN_PASSWORD`
 from `.env.development.local` (generated on first run, never printed).
 Re-running resets the matches and wipes their RPS / side / game data. Use two
