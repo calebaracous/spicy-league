@@ -23,6 +23,9 @@ import { getCaptainedTeamId, getTeamForCaptain } from "@/lib/schedule";
 import { GAME_LABELS, openSignupKind, SEASON_STATE_LABELS, seasonSchedule } from "@/lib/seasons";
 import { signInHref } from "@/lib/safe-redirect";
 import { cn } from "@/lib/utils";
+import { loadLiveMatches, matchDayApplies } from "@/lib/match-day";
+import type { LiveMatch } from "@/lib/live-match";
+import { LiveMatchBadge } from "@/components/live-match-badge";
 
 export const generateMetadata = seasonPageMetadata(null);
 
@@ -263,8 +266,8 @@ export default async function SeasonDetailPage({
     !!myTeam &&
     season.state !== "complete" &&
     (await getCaptainedTeamId(season.id, session!.user!.id)) === myTeam.id;
-  const myNextMatch = myTeam
-    ? await db.query.matches.findFirst({
+  const myScheduled = myTeam
+    ? await db.query.matches.findMany({
         where: and(
           eq(matches.seasonId, season.id),
           eq(matches.state, "scheduled"),
@@ -272,7 +275,13 @@ export default async function SeasonDetailPage({
         ),
         orderBy: [asc(matches.round)],
       })
-    : null;
+    : [];
+  // A match being played right now beats the next one by round.
+  const myLive = matchDayApplies(season)
+    ? await loadLiveMatches(myScheduled)
+    : new Map<string, LiveMatch>();
+  const myNextMatch = myScheduled.find((m) => myLive.has(m.id)) ?? myScheduled[0] ?? null;
+  const myNextLive: LiveMatch | null = myNextMatch ? (myLive.get(myNextMatch.id) ?? null) : null;
   const myOpponent = myNextMatch
     ? await db.query.teams.findFirst({
         where: eq(
@@ -411,7 +420,15 @@ export default async function SeasonDetailPage({
                 </Link>
               ) : null}
             </p>
-            {myNextMatch ? (
+            {myNextMatch && myNextLive ? (
+              <p className="text-muted-foreground flex flex-wrap items-center gap-2 text-sm">
+                <span>
+                  Playing now: vs{" "}
+                  <span className="text-foreground">{myOpponent?.name ?? "TBD"}</span>
+                </span>
+                <LiveMatchBadge live={myNextLive} />
+              </p>
+            ) : myNextMatch ? (
               <p className="text-muted-foreground text-sm">
                 Next: vs <span className="text-foreground">{myOpponent?.name ?? "TBD"}</span> ·{" "}
                 {roundLabel(myNextMatch.stage, myNextMatch.round)}
@@ -438,7 +455,7 @@ export default async function SeasonDetailPage({
                 href={`/seasons/${season.slug}/matches/${myNextMatch.id}`}
                 className={cn(buttonVariants({ size: "lg" }))}
               >
-                Match details
+                {myNextLive ? "Go to the match" : "Match details"}
               </Link>
             ) : null}
             <Link

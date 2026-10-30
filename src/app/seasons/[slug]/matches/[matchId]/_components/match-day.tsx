@@ -13,6 +13,8 @@ import type { MatchDaySnapshot } from "@/lib/match-day";
 import { bestOfLabel } from "@/lib/match-format";
 import { griefLine, RPS_THROWS, sidePickMs, type RpsRound, type RpsThrow } from "@/lib/rps";
 import { seriesScore } from "@/lib/series";
+import { liveMatchLabel, liveMatchStatus } from "@/lib/live-match";
+import { signInHref } from "@/lib/safe-redirect";
 import {
   adminResetMatchDay,
   assignPicks,
@@ -157,15 +159,25 @@ export function MatchDayCard({
   const liveStatus = useSnapshotStream<Snap>(`/api/matches/${matchId}/stream`, apply);
   const { pending, error, run } = useAction(snap, apply);
 
-  // Only this card is live. When the series decides itself the rest of the
-  // page (status badge, Result card, sub form, report form) is stale, so
-  // re-render it once the match closes.
+  // Only this card is live. The rest of the page (status badge, Result card,
+  // sub form, report form) goes stale when match day starts, a game result
+  // changes the "Live · Game 2 · 1–0" badge, or the series decides itself and
+  // closes the match, so re-render it on each of those.
   const router = useRouter();
-  const wasOpen = useRef(snap.open);
+  const live = liveMatchStatus({
+    matchState: snap.open ? "scheduled" : "closed",
+    rpsState: snap.rps?.state,
+    games: snap.games,
+    homeTeamId: snap.home.teamId,
+    awayTeamId: snap.away.teamId,
+  });
+  const pageKey = `${snap.open}|${live ? liveMatchLabel(live) : ""}`;
+  const lastPageKey = useRef(pageKey);
   useEffect(() => {
-    if (wasOpen.current && !snap.open) router.refresh();
-    wasOpen.current = snap.open;
-  }, [snap.open, router]);
+    if (lastPageKey.current === pageKey) return;
+    lastPageKey.current = pageKey;
+    router.refresh();
+  }, [pageKey, router]);
 
   // The game whose side is being picked, else the one being played.
   const sidePick = snap.games.find((g) => !g.blueTeamId) ?? null;
@@ -293,6 +305,10 @@ export function MatchDayCard({
           </p>
         ) : null}
 
+        {snap.open && !snap.viewer.userId ? (
+          <SignInPrompt href={signInHref(`/seasons/${slug}/matches/${matchId}`)} />
+        ) : null}
+
         {snap.viewer.isAdmin && (snap.rps || snap.games.length > 0) ? (
           <div className="border-t pt-3">
             <Button
@@ -314,6 +330,19 @@ export function MatchDayCard({
         ) : null}
       </CardContent>
     </Card>
+  );
+}
+
+/** For signed-out viewers: captains and players act once signed in (back to this page). */
+export function SignInPrompt({ href }: { href: string }) {
+  return (
+    <p className="text-muted-foreground border-t pt-3 text-center text-sm">
+      Captain or playing in this match?{" "}
+      <Link href={href} className="text-accent-text font-medium hover:underline">
+        Sign in
+      </Link>{" "}
+      to take part.
+    </p>
   );
 }
 

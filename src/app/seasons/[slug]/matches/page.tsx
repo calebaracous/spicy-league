@@ -14,6 +14,9 @@ import { GAME_LABELS } from "@/lib/seasons";
 import { isDraw } from "@/lib/match-format";
 import { computeStandings } from "@/lib/schedule";
 import { PLAYOFF_SPOTS } from "@/lib/standings";
+import { loadLiveMatches, matchDayApplies } from "@/lib/match-day";
+import type { LiveMatch } from "@/lib/live-match";
+import { LiveMatchBadge } from "@/components/live-match-badge";
 
 export const generateMetadata = seasonPageMetadata("Matches");
 
@@ -49,11 +52,13 @@ function BracketCard({
   slug,
   label,
   teamName,
+  live,
 }: {
   match: MatchRow;
   slug: string;
   label: string;
   teamName: Map<string, string>;
+  live: LiveMatch | undefined;
 }) {
   const sb = STATE_BADGE[m.state] ?? STATE_BADGE.scheduled;
   const decided = m.winnerTeamId !== null;
@@ -68,7 +73,7 @@ function BracketCard({
     >
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className="text-label text-muted-foreground">{label}</span>
-        <Badge variant={sb.variant}>{sb.label}</Badge>
+        {live ? <LiveMatchBadge live={live} /> : <Badge variant={sb.variant}>{sb.label}</Badge>}
       </div>
       <ul className="space-y-1">
         {sides.map((side) => {
@@ -88,7 +93,7 @@ function BracketCard({
           );
         })}
       </ul>
-      {m.scheduledAt && m.state === "scheduled" ? (
+      {m.scheduledAt && m.state === "scheduled" && !live ? (
         <p className="text-muted-foreground mt-2 text-xs">
           <LocalTime date={m.scheduledAt} preset="weekday-datetime" />
         </p>
@@ -102,10 +107,12 @@ function MatchLine({
   match: m,
   slug,
   teamName,
+  live,
 }: {
   match: MatchRow;
   slug: string;
   teamName: Map<string, string>;
+  live: LiveMatch | undefined;
 }) {
   const sb = STATE_BADGE[m.state] ?? STATE_BADGE.scheduled;
   const hasScore = m.homeScore !== null && m.awayScore !== null;
@@ -130,12 +137,12 @@ function MatchLine({
         ) : null}
       </div>
       <div className="flex shrink-0 items-center gap-3">
-        {m.scheduledAt && m.state === "scheduled" ? (
+        {m.scheduledAt && m.state === "scheduled" && !live ? (
           <span className="text-muted-foreground hidden text-xs sm:inline">
             <LocalTime date={m.scheduledAt} preset="weekday-datetime" />
           </span>
         ) : null}
-        <Badge variant={sb.variant}>{sb.label}</Badge>
+        {live ? <LiveMatchBadge live={live} /> : <Badge variant={sb.variant}>{sb.label}</Badge>}
       </div>
     </Link>
   );
@@ -165,6 +172,9 @@ export default async function MatchesPage({ params }: { params: Params }) {
     .orderBy(asc(matches.round));
 
   const allTeams = await db.select().from(teams).where(eq(teams.seasonId, season.id));
+  const live = matchDayApplies(season)
+    ? await loadLiveMatches(allMatches)
+    : new Map<string, LiveMatch>();
   const teamName = new Map(allTeams.map((t) => [t.id, t.name]));
 
   const table = ["group_stage", "playoffs", "complete"].includes(season.state)
@@ -298,6 +308,7 @@ export default async function MatchesPage({ params }: { params: Params }) {
                   slug={slug}
                   label={`Semifinal ${i + 1}`}
                   teamName={teamName}
+                  live={live.get(m.id)}
                 />
               ))}
             </div>
@@ -305,7 +316,13 @@ export default async function MatchesPage({ params }: { params: Params }) {
               →
             </span>
             {finalMatch ? (
-              <BracketCard match={finalMatch} slug={slug} label="Final" teamName={teamName} />
+              <BracketCard
+                match={finalMatch}
+                slug={slug}
+                label="Final"
+                teamName={teamName}
+                live={live.get(finalMatch.id)}
+              />
             ) : (
               <div className="text-muted-foreground rounded-xl border border-dashed p-4 text-sm">
                 <p className="text-label mb-1">Final</p>
@@ -323,7 +340,13 @@ export default async function MatchesPage({ params }: { params: Params }) {
           </h2>
           <div className="space-y-1">
             {tiebreakerMatches.map((m) => (
-              <MatchLine key={m.id} match={m} slug={slug} teamName={teamName} />
+              <MatchLine
+                key={m.id}
+                match={m}
+                slug={slug}
+                teamName={teamName}
+                live={live.get(m.id)}
+              />
             ))}
           </div>
         </section>
@@ -347,7 +370,13 @@ export default async function MatchesPage({ params }: { params: Params }) {
                 </h2>
                 <div className="space-y-1">
                   {roundMatches.map((m) => (
-                    <MatchLine key={m.id} match={m} slug={slug} teamName={teamName} />
+                    <MatchLine
+                      key={m.id}
+                      match={m}
+                      slug={slug}
+                      teamName={teamName}
+                      live={live.get(m.id)}
+                    />
                   ))}
                 </div>
               </div>

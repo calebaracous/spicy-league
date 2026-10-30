@@ -1,3 +1,6 @@
+import Link from "next/link";
+
+import { LiveMatchBadge } from "@/components/live-match-badge";
 import { Divider } from "@/components/ui/divider";
 import { LinkButton } from "@/components/ui/link-button";
 import { LocalTime } from "@/components/ui/local-time";
@@ -46,15 +49,16 @@ export function LiveSection({ season, nextMatch, topPlayers }: LiveSectionProps)
             <SectionLabel>{phaseLabel}</SectionLabel>
           </div>
           <h2 className="text-heading" style={{ color: "var(--text)" }}>
-            Next match
+            {nextMatch?.live ? "Playing now" : "Next match"}
           </h2>
           <PrizePoolLine season={season} className="text-sm" />
         </Reveal>
 
         {nextMatch ? (
           <Reveal>
-            <div
-              className="rounded-2xl p-10"
+            <Link
+              href={`/seasons/${season.slug}/matches/${nextMatch.id}`}
+              className="block rounded-2xl p-10 transition-colors hover:border-[color:var(--accent)]!"
               style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
             >
               <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-8">
@@ -81,7 +85,9 @@ export function LiveSection({ season, nextMatch, topPlayers }: LiveSectionProps)
                       border: "2px solid var(--accent)",
                     }}
                   >
-                    —
+                    {nextMatch.live && nextMatch.live.gameNumber !== null
+                      ? `${nextMatch.live.homeWins}–${nextMatch.live.awayWins}`
+                      : "—"}
                   </span>
                 </div>
 
@@ -105,15 +111,19 @@ export function LiveSection({ season, nextMatch, topPlayers }: LiveSectionProps)
                 <span style={{ color: "var(--muted)" }}>
                   {matchLabel(nextMatch.round, nextMatch.stage)}
                 </span>
-                <span className="font-mono" style={{ color: "var(--text)" }}>
-                  {nextMatch.scheduledAt ? (
-                    <LocalTime date={nextMatch.scheduledAt} preset="weekday-datetime" />
-                  ) : (
-                    "TBD"
-                  )}
-                </span>
+                {nextMatch.live ? (
+                  <LiveMatchBadge live={nextMatch.live} />
+                ) : (
+                  <span className="font-mono" style={{ color: "var(--text)" }}>
+                    {nextMatch.scheduledAt ? (
+                      <LocalTime date={nextMatch.scheduledAt} preset="weekday-datetime" />
+                    ) : (
+                      "TBD"
+                    )}
+                  </span>
+                )}
               </div>
-            </div>
+            </Link>
           </Reveal>
         ) : (
           <Reveal>

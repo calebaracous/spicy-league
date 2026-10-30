@@ -16,6 +16,7 @@ import {
 import { matches, type Match } from "@/db/schema/matches";
 import { seasons } from "@/db/schema/seasons";
 import { getChampionCatalog } from "@/lib/champions";
+import { liveMatchStatus, type LiveMatch } from "@/lib/live-match";
 import { logEvent, matchEventData } from "@/lib/events";
 import { notifyDraftRecap, notifyMatchSides } from "@/lib/discord-notify";
 import { syncInBackground } from "@/lib/discord-roles";
@@ -46,6 +47,45 @@ type MatchTeams = Pick<Match, "id" | "homeTeamId" | "awayTeamId" | "seasonId" | 
 /** Side selection exists for LoL seasons only. */
 export function matchDayApplies(season: { game: string }): boolean {
   return season.game === "lol";
+}
+
+/**
+ * Which of these matches are being played right now (see `liveMatchStatus`),
+ * by match id. Two small queries for any number of matches; read-only, so a
+ * lapsed deadline shows as of the last poll.
+ */
+export async function loadLiveMatches(
+  rows: readonly Pick<Match, "id" | "state" | "homeTeamId" | "awayTeamId">[],
+): Promise<Map<string, LiveMatch>> {
+  const scheduled = rows.filter((m) => m.state === "scheduled");
+  const live = new Map<string, LiveMatch>();
+  if (scheduled.length === 0) return live;
+  const ids = scheduled.map((m) => m.id);
+  const [rpsRows, gameRows] = await Promise.all([
+    db
+      .select({ matchId: matchRps.matchId, state: matchRps.state })
+      .from(matchRps)
+      .where(inArray(matchRps.matchId, ids)),
+    db
+      .select({
+        matchId: matchGames.matchId,
+        gameNumber: matchGames.gameNumber,
+        winnerTeamId: matchGames.winnerTeamId,
+      })
+      .from(matchGames)
+      .where(inArray(matchGames.matchId, ids)),
+  ]);
+  for (const m of scheduled) {
+    const status = liveMatchStatus({
+      matchState: m.state,
+      rpsState: rpsRows.find((r) => r.matchId === m.id)?.state,
+      games: gameRows.filter((g) => g.matchId === m.id),
+      homeTeamId: m.homeTeamId,
+      awayTeamId: m.awayTeamId,
+    });
+    if (status) live.set(m.id, status);
+  }
+  return live;
 }
 
 function rpsCore(row: MatchRps): RpsCore {

@@ -27,7 +27,16 @@ import {
   lockChampion,
   readyDraft,
 } from "../../match-day-actions";
-import { BLUE, Countdown, formatSeconds, RED, useAction, useCountdown } from "./match-day";
+import { signInHref } from "@/lib/safe-redirect";
+import {
+  BLUE,
+  Countdown,
+  formatSeconds,
+  RED,
+  SignInPrompt,
+  useAction,
+  useCountdown,
+} from "./match-day";
 
 // The match-day draft room (docs/MATCH-DAY.md, phase 3): both captains ready
 // up → 3s countdown → 20 pick/ban steps (60s bans, 2-minute picks; a missed
@@ -193,6 +202,15 @@ export function DraftRoom({
         <p role="alert" className="text-destructive text-sm">
           {error}
         </p>
+      ) : null}
+
+      {snap.open &&
+      !snap.viewer.userId &&
+      draft.state !== "complete" &&
+      draft.state !== "skipped" ? (
+        <SignInPrompt
+          href={signInHref(`/seasons/${slug}/matches/${matchId}/games/${gameNumber}`)}
+        />
       ) : null}
 
       {/* Phones: both teams side by side as compact icon rows, the grid below. */}

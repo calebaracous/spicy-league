@@ -15,6 +15,8 @@ import {
 } from "@/db/schema";
 import type { Season } from "@/db/schema/seasons";
 import { bestRankPerUser, formatRank, rankScore } from "@/lib/rank";
+import type { LiveMatch } from "@/lib/live-match";
+import { loadLiveMatches, matchDayApplies } from "@/lib/match-day";
 
 // ─── Public types ─────────────────────────────────────────────────────────────
 
@@ -31,6 +33,9 @@ export type CaptainInfo = {
 };
 
 export type NextMatchInfo = {
+  id: string;
+  /** Set while the match is being played (match day underway). */
+  live: LiveMatch | null;
   homeTeamName: string;
   awayTeamName: string;
   round: number;
@@ -219,12 +224,17 @@ async function getRandomSignups(
   return userRows.map((u) => ({ username: u.username ?? u.id, rank: null }));
 }
 
-async function getNextMatch(seasonId: string): Promise<NextMatchInfo | null> {
+/** The match being played right now, else the next scheduled one. */
+async function getNextMatch(season: Season): Promise<NextMatchInfo | null> {
   const homeAlias = alias(teams, "home");
   const awayAlias = alias(teams, "away");
 
   const rows = await db
     .select({
+      id: matches.id,
+      state: matches.state,
+      homeTeamId: matches.homeTeamId,
+      awayTeamId: matches.awayTeamId,
       homeTeamName: homeAlias.name,
       awayTeamName: awayAlias.name,
       round: matches.round,
@@ -234,11 +244,21 @@ async function getNextMatch(seasonId: string): Promise<NextMatchInfo | null> {
     .from(matches)
     .innerJoin(homeAlias, eq(homeAlias.id, matches.homeTeamId))
     .innerJoin(awayAlias, eq(awayAlias.id, matches.awayTeamId))
-    .where(and(eq(matches.seasonId, seasonId), eq(matches.state, "scheduled")))
-    .orderBy(asc(matches.scheduledAt))
-    .limit(1);
+    .where(and(eq(matches.seasonId, season.id), eq(matches.state, "scheduled")))
+    .orderBy(asc(matches.scheduledAt), asc(matches.round));
 
-  return (rows[0] as NextMatchInfo) ?? null;
+  const live = matchDayApplies(season) ? await loadLiveMatches(rows) : new Map<string, LiveMatch>();
+  const row = rows.find((r) => live.has(r.id)) ?? rows[0];
+  if (!row) return null;
+  return {
+    id: row.id,
+    live: live.get(row.id) ?? null,
+    homeTeamName: row.homeTeamName,
+    awayTeamName: row.awayTeamName,
+    round: row.round,
+    stage: row.stage as NextMatchInfo["stage"],
+    scheduledAt: row.scheduledAt,
+  };
 }
 
 async function getOffSeasonPodium(lastSeason: Season): Promise<PodiumEntry[]> {
@@ -394,7 +414,7 @@ export async function getHomepageData(): Promise<HomepageData> {
 
   // Live phase (group_stage | playoffs)
   const [nextMatch, topPlayers] = await Promise.all([
-    getNextMatch(active.id),
+    getNextMatch(active),
     active.game === "lol" ? getTopRankedPlayers(active.id, [], 3) : Promise.resolve([]),
   ]);
   return { state: "live", season: active, nextMatch, topPlayers, pastSeasons };

@@ -290,6 +290,21 @@ and the games list (sides, winner, who recorded it, Wrong? / Flag as wrong).
 Shown while the match is scheduled, and afterwards only if sides were set.
 Admins get "Reset match day" (wipes RPS, sides and game results; the
 series result stays).
+Signed-out viewers of an open match get "Captain or playing in this match?
+Sign in to take part" (back to this page via `signInHref`), here and in the
+draft room.
+
+**Live badge.** `liveMatchStatus` (`src/lib/live-match.ts`, pure, unit-tested
+in `tests/unit/live-match.test.ts`): a scheduled match is live once RPS has a
+round going or any game exists (readying up doesn't count) →
+"Live · Game 2 · 1–0" (home–away) or "Live · picking sides"
+(`LiveMatchBadge`, `src/components/live-match-badge.tsx`). Loaded in bulk by
+`loadLiveMatches(rows)` (`src/lib/match-day.ts`, read-only) for the match
+page header, schedule rows and bracket cards, the season page's "Your team"
+card ("Playing now", preferred over the next match by round) and the home
+page's next-match card ("Playing now", the card links to the match). The
+card calls `router.refresh()` when the badge text or `open` changes, so the
+server-rendered header follows game results.
 
 ## Discord
 

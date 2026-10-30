@@ -36,6 +36,8 @@ import { MatchDayCard } from "./_components/match-day";
 import { RiotScoreboard, type ScoreboardGame } from "./_components/riot-scoreboard";
 import { scoreboard } from "@/lib/riot-player-stats";
 import { loadMatchRiotStats } from "@/lib/season-stats";
+import { liveMatchStatus } from "@/lib/live-match";
+import { LiveMatchBadge } from "@/components/live-match-badge";
 
 export const generateMetadata = seasonPageMetadata("Match");
 
@@ -139,6 +141,13 @@ export default async function MatchDetailPage({
       })
     : null;
   const showMatchDay = matchDay && (matchDay.open || matchDay.games.length > 0);
+  const live = liveMatchStatus({
+    matchState: match.state,
+    rpsState: matchDay?.rps?.state,
+    games: matchDay?.games ?? [],
+    homeTeamId: match.homeTeamId,
+    awayTeamId: match.awayTeamId,
+  });
   // Riot tournament games' per-player stats (phase 6), if any arrived.
   const riot = matchDay ? await loadMatchRiotStats(match.id) : null;
   // Draft recaps and the scoreboard need champion names; only fetched once there's one.
@@ -210,7 +219,7 @@ export default async function MatchDetailPage({
           <h1 className="text-heading">
             {homeTeam?.name ?? "?"} vs {awayTeam?.name ?? "?"}
           </h1>
-          <Badge variant={sb.variant}>{sb.label}</Badge>
+          {live ? <LiveMatchBadge live={live} /> : <Badge variant={sb.variant}>{sb.label}</Badge>}
         </div>
         <p className="text-muted-foreground text-sm">
           {season.name} · {roundLabel(match.stage, match.round)}
