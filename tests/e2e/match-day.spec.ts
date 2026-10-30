@@ -351,7 +351,7 @@ test("Draft room: ready, countdown, lock, timeout locks the hover, skipped ban, 
     await blue.getByRole("button", { name: "Ready", exact: true }).click();
     await red.getByRole("button", { name: "Ready", exact: true }).click();
     for (const p of [blue, red, spectator]) {
-      await expect(p.getByText("BLUE BAN 1")).toBeVisible({ timeout: SSE_TIMEOUT });
+      await expect(p.getByText("BLUE BAN 1").first()).toBeVisible({ timeout: SSE_TIMEOUT });
     }
     await expect(blue.getByText("Your turn")).toBeVisible();
     await expect(red.getByText("Your turn")).toHaveCount(0);
@@ -360,7 +360,7 @@ test("Draft room: ready, countdown, lock, timeout locks the hover, skipped ban, 
   await test.step("blue bans Garen", async () => {
     await champ(blue, "Garen").click();
     await blue.getByRole("button", { name: "Lock in" }).click();
-    await expect(red.getByText("RED BAN 1")).toBeVisible({ timeout: SSE_TIMEOUT });
+    await expect(red.getByText("RED BAN 1").first()).toBeVisible({ timeout: SSE_TIMEOUT });
     await expect(champ(red, "Garen: Banned")).toBeDisabled();
   });
 
@@ -369,7 +369,7 @@ test("Draft room: ready, countdown, lock, timeout locks the hover, skipped ban, 
     await expect(red.getByRole("button", { name: "Lock in" })).toBeEnabled();
     // Only game 2 is live; game 1 is complete, so its deadline is ignored.
     await expireStep(2_000);
-    await expect(spectator.getByText("BLUE BAN 2")).toBeVisible({ timeout: 20_000 });
+    await expect(spectator.getByText("BLUE BAN 2").first()).toBeVisible({ timeout: 20_000 });
     const taken = await actions();
     expect(taken.map((a) => [a.step, a.championKey, a.auto])).toEqual([
       [1, "Garen", false],
@@ -379,7 +379,7 @@ test("Draft room: ready, countdown, lock, timeout locks the hover, skipped ban, 
 
   await test.step("blue skips a ban", async () => {
     await blue.getByRole("button", { name: "Skip ban" }).click();
-    await expect(red.getByText("RED BAN 2")).toBeVisible({ timeout: SSE_TIMEOUT });
+    await expect(red.getByText("RED BAN 2").first()).toBeVisible({ timeout: SSE_TIMEOUT });
     expect((await actions())[2]).toMatchObject({ step: 3, championKey: null, auto: false });
   });
 
@@ -399,12 +399,12 @@ test("Draft room: ready, countdown, lock, timeout locks the hover, skipped ban, 
     await expect(spectator.getByText(/Paused: time ran out/)).toBeVisible({
       timeout: SSE_TIMEOUT,
     });
-    await expect(spectator.getByText("BLUE PICK 1")).toBeVisible();
+    await expect(spectator.getByText("BLUE PICK 1").first()).toBeVisible();
     expect((await actions()).length).toBe(6);
     await blue.reload();
     await champ(blue, "Jinx").click();
     await blue.getByRole("button", { name: "Lock in" }).click();
-    await expect(spectator.getByText("RED PICK 1")).toBeVisible({ timeout: SSE_TIMEOUT });
+    await expect(spectator.getByText("RED PICK 1").first()).toBeVisible({ timeout: SSE_TIMEOUT });
     expect((await actions())[6]).toMatchObject({ step: 7, championKey: "Jinx", auto: false });
   });
 
