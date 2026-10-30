@@ -54,7 +54,10 @@ export function RiotLinkForm({
           aria-invalid={state.error ? true : undefined}
         />
         <p className="text-muted-foreground text-xs">
-          Found in the client under your profile icon (top right). {hint}
+          {userId
+            ? "Their Riot ID, shown in the client under the profile icon (top right)."
+            : "Found in the client under your profile icon (top right)."}{" "}
+          {hint}
         </p>
       </div>
       <FormError message={state.error} />

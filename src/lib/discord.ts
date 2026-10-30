@@ -11,6 +11,10 @@
 export const DISCORD_USERNAME_HELP =
   "Your Discord username (not your display name): 2–32 letters, numbers, underscores or periods";
 
+/** The same rule, worded for an admin editing someone else's account. */
+export const DISCORD_USERNAME_HELP_ADMIN =
+  "Their Discord username (not their display name): 2–32 letters, numbers, underscores or periods";
+
 const DISCORD_USERNAME = /^[a-z0-9_.]{2,32}$/;
 
 /** Trims, drops a leading `@`, lowercases. Returns null if it isn't a valid username. */

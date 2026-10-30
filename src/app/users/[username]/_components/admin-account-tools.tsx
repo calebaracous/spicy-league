@@ -9,7 +9,7 @@ import {
 import { DeleteAccountForm } from "./delete-account-form";
 import { RiotLinkForm } from "@/app/profile/_components/link-forms";
 import { MAX_RIOT_ACCOUNTS } from "@/app/profile/constants";
-import { DISCORD_USERNAME_HELP } from "@/lib/discord";
+import { DISCORD_USERNAME_HELP_ADMIN } from "@/lib/discord";
 import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,7 +17,7 @@ import { Label } from "@/components/ui/label";
 import { LocalTime } from "@/components/ui/local-time";
 
 export const ADMIN_ERROR_MESSAGES: Record<string, string> = {
-  "discord-invalid": `That isn't a valid Discord username. ${DISCORD_USERNAME_HELP}.`,
+  "discord-invalid": `That isn't a valid Discord username. ${DISCORD_USERNAME_HELP_ADMIN}.`,
   "discord-taken": "That Discord username is already on another account.",
   "discord-id-invalid": "A Discord user ID is a 17–20 digit number.",
   "discord-id-taken": "That Discord user ID is already matched to another account.",
@@ -75,7 +75,7 @@ export function AdminAccountTools({
               <PendingSubmitButton variant="outline">Save</PendingSubmitButton>
             </div>
             <p className="text-muted-foreground text-xs">
-              {DISCORD_USERNAME_HELP}. Changing it clears the matched ID below.
+              {DISCORD_USERNAME_HELP_ADMIN}. Changing it clears the matched ID below.
             </p>
           </form>
           <form action={adminSaveDiscordUserId} className="space-y-1.5">

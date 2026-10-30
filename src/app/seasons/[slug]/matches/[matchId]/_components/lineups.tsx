@@ -262,18 +262,34 @@ export function MatchLineups({
                       defaultValue=""
                     >
                       <option value="">Nobody (team is short)</option>
+                      {/* Admins manage both teams: group the players so it's clear whose spot it is. */}
                       {(managedTeamIds.length === 1
-                        ? managedTeamIds[0] === home.id
-                          ? lineups.home
-                          : lineups.away
-                        : [...lineups.home, ...lineups.away]
-                      )
-                        .filter((p) => !p.sub && !p.satOut)
-                        .map((p) => (
-                          <option key={p.userId} value={p.userId}>
-                            {p.name ?? p.username}
-                          </option>
-                        ))}
+                        ? [
+                            {
+                              team: null,
+                              players: managedTeamIds[0] === home.id ? lineups.home : lineups.away,
+                            },
+                          ]
+                        : [
+                            { team: home.name, players: lineups.home },
+                            { team: away.name, players: lineups.away },
+                          ]
+                      ).map(({ team, players }) => {
+                        const options = players
+                          .filter((p) => !p.sub && !p.satOut)
+                          .map((p) => (
+                            <option key={p.userId} value={p.userId}>
+                              {p.name ?? p.username}
+                            </option>
+                          ));
+                        return team ? (
+                          <optgroup key={team} label={team}>
+                            {options}
+                          </optgroup>
+                        ) : (
+                          options
+                        );
+                      })}
                     </select>
                   </div>
                 </div>

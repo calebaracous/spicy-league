@@ -211,12 +211,14 @@ export default async function EditSeasonPage({
 
       <Card>
         <CardHeader>
-          <CardTitle>Discord</CardTitle>
+          <CardTitle>Players and Discord</CardTitle>
           <CardDescription>
-            The bot keeps Captain, team roles and channels, Signed up, Sub list, Champion and 10-man
-            roles in step with the site, and opens a thread per match. Sync re-runs all of it, e.g.
-            after someone joins the server or fixes their username, or after a channel rename hit
-            Discord&apos;s limit. Details: <code>docs/DISCORD.md</code>.
+            Everyone in the season with their Discord match
+            {isLol ? " and whether they've opted in to public per-player stats" : ""}. The bot keeps
+            Captain, team roles and channels, Signed up, Sub list, Champion and 10-man roles in step
+            with the site, and opens a thread per match. Sync re-runs all of it, e.g. after someone
+            joins the server or fixes their username, or after a channel rename hit Discord&apos;s
+            limit. Details: <code>docs/DISCORD.md</code>.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
