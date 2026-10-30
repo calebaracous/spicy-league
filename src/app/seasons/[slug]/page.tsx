@@ -426,7 +426,7 @@ export default async function SeasonDetailPage({
                   Playing now: vs{" "}
                   <span className="text-foreground">{myOpponent?.name ?? "TBD"}</span>
                 </span>
-                <LiveMatchBadge live={myNextLive} />
+                <LiveMatchBadge live={myNextLive} awayView={myNextMatch.awayTeamId === myTeam.id} />
               </p>
             ) : myNextMatch ? (
               <p className="text-muted-foreground text-sm">

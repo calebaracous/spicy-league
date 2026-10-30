@@ -2,7 +2,16 @@ import { liveMatchLabel, type LiveMatch } from "@/lib/live-match";
 import { cn } from "@/lib/utils";
 
 /** "● Live · Game 2 · 1–0" pill for a match being played right now. */
-export function LiveMatchBadge({ live, className }: { live: LiveMatch; className?: string }) {
+export function LiveMatchBadge({
+  live,
+  awayView = false,
+  className,
+}: {
+  live: LiveMatch;
+  /** Score from the away team's side (a card about that team). */
+  awayView?: boolean;
+  className?: string;
+}) {
   return (
     <span
       className={cn(
@@ -21,7 +30,7 @@ export function LiveMatchBadge({ live, className }: { live: LiveMatch; className
           style={{ background: "var(--accent-text)" }}
         />
       </span>
-      {liveMatchLabel(live)}
+      {liveMatchLabel(live, awayView)}
     </span>
   );
 }

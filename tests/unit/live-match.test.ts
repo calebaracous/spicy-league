@@ -41,6 +41,9 @@ describe("liveMatchStatus", () => {
 describe("liveMatchLabel", () => {
   it("names the game and the home–away score", () => {
     expect(liveMatchLabel({ gameNumber: 2, homeWins: 1, awayWins: 0 })).toBe("Live · Game 2 · 1–0");
+    expect(liveMatchLabel({ gameNumber: 2, homeWins: 1, awayWins: 0 }, true)).toBe(
+      "Live · Game 2 · 0–1",
+    );
     expect(liveMatchLabel({ gameNumber: null, homeWins: 0, awayWins: 0 })).toBe(
       "Live · picking sides",
     );

@@ -18,6 +18,8 @@ import { formatRank } from "@/lib/rank";
 import { opggUrlForRiotId } from "@/lib/opgg";
 import { getChampionName } from "@/lib/riot-api";
 import { getPlayerMatchHistory } from "@/lib/substitutions";
+import { getCurrentTeams } from "@/lib/current-team";
+import { LiveMatchBadge } from "@/components/live-match-badge";
 import { playerChampions } from "@/lib/champion-stats";
 import { getChampionCatalog } from "@/lib/champions";
 import { playerAverages } from "@/lib/riot-player-stats";
@@ -88,12 +90,13 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
     }),
   );
 
-  const [history, viewer, draftGames, riotLines] = await Promise.all([
+  const [history, viewer, draftGames, riotLines, currentTeams] = await Promise.all([
     getPlayerMatchHistory(user.id),
     auth(),
     loadPlayerDraftGames(user.id),
     // Riot per-player numbers are public only with the stats opt-in (decision 20).
     user.statsOptInAt ? loadPlayerRiotLines(user.id) : Promise.resolve([]),
+    getCurrentTeams(user.id),
   ]);
   const riotSeasons = riotLines.flatMap(({ season, lines }) => {
     const stats = playerAverages(lines);
@@ -231,6 +234,52 @@ export default async function PublicProfilePage({ params, searchParams }: Props)
         </Alert>
       ) : null}
       {user.bio ? <p className="text-base leading-relaxed">{user.bio}</p> : null}
+
+      {currentTeams.map(({ season, team, next }) => (
+        <section
+          key={season.slug}
+          aria-label={`Playing in ${season.name}`}
+          className="space-y-1 rounded-xl border p-4"
+        >
+          <p className="text-muted-foreground text-xs">
+            Playing in{" "}
+            <Link href={`/seasons/${season.slug}`} className="hover:underline">
+              {season.name}
+            </Link>
+          </p>
+          <p className="font-medium">
+            <Link href={`/seasons/${season.slug}/teams`} className="hover:underline">
+              {team.name}
+            </Link>
+          </p>
+          {next ? (
+            <p className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+              <Link
+                href={`/seasons/${season.slug}/matches/${next.id}`}
+                className="hover:text-foreground hover:underline"
+              >
+                {next.live ? "Playing now" : "Next"}: vs{" "}
+                <span className="text-foreground">{next.opponentName}</span>
+                {next.live ? null : (
+                  <>
+                    {" "}
+                    · {next.roundLabel}
+                    {next.scheduledAt ? (
+                      <>
+                        {" "}
+                        · <LocalTime date={next.scheduledAt} preset="weekday-datetime" />
+                      </>
+                    ) : null}
+                  </>
+                )}
+              </Link>
+              {next.live ? <LiveMatchBadge live={next.live} awayView={next.isAway} /> : null}
+            </p>
+          ) : (
+            <p className="text-muted-foreground text-sm">No scheduled matches left.</p>
+          )}
+        </section>
+      ))}
 
       {hasAnyStats ? (
         <Card>

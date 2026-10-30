@@ -41,9 +41,12 @@ export function liveMatchStatus({
   return null;
 }
 
-/** "Live · Game 2 · 1–0" (home–away), or "Live · picking sides" before game 1. */
-export function liveMatchLabel(live: LiveMatch): string {
-  return live.gameNumber === null
-    ? "Live · picking sides"
-    : `Live · Game ${live.gameNumber} · ${live.homeWins}–${live.awayWins}`;
+/**
+ * "Live · Game 2 · 1–0" (home–away), or "Live · picking sides" before game 1.
+ * `awayView` puts the away team's wins first, for a card about the away team.
+ */
+export function liveMatchLabel(live: LiveMatch, awayView = false): string {
+  if (live.gameNumber === null) return "Live · picking sides";
+  const [mine, theirs] = awayView ? [live.awayWins, live.homeWins] : [live.homeWins, live.awayWins];
+  return `Live · Game ${live.gameNumber} · ${mine}–${theirs}`;
 }

@@ -162,7 +162,7 @@ Rendered by `src/app/page.tsx`:
 - `src/app/history/_components/zoomable-image.tsx` — client; tap a screenshot to open it full-size in a native `<dialog>`.
 - `src/app/users/page.tsx` — public player directory ("Players" in the nav).
 - `src/app/users/_components/player-directory.tsx` — client; search box, A–Z jump bar, grouped player rows with stats + rank.
-- `src/app/users/[username]/page.tsx` — public profile; per-Riot-account rank + top champs, Steam/Leetify links. The owner gets a "Delete account" card (`#delete-account`, or the `deletionBlocker` sentence instead). Admins also get the "Admin tools" card (`?saved=` / `?error=` flash).
+- `src/app/users/[username]/page.tsx` — public profile; "Playing in {season}" card per current team with the live or next match (`getCurrentTeams`); per-Riot-account rank + top champs, Steam/Leetify links. The owner gets a "Delete account" card (`#delete-account`, or the `deletionBlocker` sentence instead). Admins also get the "Admin tools" card (`?saved=` / `?error=` flash).
 - `src/app/users/[username]/_components/admin-account-tools.tsx` — admin-only card: edit Discord username, set/clear the matched Discord user ID, link/unlink Riot accounts, refresh stats (no rate limit), delete the account (not on their own page). `ADMIN_ERROR_MESSAGES`.
 - `src/app/users/[username]/_components/delete-account-form.tsx` — client; type-the-username confirm form for account deletion, shared by the owner's card and the admin tools.
 - `src/app/users/[username]/admin-actions.ts` — `requireAdmin` actions behind that card; the target is the hidden `userId` field.
@@ -225,7 +225,8 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/match-results.ts` — `applyConfirmEffects` (final after both semis, re-teams an unplayed final, champion, Discord, revalidation) and `confirmWithResult` (set + confirm in one go); used by `confirmMatch`, match day's auto-confirm and `adminEditResult`.
 - `src/lib/rps.ts` — pure RPS rules: `roundOutcome`, `advanceRps` / `settleRps` (lazy deadline state machine), timings, `griefLine`, `randomSide`.
 - `src/lib/match-day.ts` — `settleMatchDay` (apply lapsed deadlines under the match lock), `resolveExpired` (SKIP LOCKED), `getMatchDaySnapshot` (per viewer, throws hidden until reveal), `getMatchDayViewer`, `matchDayApplies`, `matchDayIsHot`, `loadLiveMatches` (which scheduled matches are being played).
-- `src/lib/live-match.ts` — pure: `liveMatchStatus` / `liveMatchLabel` ("Live · Game 2 · 1–0").
+- `src/lib/live-match.ts` — pure: `liveMatchStatus` / `liveMatchLabel` ("Live · Game 2 · 1–0"), `awayView` flips the score for a card about the away team).
+- `src/lib/current-team.ts` — `getCurrentTeams(userId)`: a player's teams in seasons being played, with the live or next match (public profile).
 - `src/lib/draft-clock.ts` — pure draft clock: `advanceDraft` / `settleDraft` (ready → 3s countdown → 60s bans / 2-minute picks → complete; timeouts lock the hover, else skip a ban or pause on a pick), `afterStep`, `deadlineFor`, `draftPaused`.
 - `src/lib/draft-room.ts` — pure draft-room rules: `DRAFT_SEQUENCE`, availability incl. fearless, `resolveTimeout`, `draftBoard`, `championIconUrl`.
 - `src/lib/champions.ts` — Data Dragon champion catalogue (`getChampionCatalog`, `parseChampionJson`, `resolveChampionKeys` for the admin disabled-champions field), daily revalidate.

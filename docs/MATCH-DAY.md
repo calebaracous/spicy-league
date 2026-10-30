@@ -298,12 +298,13 @@ draft room.
 in `tests/unit/live-match.test.ts`): a scheduled match is live once RPS has a
 round going or any game exists (readying up doesn't count) →
 "Live · Game 2 · 1–0" (home–away) or "Live · picking sides"
-(`LiveMatchBadge`, `src/components/live-match-badge.tsx`). Loaded in bulk by
+(`LiveMatchBadge`, `src/components/live-match-badge.tsx`; `awayView` puts the away team's wins
+first on cards about that team). Loaded in bulk by
 `loadLiveMatches(rows)` (`src/lib/match-day.ts`, read-only) for the match
 page header, schedule rows and bracket cards, the season page's "Your team"
 card ("Playing now", preferred over the next match by round) and the home
 page's next-match card ("Playing now", the card links to the match) and
-the admin overview's "Live now" list (`getAdminOverview`, which also puts
+public profiles' "Playing in" card (`getCurrentTeams`) and the admin overview's "Live now" list (`getAdminOverview`, which also puts
 paused match-day drafts and flagged game results under "Needs attention"). The
 card calls `router.refresh()` when the badge text or `open` changes, so the
 server-rendered header follows game results.
