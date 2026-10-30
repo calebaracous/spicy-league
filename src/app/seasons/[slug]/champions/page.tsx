@@ -80,9 +80,11 @@ export default async function ChampionsPage({
         </Link>
         <h1 className="text-heading">Champions</h1>
         <p className="text-muted-foreground text-sm">
-          From the match-day draft rooms of confirmed matches.{" "}
-          {counted > 0 ? `${counted} drafted game${counted === 1 ? "" : "s"}` : ""}
-          {team ? ` involving ${team.name}` : ""}.
+          From the match-day draft rooms of confirmed matches
+          {counted > 0
+            ? `: ${counted} drafted game${counted === 1 ? "" : "s"}${team ? ` involving ${team.name}` : ""}`
+            : ""}
+          .
         </p>
       </header>
       <SeasonNav slug={slug} state={season.state} game={season.game} current="champions" />

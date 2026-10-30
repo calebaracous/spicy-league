@@ -12,6 +12,7 @@ import type { DraftSide } from "@/lib/draft-room";
 import type { MatchDaySnapshot } from "@/lib/match-day";
 import { bestOfLabel } from "@/lib/match-format";
 import { griefLine, RPS_THROWS, sidePickMs, type RpsRound, type RpsThrow } from "@/lib/rps";
+import { seriesScore } from "@/lib/series";
 import {
   adminResetMatchDay,
   assignPicks,
@@ -94,19 +95,40 @@ export function useCountdown(deadline: string | null, serverNow: string): number
   return Math.max(0, Date.parse(deadline) - (clock.now + clock.offset));
 }
 
-export function Countdown({ ms, total }: { ms: number | null; total: number }) {
+/** Seconds left as "s", or "m:ss" from a minute up. */
+export function formatSeconds(ms: number): string {
+  const s = Math.ceil(ms / 1000);
+  return s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : String(s);
+}
+
+export function Countdown({
+  ms,
+  total,
+  color = "var(--accent)",
+  doneLabel,
+}: {
+  ms: number | null;
+  total: number;
+  /** Progress bar colour, e.g. the side on the clock. */
+  color?: string;
+  /** Shown instead of "0" while the server applies the deadline. */
+  doneLabel?: string;
+}) {
   if (ms === null) return null;
   const pct = Math.max(0, Math.min(100, (ms / total) * 100));
-  const s = Math.ceil(ms / 1000);
   return (
     <div className="space-y-1">
       <div className="text-center text-3xl font-semibold tabular-nums">
-        {s >= 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}` : s}
+        {ms === 0 && doneLabel ? (
+          <span className="text-muted-foreground text-lg font-medium">{doneLabel}</span>
+        ) : (
+          formatSeconds(ms)
+        )}
       </div>
       <div className="bg-muted h-1 overflow-hidden rounded-full">
         <div
           className="h-full rounded-full transition-[width] duration-200 ease-linear"
-          style={{ width: `${pct}%`, backgroundColor: "var(--accent)" }}
+          style={{ width: `${pct}%`, backgroundColor: color }}
         />
       </div>
     </div>
@@ -389,7 +411,7 @@ function RpsRoundView({
       <div className="text-muted-foreground text-center text-xs tracking-wide uppercase">
         Round {rps.round}
       </div>
-      <Countdown ms={ms} total={10_000} />
+      <Countdown ms={ms} total={10_000} doneLabel="Revealing…" />
       <div className="grid grid-cols-2 gap-3 text-center">
         {(["home", "away"] as const).map((side) => (
           <div key={side} className="rounded-lg border p-3">
@@ -510,7 +532,7 @@ function SidePick({
           so they pick the side for game {n}.
         </p>
       ) : null}
-      <Countdown ms={ms} total={sidePickMs(n)} />
+      <Countdown ms={ms} total={sidePickMs(n)} doneLabel="Picking a random side…" />
       {mine ? (
         <>
           <p className="text-center">Pick your side for game {n}. Out of time = random side.</p>
@@ -567,6 +589,18 @@ function ResultPrompt({
 }) {
   const canReport = snap.viewer.teamId !== null || snap.viewer.isAdmin;
   const drafted = game.draft.state === "complete" || game.draft.state === "skipped";
+  // How many of the two possible results would end the series (0, 1 or 2).
+  const recorded = snap.games.filter((g) => g.winnerTeamId);
+  const teams = { homeTeamId: snap.home.teamId, awayTeamId: snap.away.teamId };
+  const endings = [snap.home.teamId, snap.away.teamId].filter(
+    (winnerTeamId) => seriesScore(snap.bestOf, [...recorded, { winnerTeamId }], teams).over,
+  ).length;
+  const nextSideNote =
+    endings === 2
+      ? ""
+      : endings === 1
+        ? " (if the series goes on, the loser picks the next side)"
+        : " (the loser picks the next side)";
   if (!drafted) {
     const step = Math.min(game.draft.actions.length + 1, 20);
     return (
@@ -588,8 +622,7 @@ function ResultPrompt({
   return (
     <div className="space-y-3 text-center">
       <p>
-        Game {game.gameNumber} is on. Play it, then record the winner
-        {snap.series.played === 0 ? "" : " (the loser picks the next side)"}.
+        Game {game.gameNumber} is on. Play it, then record the winner{nextSideNote}.
       </p>
       {canReport ? (
         <div className="grid grid-cols-2 gap-3">
@@ -613,12 +646,14 @@ function ResultPrompt({
 }
 
 function sideNote(g: Game, teamName: (id: string | null) => string): string {
+  const chooser = teamName(g.sideChooserTeamId);
+  const side = g.sideChooserTeamId === g.blueTeamId ? "blue" : "red";
   return g.sideChosenVia === "rps"
-    ? `${teamName(g.sideChooserTeamId)} won RPS and chose`
+    ? `${chooser} won RPS and took ${side}`
     : g.sideChosenVia === "auto"
-      ? "random, the clock ran out"
+      ? "random side, the clock ran out"
       : g.sideChosenVia === "loser"
-        ? `${teamName(g.sideChooserTeamId)} chose (lost the last game)`
+        ? `${chooser} lost game ${g.gameNumber - 1} and took ${side}`
         : "set by an admin";
 }
 
@@ -668,7 +703,7 @@ function GamesList({
                   href={draftHref(g.gameNumber)}
                   className="text-xs underline-offset-2 hover:underline"
                 >
-                  {g.draft.state === "complete" ? "Draft" : "Draft room →"}
+                  {g.draft.state === "complete" ? "Full draft →" : "Draft room →"}
                 </Link>
               ) : null}
             </div>

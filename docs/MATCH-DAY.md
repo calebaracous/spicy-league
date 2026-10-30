@@ -130,11 +130,19 @@ and captains can only record that game's winner once the draft is
   game (hand-written partial unique index in `0018_match_draft.sql`).
 - **UI** (`_components/draft-room.tsx`): status bar (ready boxes →
   countdown → "BLUE BAN 2 · step n/20" + timer → done), blue and red
-  columns (5 ban slots, 5 pick slots, the on-the-clock hover shown faded),
-  champion grid with search; Lock in / Skip ban sticky above the grid on
-  your turn; admin Undo / Skip / Restart. Icons are plain `<img>` from Data
-  Dragon (no next/image optimisation). Same stream as the card; countdown
-  ticks re-render only the status bar.
+  columns (5 ban slots, 5 pick slots, the on-the-clock hover shown faded;
+  one row of 5 each on phones), champion grid (unavailable champions keep
+  their name with a Banned / Picked / Fearless / Disabled badge). A sticky
+  bar above the grid holds the step + seconds left (`StepClock`), the
+  search and, on your turn, Skip ban / Lock in. Selecting sends
+  `hoverChampion` outside the action transition, so Lock in never waits on
+  it (a late hover fails harmlessly); double-click locks in, and in the
+  search Enter selects the exact or only match, Enter again locks it.
+  Timers and the selection outline use the colour of the side on the clock.
+  Done / skipped → "Back to the match". Admin Undo / Skip / Restart. Icons
+  are plain `<img>` from Data Dragon (no next/image optimisation). Same
+  stream as the card; countdown ticks re-render only the status bar and
+  `StepClock`.
 
 ## Draft recap + players (phase 4)
 
