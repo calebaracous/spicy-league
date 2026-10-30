@@ -1,5 +1,6 @@
 import { and, eq, isNotNull, isNull, ne } from "drizzle-orm";
 import Link from "next/link";
+import { refresh } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { manualRefreshStats, unlinkCs2Account, unlinkRiotAccount } from "./account-actions";
@@ -20,6 +21,7 @@ import { opggUrlForRiotId } from "@/lib/opgg";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { buttonVariants } from "@/components/ui/button";
 import { PendingSubmitButton } from "@/components/ui/pending-submit-button";
+import { AutoSaveCheckbox } from "@/components/ui/auto-save-checkbox";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -184,7 +186,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
       await logEvent("profile.ten_man_pings", { actorId: session.user.id, data: { enabled: on } });
     }
     syncInBackground("10-man role", () => setTenManRole(session.user.id, on));
-    redirect("/profile?saved=1");
+    // Auto-saved checkbox: refresh in place (a redirect would jump the page).
+    refresh();
   }
 
   // "Interested in being a captain" — also set by the season signup form.
@@ -203,7 +206,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
         data: { enabled: on },
       });
     }
-    redirect("/profile?saved=1");
+    // Auto-saved checkbox: refresh in place (a redirect would jump the page).
+    refresh();
   }
 
   // Public per-player Riot stats from league games (Riot policy: opt-in
@@ -230,7 +234,8 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
     if (updated.length) {
       await logEvent("profile.stats_opt_in", { actorId: session.user.id, data: { enabled: on } });
     }
-    redirect("/profile?saved=1");
+    // Auto-saved checkbox: refresh in place (a redirect would jump the page).
+    refresh();
   }
 
   async function doSignOut() {
@@ -298,13 +303,9 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
             action={saveTenManPings}
             className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t pt-4"
           >
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="tenManPings" defaultChecked={user.tenManPings} />
+            <AutoSaveCheckbox name="tenManPings" defaultChecked={user.tenManPings}>
               Ping me in Discord when a 10-man opens
-            </label>
-            <PendingSubmitButton variant="outline" size="sm">
-              Save
-            </PendingSubmitButton>
+            </AutoSaveCheckbox>
           </form>
         </CardContent>
       </Card>
@@ -323,13 +324,9 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
             action={saveCaptainInterest}
             className="flex flex-wrap items-center justify-between gap-3"
           >
-            <label className="flex items-center gap-2 text-sm">
-              <input type="checkbox" name="captainInterest" defaultChecked={user.captainInterest} />
+            <AutoSaveCheckbox name="captainInterest" defaultChecked={user.captainInterest}>
               I&apos;m interested in being a captain
-            </label>
-            <PendingSubmitButton variant="outline" size="sm">
-              Save
-            </PendingSubmitButton>
+            </AutoSaveCheckbox>
           </form>
         </CardContent>
       </Card>
@@ -509,20 +506,13 @@ export default async function ProfilePage({ searchParams }: { searchParams: Sear
 
           <form action={saveStatsOptIn} className="space-y-1.5">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <label className="flex items-center gap-2 text-sm">
-                <input
-                  type="checkbox"
-                  name="statsOptIn"
-                  defaultChecked={!!user.statsOptInAt}
-                  disabled={!!optOutLockedBy}
-                />
+              <AutoSaveCheckbox
+                name="statsOptIn"
+                defaultChecked={!!user.statsOptInAt}
+                disabled={!!optOutLockedBy}
+              >
                 Show my per-player stats from league games publicly
-              </label>
-              {optOutLockedBy ? null : (
-                <PendingSubmitButton variant="outline" size="sm">
-                  Save
-                </PendingSubmitButton>
-              )}
+              </AutoSaveCheckbox>
             </div>
             <p className="text-muted-foreground text-xs">
               KDA, CS, damage and similar, from Riot, for Spicy League games. Required to sign up

@@ -151,7 +151,7 @@ Rendered by `src/app/page.tsx`:
 - `src/app/signin/check-email/page.tsx` — "verify your email" confirmation page.
 - `src/app/forgot-password/page.tsx` + `_components/forgot-password-form.tsx` — trigger reset email.
 - `src/app/reset-password/page.tsx` + `_components/reset-password-form.tsx` — consume reset token.
-- `src/app/profile/page.tsx` — private profile + account-link UI. Contains inline `saveProfile`, `saveOpggUrl`, `saveDiscordUsername` (highlighted card while unset), `saveTenManPings`, `saveCaptainInterest` ("Captaining" card), `saveStatsOptIn` (public per-player stats toggle in the League of Legends card) and `doSignOut` server actions and the `ERROR_MESSAGES` map. Ends with a link to the delete-account card on the public profile.
+- `src/app/profile/page.tsx` — private profile + account-link UI. Contains inline `saveProfile`, `saveOpggUrl`, `saveDiscordUsername` (highlighted card while unset), `saveTenManPings`, `saveCaptainInterest` ("Captaining" card), `saveStatsOptIn` (public per-player stats toggle in the League of Legends card) and `doSignOut` server actions (the three checkboxes — 10-man pings, captaining, stats opt-in — save on change via `AutoSaveCheckbox` and `refresh()` in place; text fields keep Save buttons and redirect with `?saved=1`) and the `ERROR_MESSAGES` map. Ends with a link to the delete-account card on the public profile.
 - `src/app/profile/account-actions.ts` — `linkRiotAccount`, `unlinkRiotAccount` (by `linkId`), `linkCs2Account`, `unlinkCs2Account`, `manualRefreshStats` (rate-limited), `deleteOwnAccount` (type-your-username confirm, signs out, then `deleteAccount`).
 - `src/app/profile/_components/link-forms.tsx` — client `RiotLinkForm` / `Cs2LinkForm` (`useActionState`, inline errors, input kept).
 - `src/app/profile/constants.ts` — `MAX_RIOT_ACCOUNTS = 3`.
@@ -225,7 +225,7 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/match-results.ts` — `applyConfirmEffects` (final after both semis, re-teams an unplayed final, champion, Discord, revalidation) and `confirmWithResult` (set + confirm in one go); used by `confirmMatch`, match day's auto-confirm and `adminEditResult`.
 - `src/lib/rps.ts` — pure RPS rules: `roundOutcome`, `advanceRps` / `settleRps` (lazy deadline state machine), timings, `griefLine`, `randomSide`.
 - `src/lib/match-day.ts` — `settleMatchDay` (apply lapsed deadlines under the match lock), `resolveExpired` (SKIP LOCKED), `getMatchDaySnapshot` (per viewer, throws hidden until reveal), `getMatchDayViewer`, `matchDayApplies`, `matchDayIsHot`, `loadLiveMatches` (which scheduled matches are being played).
-- `src/lib/live-match.ts` — pure: `liveMatchStatus` / `liveMatchLabel` ("Live · Game 2 · 1–0"), `awayView` flips the score for a card about the away team).
+- `src/lib/live-match.ts` — pure: `liveMatchStatus` / `liveMatchLabel` ("Live · Game 2 · 1–0"; `awayView` flips the score for a card about the away team).
 - `src/lib/current-team.ts` — `getCurrentTeams(userId)`: a player's teams in seasons being played, with the live or next match (public profile).
 - `src/lib/draft-clock.ts` — pure draft clock: `advanceDraft` / `settleDraft` (ready → 3s countdown → 60s bans / 2-minute picks → complete; timeouts lock the hover, else skip a ban or pause on a pick), `afterStep`, `deadlineFor`, `draftPaused`.
 - `src/lib/draft-room.ts` — pure draft-room rules: `DRAFT_SEQUENCE`, availability incl. fearless, `resolveTimeout`, `draftBoard`, `championIconUrl`.
@@ -274,6 +274,7 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/components/flash-toast.tsx` — client; turns a `?saved=` flag into a sonner toast and removes it from the URL.
 - `src/components/season-nav.tsx` — `SeasonNav` tabs for `/seasons/[slug]/*`, gated by season state (and `game`: the Champions tab is LoL-only).
 - `src/components/use-turn-alert.ts` — client hooks: `useSnapshotStream` (SSE + connection status), `useTurnAlert` (title flash + chime on your pick), `useTurnSoundPref`.
+- `src/components/ui/auto-save-checkbox.tsx` — `AutoSaveCheckbox`: submits its server-action form on toggle, "Saving…" / "Saved" inline.
 - `src/components/live-match-badge.tsx` — `LiveMatchBadge` pill for a match being played.
 - `src/components/live-status.tsx` — `LiveStatusDot` ("Live" / "Reconnecting…") and `TurnSoundToggle`.
 
