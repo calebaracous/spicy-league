@@ -7,6 +7,7 @@ the real UI against a real database and is run on demand.
 |---|---|---|
 | `npm run test:unit` | Vitest — pure logic (draft, standings, schedule, subs, Discord helpers, events, prize pool) | nothing |
 | `npm run test:e2e` | Playwright — full season draft through the UI | `DATABASE_URL`, Chromium |
+| `npm run test:staging` | Playwright — one match-day playthrough against the deployed staging site | staging deployed, `.env.development.local` |
 | `npm run test:e2e:cleanup` | Delete leftover e2e data (add `-- --legacy` for the old seed data) | `DATABASE_URL` |
 
 ## Test admin account (`claudius`)
@@ -232,6 +233,32 @@ Picking a captain or a non-signup can't be reached from the UI (never
 offered), so `cant-pick-captain` / `not-in-pool` are untested. Matches,
 standings and playoffs beyond schedule generation, and the 10-man flow, are
 out of scope for now.
+
+## Staging smoke test (`tests/staging/`)
+
+`npm run test:staging` plays the `rps-test` season through the UI of the
+**deployed** staging site (`STAGING_URL` overrides the URL), so push to
+`staging` and wait for the Vercel deploy first. It runs
+`scripts/seed-rps-test.mjs` (resetting that season), signs in both RPS
+captains, `rps_player_b`, `claudius` and an anonymous viewer, and checks
+DB state against `DATABASE_URL` from `.env.development.local`; it throws if
+that is the production URL. About two minutes. It covers:
+
+- Group match (Bo2): signed-out "Sign in to take part" prompt → RPS → side
+  pick → `LiveMatchBadge` on the match page, schedule, season card, public
+  profile, admin "Live now" and the home page (soft: the home page shows
+  whichever season is active, an e2e season while e2e runs) → a full
+  20-step draft using click + Lock in, Enter twice, double-click and Skip
+  ban, with the saved keys checked → "loser picks the next side" note →
+  loser's side pick and the away-view score → admin skips game 2's draft →
+  1–1 draw auto-confirms → captain assigns players, a player claims theirs
+  → champions page and profile stats.
+- Semi (Bo3): a DB-seeded draft step expires with nothing hovered and
+  pauses → admin "Game 1 draft paused" → skip → result → side pick → flag →
+  admin "Game 1 result flagged".
+
+It leaves the season in that state for poking around; rerun the seed
+script to reset it.
 
 ## Where to look when…
 

@@ -51,6 +51,7 @@ Trivial shadcn primitives get a single entry at the bottom.
 - `tests/e2e/global-setup.ts` / `global-teardown.ts` — seed run-scoped admin + players; delete all e2e-tagged data afterwards.
 - `tests/e2e/support/` — `env.ts` (DB URL, markers), `db.ts` (assert helpers incl. `getCaptainTeams` / `getTeams` keyed by primary captain, `cleanupE2EData`), `seed.ts` (users, signups, `seedDraftSeason`), `pages.ts` (sign-in, live-board + admin-draft helpers, `freezeLiveUpdates`).
 - `tests/e2e/draft.spec.ts` — full season draft through the UI. `tests/e2e/draft-edge-cases.spec.ts` — captain limits, short pool, SSE undo race, simultaneous picks. `tests/e2e/draft-duo.spec.ts` — duo captains: pair/split/move/remove, captain lock, mixed solo/duo draft, sub-only signup, sub request by the non-primary captain.
+- `tests/staging/` — `season.spec.ts` + its own `playwright.config.ts`: `npm run test:staging`, a match-day playthrough of the `rps-test` season against the deployed staging site.
 
 ## Scripts
 
