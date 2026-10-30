@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { LocalTime } from "@/components/ui/local-time";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { LiveMatchBadge } from "@/components/live-match-badge";
 import { getAdminOverview } from "@/lib/admin-overview";
 import { requireAdmin } from "@/lib/auth-helpers";
 import { countUnreadEvents, getEventsSeenAt } from "@/lib/events";
@@ -22,7 +23,7 @@ export default async function AdminPage() {
     getAdminOverview(),
     getEventsSeenAt(session.user.id).then((seenAt) => countUnreadEvents(session.user.id, seenAt)),
   ]);
-  const { stats, latestUsers, latestSignups, activeSeasons, actionItems } = overview;
+  const { stats, latestUsers, latestSignups, activeSeasons, actionItems, liveMatches } = overview;
 
   const tiles = [
     { label: "Players", value: stats.totalUsers, href: "/admin/users" },
@@ -77,6 +78,30 @@ export default async function AdminPage() {
           </Link>
         ))}
       </section>
+
+      {liveMatches.length > 0 ? (
+        <section className="space-y-3">
+          <h2 className="text-muted-foreground text-sm font-medium tracking-wide uppercase">
+            Live now
+          </h2>
+          <ul className="divide-y rounded-xl border">
+            {liveMatches.map((m) => (
+              <li key={m.href}>
+                <Link
+                  href={m.href}
+                  className="hover:bg-muted/40 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 px-4 py-3 text-sm"
+                >
+                  <span>
+                    <span className="font-medium">{m.teams}</span>
+                    <span className="text-muted-foreground"> · {m.seasonName}</span>
+                  </span>
+                  <LiveMatchBadge live={m.live} />
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
 
       <section className="space-y-3">
         <h2 className="text-muted-foreground text-sm font-medium tracking-wide uppercase">

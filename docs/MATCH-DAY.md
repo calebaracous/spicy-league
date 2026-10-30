@@ -302,7 +302,9 @@ round going or any game exists (readying up doesn't count) →
 `loadLiveMatches(rows)` (`src/lib/match-day.ts`, read-only) for the match
 page header, schedule rows and bracket cards, the season page's "Your team"
 card ("Playing now", preferred over the next match by round) and the home
-page's next-match card ("Playing now", the card links to the match). The
+page's next-match card ("Playing now", the card links to the match) and
+the admin overview's "Live now" list (`getAdminOverview`, which also puts
+paused match-day drafts and flagged game results under "Needs attention"). The
 card calls `router.refresh()` when the badge text or `open` changes, so the
 server-rendered header follows game results.
 

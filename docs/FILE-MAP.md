@@ -130,7 +130,7 @@ Rendered by `src/app/page.tsx`:
 ## Admin pages
 
 - `src/app/admin/layout.tsx` — wraps admin section with `requireAdmin()`.
-- `src/app/admin/page.tsx` — admin overview (Events button with unread count, stats, needs-attention list, active seasons, newest accounts, latest signups) + all seasons.
+- `src/app/admin/page.tsx` — admin overview (Events button with unread count, stats, "Live now" match-day matches, needs-attention list incl. paused match-day drafts and flagged game results, active seasons, newest accounts, latest signups) + all seasons.
 - `src/app/admin/events/page.tsx` — events inbox: filters, unread highlight, paging. `actions.ts` — `markAllEventsRead`.
 - `src/app/admin/users/page.tsx` — player search/filters, ban + unban forms. `actions.ts` — `banUserAction`, `unbanUserAction`.
 - `src/app/admin/seasons/new/page.tsx` — create season form (incl. prize pool + payout split, also on the edit form).
@@ -259,7 +259,7 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/bans.ts` — `isBanActive`, `getActiveBan` (DB read), `banUser` (also deletes sessions), `unbanUser`, `banMessage`.
 - `src/lib/events.ts` — `logEvent`, `matchEventData`, `pruneOldEvents` (60-day retention), `listEvents` (filters + cursor), `unreadFor` / `countUnreadEvents` / `markEventsSeen`.
 - `src/lib/event-format.ts` — pure: `EVENT_TYPES` → category, `describeEvent` / `describeDetails` (sentence segments, diffs), `diffFields`.
-- `src/lib/admin-overview.ts` — `getAdminOverview()`: stats, newest accounts, latest signups, active seasons, action items.
+- `src/lib/admin-overview.ts` — `getAdminOverview()`: stats, newest accounts, latest signups, active seasons, action items, and match night (`getMatchNight`: live LoL matches, paused match-day drafts, flagged game results).
 - `src/lib/safe-redirect.ts` — `safeCallbackUrl` (same-origin paths only) + `signInHref(path)` for sign-in links that return the user.
 - `src/lib/season-meta.ts` — `getSeasonName` (request-cached) + `seasonPageMetadata("Page")` for season sub-page `<title>`s.
 
