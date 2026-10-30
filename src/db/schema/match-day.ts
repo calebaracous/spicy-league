@@ -10,6 +10,7 @@ import {
   unique,
 } from "drizzle-orm/pg-core";
 
+import { LANE_ROLES } from "../../lib/draft-room";
 import type { RpsRound } from "../../lib/rps";
 import { users } from "./auth";
 import { teams } from "./drafts";
@@ -42,6 +43,7 @@ export const matchDraftStateEnum = pgEnum("match_draft_state", [
 ]);
 export const draftSideEnum = pgEnum("draft_side", ["blue", "red"]);
 export const draftKindEnum = pgEnum("draft_kind", ["ban", "pick"]);
+export const laneRoleEnum = pgEnum("lane_role", LANE_ROLES);
 
 export const matchRps = pgTable("match_rps", {
   matchId: text("match_id")
@@ -143,6 +145,10 @@ export const matchDraftActions = pgTable(
     assignedUserId: text("assigned_user_id").references(() => users.id, {
       onDelete: "set null",
     }),
+    // Picks only: the position it was played in, set with the player (or
+    // alone). At most one pick per role per side, enforced in assignPicks /
+    // claimPick. The recap orders picks by it.
+    role: laneRoleEnum("role"),
     createdAt: timestamp("created_at", { mode: "date" }).defaultNow().notNull(),
   },
   (t) => [unique("match_draft_actions_game_step_uniq").on(t.gameId, t.step)],

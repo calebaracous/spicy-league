@@ -54,6 +54,7 @@ files are in git history before the squash commit):
 - `0019_draft_pick_players.sql` — `match_draft_actions.assigned_user_id`.
 - `0020_riot_tournament.sql` — `seasons.riot_tournament_id`,
   `match_game_player_stats`.
+- `0021_draft_pick_roles.sql` — `lane_role` enum + `match_draft_actions.role`.
 
 **Why the baseline's `when` is old.** Drizzle's migrator applies a journal
 entry only if its `when` is greater than the newest `created_at` in
@@ -322,7 +323,10 @@ cascade from `matches`; team/user FKs are `set null`.
 - `match_draft_actions` — one row per draft step taken, unique `(gameId,
   step)`; `side` / `kind`, `championKey` (Data Dragon key; null = skipped
   ban), `actedBy` (null when `auto`), `auto`, `assignedUserId` (picks: who
-  played it, set by the team's captains after the draft; `0019`). Partial unique `(gameId,
+  played it, set by the team's captains after the draft; `0019`), `role`
+  (picks: enum `lane_role` = `top | jungle | mid | bot | support`, nullable;
+  one per side per game, enforced in `assignPicks` / `claimPick`, not the
+  DB; `0021`). Partial unique `(gameId,
   championKey) WHERE championKey IS NOT NULL`, hand-written in
   `0018_match_draft.sql` (not in the Drizzle schema).
 - `match_game_player_stats` — one row per player per Riot tournament game

@@ -7,7 +7,16 @@ import { teams } from "@/db/schema/drafts";
 import { seasons } from "@/db/schema/seasons";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { SeasonNav } from "@/components/season-nav";
-import { championStats, percent, sideStats } from "@/lib/champion-stats";
+import {
+  championStats,
+  defaultSortDir,
+  parseChampionSort,
+  percent,
+  sideStats,
+  sortChampionRows,
+  type ChampionSort,
+  type SortDir,
+} from "@/lib/champion-stats";
 import { getChampionCatalog } from "@/lib/champions";
 import { championIconUrl } from "@/lib/draft-room";
 import { seasonPageMetadata } from "@/lib/season-meta";
@@ -18,12 +27,12 @@ export const generateMetadata = seasonPageMetadata("Champions");
 export const dynamic = "force-dynamic";
 
 type Params = Promise<{ slug: string }>;
-type SearchParams = Promise<{ team?: string }>;
+type SearchParams = Promise<{ team?: string; sort?: string; dir?: string }>;
 
 /**
  * Champion pick/ban/win stats and side win rates from the season's match-day
  * draft rooms (docs/MATCH-DAY.md, phase 5). `?team=` narrows it to one team
- * for scouting. Confirmed matches only.
+ * for scouting; `?sort=&dir=` orders the table. Confirmed matches only.
  */
 export default async function ChampionsPage({
   params,
@@ -33,7 +42,8 @@ export default async function ChampionsPage({
   searchParams: SearchParams;
 }) {
   const { slug } = await params;
-  const { team: teamId } = await searchParams;
+  const { team: teamId, ...query } = await searchParams;
+  const order = parseChampionSort(query.sort, query.dir);
   const season = await db.query.seasons.findFirst({
     where: and(eq(seasons.slug, slug), ne(seasons.state, "draft")),
   });
@@ -51,12 +61,46 @@ export default async function ChampionsPage({
   const team = teamRows.find((t) => t.id === teamId) ?? null;
   const {
     games: counted,
-    rows,
+    rows: unsorted,
     bannedAgainst,
   } = championStats(games, team ? { teamId: team.id } : {});
   const sides = sideStats(games);
   const names = new Map(catalog?.champions.map((c) => [c.key, c.name]) ?? []);
   const name = (key: string) => names.get(key) ?? key;
+  const rows = sortChampionRows(unsorted, order.sort, order.dir, name);
+  const href = (q: { team?: string | null; sort?: ChampionSort; dir?: SortDir }) => {
+    const params = new URLSearchParams();
+    if (q.team) params.set("team", q.team);
+    if (q.sort && (q.sort !== "presence" || q.dir !== "desc")) {
+      params.set("sort", q.sort);
+      params.set("dir", q.dir ?? defaultSortDir(q.sort));
+    }
+    const qs = params.toString();
+    return `/seasons/${slug}/champions${qs ? `?${qs}` : ""}`;
+  };
+  // A header link: first click sorts that column its natural way, the next flips it.
+  const column = (sort: ChampionSort, label: string, align: "left" | "right" = "right") => {
+    const active = order.sort === sort;
+    const dir: SortDir = active ? (order.dir === "asc" ? "desc" : "asc") : defaultSortDir(sort);
+    return (
+      <th
+        className={cn("py-1.5 font-normal", align === "right" && "text-right")}
+        aria-sort={active ? (order.dir === "asc" ? "ascending" : "descending") : undefined}
+      >
+        <Link
+          href={href({ team: team?.id, sort, dir })}
+          scroll={false}
+          className={cn(
+            "hover:text-foreground hover:underline",
+            active && "text-foreground font-medium",
+          )}
+        >
+          {label}
+          {active ? (order.dir === "asc" ? " ↑" : " ↓") : ""}
+        </Link>
+      </th>
+    );
+  };
   const icon = (key: string, size = 28) =>
     catalog ? (
       // Small Data Dragon squares; see draft-room.tsx for why not next/image.
@@ -119,9 +163,7 @@ export default async function ChampionsPage({
               return (
                 <Link
                   key={t.id ?? "all"}
-                  href={
-                    t.id ? `/seasons/${slug}/champions?team=${t.id}` : `/seasons/${slug}/champions`
-                  }
+                  href={href({ team: t.id, ...order })}
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "rounded-full border px-3 py-1 text-xs",
@@ -147,12 +189,12 @@ export default async function ChampionsPage({
                 <table className="w-full min-w-[34rem] text-sm">
                   <thead className="text-muted-foreground text-left text-xs">
                     <tr>
-                      <th className="py-1.5 font-normal">Champion</th>
-                      <th className="py-1.5 text-right font-normal">Presence</th>
-                      <th className="py-1.5 text-right font-normal">Picks</th>
-                      <th className="py-1.5 text-right font-normal">Bans</th>
-                      <th className="py-1.5 text-right font-normal">W–L</th>
-                      <th className="py-1.5 text-right font-normal">Win %</th>
+                      {column("champion", "Champion", "left")}
+                      {column("presence", "Presence")}
+                      {column("picks", "Picks")}
+                      {column("bans", "Bans")}
+                      {column("record", "W–L")}
+                      {column("winrate", "Win %")}
                       <th className="py-1.5 text-right font-normal">Blue / red</th>
                     </tr>
                   </thead>

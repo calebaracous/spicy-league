@@ -93,6 +93,73 @@ export function championStats(
   return { games: counted, rows: sorted, bannedAgainst };
 }
 
+/** Columns the champions table sorts by (`?sort=`). */
+export const CHAMPION_SORTS = [
+  "champion",
+  "presence",
+  "picks",
+  "bans",
+  "record",
+  "winrate",
+] as const;
+export type ChampionSort = (typeof CHAMPION_SORTS)[number];
+export type SortDir = "asc" | "desc";
+
+/** A column's first-click direction: names A→Z, numbers high → low. */
+export const defaultSortDir = (sort: ChampionSort): SortDir =>
+  sort === "champion" ? "asc" : "desc";
+
+/** `?sort=&dir=` → a valid sort, presence high → low by default. */
+export function parseChampionSort(
+  sort: string | undefined,
+  dir: string | undefined,
+): { sort: ChampionSort; dir: SortDir } {
+  const s = CHAMPION_SORTS.find((c) => c === sort) ?? "presence";
+  return { sort: s, dir: dir === "asc" || dir === "desc" ? dir : defaultSortDir(s) };
+}
+
+/**
+ * The table's rows in the chosen order. Ties go to the champion with more
+ * decided games (so 3–0 sits above 1–0 at 100%), then presence, then name.
+ * By win rate, champions with no recorded result go last either way. No
+ * minimum: with fearless drafts most champions are one-offs, and 100% / 0%
+ * reads as "few games" on its own.
+ */
+export function sortChampionRows(
+  rows: readonly ChampionRow[],
+  sort: ChampionSort,
+  dir: SortDir,
+  name: (key: string) => string,
+): ChampionRow[] {
+  const decided = (r: ChampionRow) => r.wins + r.losses;
+  const primary = (a: ChampionRow, b: ChampionRow): number => {
+    switch (sort) {
+      case "champion":
+        return name(a.key).localeCompare(name(b.key));
+      case "presence":
+        return a.presence - b.presence;
+      case "picks":
+        return a.picks - b.picks;
+      case "bans":
+        return a.bans - b.bans;
+      case "record":
+        return a.wins - b.wins || b.losses - a.losses;
+      case "winrate":
+        return a.wins / decided(a) - b.wins / decided(b);
+    }
+  };
+  return [...rows].sort((a, b) => {
+    if (sort === "winrate" && !decided(a) !== !decided(b)) return decided(a) ? -1 : 1;
+    const p = sort === "winrate" && !decided(a) ? 0 : primary(a, b);
+    return (
+      (dir === "asc" ? p : -p) ||
+      decided(b) - decided(a) ||
+      b.presence - a.presence ||
+      name(a.key).localeCompare(name(b.key))
+    );
+  });
+}
+
 /** Blue vs red record, and how often the RPS winner won game 1. */
 export function sideStats(games: readonly StatsGame[]) {
   let played = 0;

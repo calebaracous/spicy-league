@@ -21,7 +21,7 @@ import { logEvent, matchEventData } from "@/lib/events";
 import { notifyDraftRecap, notifyMatchSides } from "@/lib/discord-notify";
 import { syncInBackground } from "@/lib/discord-roles";
 import { settleDraft, type DraftClock, type DraftState } from "@/lib/draft-clock";
-import { availableChampions, type DraftAction } from "@/lib/draft-room";
+import { availableChampions, type DraftAction, type LaneRole } from "@/lib/draft-room";
 import { fearlessApplies } from "@/lib/match-format";
 import { lobbyCodesEnabled } from "@/lib/riot-tournament";
 import { getCaptainedTeamId } from "@/lib/schedule";
@@ -198,8 +198,11 @@ function draftDue(g: MatchGame, now: Date): boolean {
   }
 }
 
-/** A stored draft step: the rules' shape plus who played a pick (phase 4). */
-export type StoredDraftAction = DraftAction & { assignedUserId: string | null };
+/** A stored draft step: the rules' shape plus who played a pick, and where (phase 4). */
+export type StoredDraftAction = DraftAction & {
+  assignedUserId: string | null;
+  role: LaneRole | null;
+};
 
 /** Every game's draft actions in step order, keyed by game id. */
 export async function loadDraftActions(
@@ -221,6 +224,7 @@ export async function loadDraftActions(
       kind: r.kind,
       championKey: r.championKey,
       assignedUserId: r.assignedUserId,
+      role: r.role,
     });
     byGame.set(r.gameId, list);
   }
@@ -301,7 +305,10 @@ async function settleDrafts(tx: Tx, match: MatchTeams, now: Date): Promise<numbe
       await tx
         .insert(matchDraftActions)
         .values(taken.map((a) => ({ ...a, gameId: g.id, auto: true })));
-      actionsByGame.set(g.id, [...actions, ...taken.map((a) => ({ ...a, assignedUserId: null }))]);
+      actionsByGame.set(g.id, [
+        ...actions,
+        ...taken.map((a) => ({ ...a, assignedUserId: null, role: null })),
+      ]);
     }
   }
   return done;

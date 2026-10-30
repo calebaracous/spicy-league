@@ -237,8 +237,10 @@ test("rps-test season on staging", async ({ browser }) => {
   await test.step("recap: captain assigns players, Team B player claims their pick", async () => {
     await capA.goto(groupUrl);
     await card(capA).getByRole("button", { name: "Assign players" }).click();
-    await card(capA).getByLabel("Garen").selectOption({ label: "RPS Captain A" });
-    await card(capA).getByLabel("Jinx").selectOption({ label: "Claudius (test admin)" });
+    await card(capA).getByLabel("Garen: role").selectOption("top");
+    await card(capA).getByLabel("Garen: player").selectOption({ label: "RPS Captain A" });
+    await card(capA).getByLabel("Jinx: role").selectOption("bot");
+    await card(capA).getByLabel("Jinx: player").selectOption({ label: "Claudius (test admin)" });
     await card(capA).getByRole("button", { name: "Save", exact: true }).click();
     await expect(card(capA).getByRole("button", { name: "Edit players" })).toBeVisible({
       timeout: POLL,
@@ -246,18 +248,28 @@ test("rps-test season on staging", async ({ browser }) => {
     await playerB.goto(groupUrl);
     await card(playerB).getByRole("button", { name: "I played…" }).click();
     await card(playerB).getByRole("button", { name: "Lux", exact: true }).click();
+    await card(playerB).getByRole("button", { name: "Mid", exact: true }).click();
     await expect(card(playerB).getByRole("button", { name: "Change mine" })).toBeVisible({
       timeout: POLL,
     });
-    const assigned = (await sql`select a.champion_key, a.assigned_user_id from match_draft_actions a
-      join match_games g on g.id = a.game_id where g.match_id = ${group1.id}
-      and a.assigned_user_id is not null`) as { champion_key: string; assigned_user_id: string }[];
-    const by = Object.fromEntries(assigned.map((r) => [r.champion_key, r.assigned_user_id]));
+    const assigned = (await sql`select a.champion_key, a.assigned_user_id, a.role
+      from match_draft_actions a join match_games g on g.id = a.game_id
+      where g.match_id = ${group1.id} and a.assigned_user_id is not null`) as {
+      champion_key: string;
+      assigned_user_id: string;
+      role: string | null;
+    }[];
+    const by = Object.fromEntries(
+      assigned.map((r) => [r.champion_key, [r.assigned_user_id, r.role]]),
+    );
     expect(by).toEqual({
-      Garen: uid("rps_cap_a"),
-      Jinx: uid("claudius"),
-      Lux: uid("rps_player_b"),
+      Garen: [uid("rps_cap_a"), "top"],
+      Jinx: [uid("claudius"), "bot"],
+      Lux: [uid("rps_player_b"), "mid"],
     });
+    // Team A's recap reads top to support: Garen (top) before Jinx (bot).
+    await capA.goto(groupUrl);
+    await expect(card(capA).getByText(/^(Top|Bot)$/)).toHaveText(["Top", "Bot"]);
   });
 
   await test.step("stats: champions page and profile", async () => {

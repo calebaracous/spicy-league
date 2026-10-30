@@ -148,6 +148,13 @@
       "when": 1793247709851,
       "tag": "0020_riot_tournament",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1793372958024,
+      "tag": "0021_draft_pick_roles",
+      "breakpoints": true
     }
   ]
 }

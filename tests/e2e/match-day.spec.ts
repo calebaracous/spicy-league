@@ -440,11 +440,19 @@ test("Draft recap: a captain assigns their picks to lineup players", async ({ br
   await expect(card(p1).getByRole("button", { name: "I played…" })).toHaveCount(0);
   await expect(assign).toHaveCount(1);
   await assign.click();
-  const selects = card(p1).getByRole("combobox");
-  await selects.nth(0).selectOption({ label: "E2E P01" });
-  await selects.nth(1).selectOption({ label: "E2E P03" });
+  await card(p1).getByLabel("Garen: player").selectOption({ label: "E2E P01" });
+  await card(p1).getByLabel("Lux: player").selectOption({ label: "E2E P03" });
+  // Roles: two picks can't share one.
+  await card(p1).getByLabel("Garen: role").selectOption("mid");
+  await card(p1).getByLabel("Lux: role").selectOption("mid");
+  await expect(card(p1).getByText("Each role can only have one champion.")).toBeVisible();
+  await card(p1).getByLabel("Garen: role").selectOption("support");
   await card(p1).getByRole("button", { name: "Save", exact: true }).click();
   await expect(card(p1).getByRole("button", { name: "Edit players" })).toBeVisible();
+  // The recap reads top to support: Lux (mid) before Garen (support).
+  await expect(card(p1).getByText(/^(Mid|Support)$/)).toHaveText(["Mid", "Support"], {
+    timeout: SSE_TIMEOUT,
+  });
 
   const ids = await userIdsByUsername([P(1).username, P(3).username]);
   const picks = await db
@@ -452,9 +460,11 @@ test("Draft recap: a captain assigns their picks to lineup players", async ({ br
     .from(schema.matchDraftActions)
     .where(eq(schema.matchDraftActions.gameId, game.id));
   const by = (step: number) => picks.find((a) => a.step === step)!.assignedUserId;
+  const role = (step: number) => picks.find((a) => a.step === step)!.role;
   expect(by(7)).toBe(ids.get(P(1).username));
   expect(by(10)).toBe(ids.get(P(3).username));
   expect(by(8)).toBeNull();
+  expect([role(7), role(10), role(8)]).toEqual(["support", "mid", null]);
 });
 
 test("Draft recap: a lineup player claims their own pick", async ({ browser }) => {
@@ -490,6 +500,9 @@ test("Draft recap: a lineup player claims their own pick", async ({ browser }) =
   await expect(card(p4).getByRole("button", { name: "Lux" })).toHaveCount(0);
   await expect(card(p4).getByRole("button", { name: "Garen" })).toHaveCount(0);
   await card(p4).getByRole("button", { name: "Jinx" }).click();
+  // Jinx has no role yet, so P4 is asked for one.
+  await expect(card(p4)).toContainText("Which role did you play Jinx in?");
+  await card(p4).getByRole("button", { name: "Bot", exact: true }).click();
   await expect(card(p4).getByRole("button", { name: "Change mine" })).toBeVisible({
     timeout: SSE_TIMEOUT,
   });
@@ -503,6 +516,7 @@ test("Draft recap: a lineup player claims their own pick", async ({ browser }) =
   expect(by(8)).toBe(ids.get(P(4).username));
   expect(by(9)).toBe(ids.get(P(5).username));
   expect(by(7)).toBeNull();
+  expect(picks.find((a) => a.step === 8)!.role).toBe("bot");
 });
 
 test("Champion stats: season page, team filter and the player's profile", async ({ browser }) => {

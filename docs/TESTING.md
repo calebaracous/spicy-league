@@ -251,8 +251,9 @@ that is the production URL. About two minutes. It covers:
   20-step draft using click + Lock in, Enter twice, double-click and Skip
   ban, with the saved keys checked → "loser picks the next side" note →
   loser's side pick and the away-view score → admin skips game 2's draft →
-  1–1 draw auto-confirms → captain assigns players, a player claims theirs
-  → champions page and profile stats.
+  1–1 draw auto-confirms → captain assigns players and roles, a player
+  claims theirs and picks its role → recap ordered by role → champions page
+  and profile stats.
 - Semi (Bo3): a DB-seeded draft step expires with nothing hovered and
   pauses → admin "Game 1 draft paused" → skip → result → side pick → flag →
   admin "Game 1 result flagged".

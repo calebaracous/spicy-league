@@ -12,7 +12,7 @@ import { notifyDraftRecap, notifyLobbyCode, notifyMatchSides } from "@/lib/disco
 import { syncInBackground } from "@/lib/discord-roles";
 import { logEvent, matchEventData } from "@/lib/events";
 import { afterStep, deadlineFor } from "@/lib/draft-clock";
-import { nextStep, stepAt } from "@/lib/draft-room";
+import { LANE_ROLES, nextStep, stepAt, type LaneRole } from "@/lib/draft-room";
 import {
   draftAvailability,
   getMatchDaySnapshot,
@@ -559,18 +559,24 @@ export async function adminSetDraft(
   });
 }
 
+/** What a captain records for one pick: who played it and in which role. */
+export type PickAssignment = { userId: string | null; role: LaneRole | null };
+
+const isLaneRole = (v: unknown): v is LaneRole => LANE_ROLES.some((r) => r === v);
+
 /**
  * After a completed draft, a captain says which lineup player played each of
- * their team's picks (an admin can do either team). Optional; per-player
- * champion stats read it. `assignments` maps pick step → user id (or null to
- * clear). Works after the match is confirmed too.
+ * their team's picks, and in which role (an admin can do either team).
+ * Optional; per-player champion stats read the players, the recap orders by
+ * role. `assignments` maps pick step → player and role (nulls clear). Steps
+ * left out keep what they have. Works after the match is confirmed too.
  */
 export async function assignPicks(
   slug: string,
   matchId: string,
   gameNumber: number,
   side: string,
-  assignments: Record<number, string | null>,
+  assignments: Record<number, PickAssignment>,
 ): Promise<MatchDayActionResult> {
   const session = await requireAuth();
   const userId = session.user.id;
@@ -595,7 +601,11 @@ export async function assignPicks(
       const lineup = (teamId === match.homeTeamId ? lineups.home : lineups.away)
         .filter((p) => !p.satOut)
         .map((p) => p.userId);
-      const chosen = Object.values(assignments).filter((v): v is string => !!v);
+      const entries = Object.values(assignments);
+      if (entries.some((a) => a?.role != null && !isLaneRole(a.role))) {
+        throw new MatchDayError("That isn't a role.");
+      }
+      const chosen = entries.map((a) => a?.userId).filter((v): v is string => !!v);
       if (chosen.some((id) => !lineup.includes(id))) {
         throw new MatchDayError("Pick players from this match's lineup.");
       }
@@ -612,11 +622,19 @@ export async function assignPicks(
             eq(matchDraftActions.kind, "pick"),
           ),
         );
+      // Roles are unique per side, counting the picks this call leaves alone.
+      const roles = picks
+        .map((p) => (p.step in assignments ? assignments[p.step]?.role : p.role))
+        .filter((r): r is LaneRole => !!r);
+      if (new Set(roles).size !== roles.length) {
+        throw new MatchDayError("Each role can only have one champion.");
+      }
       for (const pick of picks) {
         if (!(pick.step in assignments)) continue;
+        const { userId, role } = assignments[pick.step] ?? {};
         await tx
           .update(matchDraftActions)
-          .set({ assignedUserId: assignments[pick.step] ?? null })
+          .set({ assignedUserId: userId ?? null, role: role ?? null })
           .where(eq(matchDraftActions.id, pick.id));
       }
     });
@@ -624,15 +642,17 @@ export async function assignPicks(
 }
 
 /**
- * A lineup player says which of their team's picks they played (null: none).
- * They can take a pick nobody's on yet or move off their own; captains fix
- * anything else with `assignPicks`. Works after the match is confirmed too.
+ * A lineup player says which of their team's picks they played (null: none),
+ * and its role if nobody gave it one yet. They can take a pick nobody's on yet
+ * or move off their own; captains fix anything else with `assignPicks`.
+ * Works after the match is confirmed too.
  */
 export async function claimPick(
   slug: string,
   matchId: string,
   gameNumber: number,
   step: number | null,
+  role: LaneRole | null = null,
 ): Promise<MatchDayActionResult> {
   const session = await requireAuth();
   const userId = session.user.id;
@@ -670,6 +690,20 @@ export async function claimPick(
       if (step !== null && !target) throw new MatchDayError("That isn't one of your team's picks.");
       if (target?.assignedUserId && target.assignedUserId !== userId) {
         throw new MatchDayError("A teammate already has that pick. Ask a captain to fix it.");
+      }
+      // A role only fills a gap: one a captain (or the player) already set stays.
+      const newRole = target && !target.role && role !== null ? role : null;
+      if (newRole !== null) {
+        if (!isLaneRole(newRole)) throw new MatchDayError("That isn't a role.");
+        if (picks.some((p) => p.role === newRole)) {
+          throw new MatchDayError(
+            "A teammate's pick already has that role. Ask a captain to fix it.",
+          );
+        }
+        await tx
+          .update(matchDraftActions)
+          .set({ role: newRole })
+          .where(eq(matchDraftActions.id, target!.id));
       }
       for (const pick of picks) {
         const next =

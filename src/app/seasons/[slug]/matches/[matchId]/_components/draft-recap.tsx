@@ -3,19 +3,35 @@
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
-import { championIconUrl, type DraftSide } from "@/lib/draft-room";
+import {
+  championIconUrl,
+  LANE_ROLE_LABEL,
+  LANE_ROLES,
+  type DraftSide,
+  type LaneRole,
+} from "@/lib/draft-room";
 import type { MatchDaySnapshot } from "@/lib/match-day";
 
+import type { PickAssignment } from "../../match-day-actions";
+
 // A game's finished draft on the match-day card (docs/MATCH-DAY.md, phase 4):
-// each side's picks with who played them, bans faded, and — for that team's
-// captains or an admin — "Assign players" to record who played what. Other
-// lineup players get "I played…" to claim their own pick.
+// each side's picks, top to support once roles are known, with who played
+// them, bans faded, and — for that team's captains or an admin — "Assign
+// players" to record who played what and where. Other lineup players get
+// "I played…" to claim their own pick.
 
 type Game = MatchDaySnapshot["games"][number];
+type Pick = Game["draft"]["actions"][number];
 export type ChampionNames = { version: string; names: Record<string, string> };
 export type LineupOption = { userId: string; name: string };
 
 const SIDE_COLOR: Record<DraftSide, string> = { blue: "#3b82f6", red: "#ef4444" };
+
+/** Picks with a role first, top to support; the rest in draft order. */
+function byRole(picks: Pick[]): Pick[] {
+  const rank = (p: Pick) => (p.role ? LANE_ROLES.indexOf(p.role) : LANE_ROLES.length);
+  return [...picks].sort((a, b) => rank(a) - rank(b) || a.step - b.step);
+}
 
 function Icon({
   version,
@@ -66,11 +82,17 @@ export function DraftRecap({
   claimSide: DraftSide | null;
   viewerId: string | null;
   pending: boolean;
-  onAssign: (side: DraftSide, assignments: Record<number, string | null>) => void;
-  onClaim: (step: number | null) => void;
+  onAssign: (side: DraftSide, assignments: Record<number, PickAssignment>) => void;
+  onClaim: (step: number | null, role: LaneRole | null) => void;
 }) {
   const [editing, setEditing] = useState<DraftSide | null>(null);
   const [claiming, setClaiming] = useState(false);
+  // The roleless pick a player chose, while they say which role it was.
+  const [claimStep, setClaimStep] = useState<number | null>(null);
+  const stopClaiming = () => {
+    setClaiming(false);
+    setClaimStep(null);
+  };
   const name = (key: string) => champions.names[key] ?? key;
   const sides: { side: DraftSide; teamId: string | null }[] = [
     { side: "blue", teamId: game.blueTeamId },
@@ -80,10 +102,12 @@ export function DraftRecap({
     <div className="space-y-2">
       {sides.map(({ side, teamId }) => {
         const mine = game.draft.actions.filter((a) => a.side === side);
-        const picks = mine.filter((a) => a.kind === "pick" && a.championKey);
+        const picks = byRole(mine.filter((a) => a.kind === "pick" && a.championKey));
+        const anyRole = picks.some((a) => a.role);
         const bans = mine.filter((a) => a.kind === "ban");
         const players = teamId ? (lineups[teamId] ?? []) : [];
         const playerName = (id: string | null) => players.find((p) => p.userId === id)?.name;
+        const roleless = picks.find((a) => a.step === claimStep);
         return (
           <div key={side} className="space-y-1.5">
             <div className="flex flex-wrap items-end gap-1.5">
@@ -95,6 +119,11 @@ export function DraftRecap({
               </span>
               {picks.map((a) => (
                 <span key={a.step} className="flex w-12 flex-col items-center gap-0.5">
+                  {anyRole ? (
+                    <span className="text-muted-foreground text-[0.6rem] uppercase">
+                      {a.role ? LANE_ROLE_LABEL[a.role] : "—"}
+                    </span>
+                  ) : null}
                   <Icon
                     version={champions.version}
                     championKey={a.championKey!}
@@ -127,7 +156,9 @@ export function DraftRecap({
                   className="self-center"
                   onClick={() => setEditing(side)}
                 >
-                  {picks.some((a) => a.assignedUserId) ? "Edit players" : "Assign players"}
+                  {picks.some((a) => a.assignedUserId || a.role)
+                    ? "Edit players"
+                    : "Assign players"}
                 </Button>
               ) : null}
               {game.draft.state === "complete" && claimSide === side && !claiming ? (
@@ -141,7 +172,7 @@ export function DraftRecap({
                 </Button>
               ) : null}
             </div>
-            {claimSide === side && claiming ? (
+            {claimSide === side && claiming && !roleless ? (
               <div className="bg-muted/30 flex flex-wrap items-center gap-1.5 rounded-lg border p-2 text-sm">
                 <span className="text-muted-foreground text-xs">Which did you play?</span>
                 {picks
@@ -153,8 +184,10 @@ export function DraftRecap({
                       variant={a.assignedUserId === viewerId ? "default" : "outline"}
                       disabled={pending}
                       onClick={() => {
-                        onClaim(a.step);
-                        setClaiming(false);
+                        // No role yet: ask for it before claiming.
+                        if (!a.role) return setClaimStep(a.step);
+                        onClaim(a.step, null);
+                        stopClaiming();
                       }}
                     >
                       {name(a.championKey!)}
@@ -166,15 +199,51 @@ export function DraftRecap({
                     variant="ghost"
                     disabled={pending}
                     onClick={() => {
-                      onClaim(null);
-                      setClaiming(false);
+                      onClaim(null, null);
+                      stopClaiming();
                     }}
                   >
                     None of these
                   </Button>
                 ) : null}
-                <Button size="xs" variant="ghost" onClick={() => setClaiming(false)}>
+                <Button size="xs" variant="ghost" onClick={stopClaiming}>
                   Cancel
+                </Button>
+              </div>
+            ) : null}
+            {claimSide === side && claiming && roleless ? (
+              <div className="bg-muted/30 flex flex-wrap items-center gap-1.5 rounded-lg border p-2 text-sm">
+                <span className="text-muted-foreground text-xs">
+                  Which role did you play {name(roleless.championKey!)} in?
+                </span>
+                {LANE_ROLES.map((role) => (
+                  <Button
+                    key={role}
+                    size="xs"
+                    variant="outline"
+                    // Another pick already has it; a captain can move it.
+                    disabled={pending || picks.some((a) => a.role === role)}
+                    onClick={() => {
+                      onClaim(roleless.step, role);
+                      stopClaiming();
+                    }}
+                  >
+                    {LANE_ROLE_LABEL[role]}
+                  </Button>
+                ))}
+                <Button
+                  size="xs"
+                  variant="ghost"
+                  disabled={pending}
+                  onClick={() => {
+                    onClaim(roleless.step, null);
+                    stopClaiming();
+                  }}
+                >
+                  Skip
+                </Button>
+                <Button size="xs" variant="ghost" onClick={() => setClaimStep(null)}>
+                  Back
                 </Button>
               </div>
             ) : null}
@@ -184,6 +253,7 @@ export function DraftRecap({
                   step: a.step,
                   champion: name(a.championKey!),
                   assignedUserId: a.assignedUserId,
+                  role: a.role,
                 }))}
                 players={players}
                 pending={pending}
@@ -201,6 +271,8 @@ export function DraftRecap({
   );
 }
 
+type AssignValue = { userId: string; role: LaneRole | "" };
+
 function AssignForm({
   picks,
   players,
@@ -208,26 +280,50 @@ function AssignForm({
   onCancel,
   onSave,
 }: {
-  picks: { step: number; champion: string; assignedUserId: string | null }[];
+  picks: { step: number; champion: string; assignedUserId: string | null; role: LaneRole | null }[];
   players: LineupOption[];
   pending: boolean;
   onCancel: () => void;
-  onSave: (assignments: Record<number, string | null>) => void;
+  onSave: (assignments: Record<number, PickAssignment>) => void;
 }) {
-  const [values, setValues] = useState<Record<number, string>>(() =>
-    Object.fromEntries(picks.map((p) => [p.step, p.assignedUserId ?? ""])),
+  // Per pick: its role and who played it ("" = not set).
+  const [values, setValues] = useState<Record<number, AssignValue>>(() =>
+    Object.fromEntries(
+      picks.map((p) => [p.step, { userId: p.assignedUserId ?? "", role: p.role ?? "" }]),
+    ),
   );
-  const chosen = Object.values(values).filter(Boolean);
-  const duplicate = new Set(chosen).size !== chosen.length;
+  const set = (step: number, patch: Partial<AssignValue>) =>
+    setValues((v) => ({ ...v, [step]: { ...v[step], ...patch } }));
+  const repeats = (xs: string[]) => {
+    const filled = xs.filter(Boolean);
+    return new Set(filled).size !== filled.length;
+  };
+  const duplicatePlayer = repeats(Object.values(values).map((v) => v.userId));
+  const duplicateRole = repeats(Object.values(values).map((v) => v.role));
+  const select = "border-input h-8 min-w-0 flex-1 rounded-lg border bg-transparent px-2 text-sm";
   return (
     <div className="bg-muted/30 space-y-2 rounded-lg border p-2 text-sm">
       {picks.map((p) => (
-        <label key={p.step} className="flex items-center gap-2">
-          <span className="w-28 shrink-0 truncate">{p.champion}</span>
+        <div key={p.step} className="flex items-center gap-2">
+          <span className="w-20 shrink-0 truncate sm:w-28">{p.champion}</span>
           <select
-            value={values[p.step] ?? ""}
-            onChange={(e) => setValues((v) => ({ ...v, [p.step]: e.target.value }))}
-            className="border-input h-8 w-full rounded-lg border bg-transparent px-2 text-sm"
+            aria-label={`${p.champion}: role`}
+            value={values[p.step]?.role ?? ""}
+            onChange={(e) => set(p.step, { role: e.target.value as LaneRole | "" })}
+            className={select}
+          >
+            <option value="">Role</option>
+            {LANE_ROLES.map((role) => (
+              <option key={role} value={role}>
+                {LANE_ROLE_LABEL[role]}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label={`${p.champion}: player`}
+            value={values[p.step]?.userId ?? ""}
+            onChange={(e) => set(p.step, { userId: e.target.value })}
+            className={select}
           >
             <option value="">Who played it?</option>
             {players.map((pl) => (
@@ -236,17 +332,27 @@ function AssignForm({
               </option>
             ))}
           </select>
-        </label>
+        </div>
       ))}
-      {duplicate ? (
+      {duplicatePlayer ? (
         <p className="text-destructive text-xs">Each player can only play one champion.</p>
+      ) : null}
+      {duplicateRole ? (
+        <p className="text-destructive text-xs">Each role can only have one champion.</p>
       ) : null}
       <div className="flex gap-2">
         <Button
           size="sm"
-          disabled={pending || duplicate}
+          disabled={pending || duplicatePlayer || duplicateRole}
           onClick={() =>
-            onSave(Object.fromEntries(Object.entries(values).map(([k, v]) => [k, v || null])))
+            onSave(
+              Object.fromEntries(
+                Object.entries(values).map(([step, v]) => [
+                  step,
+                  { userId: v.userId || null, role: v.role || null },
+                ]),
+              ),
+            )
           }
         >
           Save

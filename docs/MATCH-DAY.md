@@ -148,21 +148,31 @@ and captains can only record that game's winner once the draft is
 
 - **Card**: each drafted game in the games list shows `DraftRecap`
   (`_components/draft-recap.tsx`): both sides' picks as icons with the
-  player who played each (else the champion name), bans faded. The match
+  player who played each (else the champion name), bans faded. Once any
+  pick on a side has a role, that side reads top → support with the role
+  above each icon (roleless picks after, in draft order). The match
   page passes champion names (`getChampionCatalog`, only once a game has a
   draft) and each team's match lineup (approved subs in, sat-out players
   out).
 - **Players per pick**: after a completed draft, that team's captains (or an
-  admin, either team) open **Assign players** and pick a lineup player per
-  champion → `assignPicks(slug, matchId, gameNumber, side, {step: userId})`.
+  admin, either team) open **Assign players** and set a role and a lineup
+  player per champion (either can be left blank) →
+  `assignPicks(slug, matchId, gameNumber, side, {step: {userId, role}})`.
   Validated against `getMatchLineups` (no outsiders, one champion per
-  player); works after the match is confirmed too. Optional — it only feeds
-  per-player champion stats. Stored in `match_draft_actions.assignedUserId`
-  (migration `0019_draft_pick_players`).
+  player) and one pick per role per side (counting picks left out of the
+  call); works after the match is confirmed too. Optional — players feed
+  per-player champion stats, roles order the recap. Stored in
+  `match_draft_actions.assignedUserId` (migration `0019_draft_pick_players`)
+  and `.role` (`lane_role` enum top/jungle/mid/bot/support, `LANE_ROLES` in
+  `src/lib/draft-room.ts`; migration `0021_draft_pick_roles`). Per champion
+  rather than per role, so a role or player can be set without the other.
 - **Players claim their own**: other lineup players get **I played…** on
-  their side's recap → `claimPick(slug, matchId, gameNumber, step|null)`:
-  they can take a pick nobody has or move off their own (null = none), not
-  one a teammate has — captains fix that with Assign players.
+  their side's recap → `claimPick(slug, matchId, gameNumber, step|null,
+  role?)`: they can take a pick nobody has or move off their own (null =
+  none), not one a teammate has — captains fix that with Assign players. A
+  pick with no role asks "Which role did you play X in?" first (roles
+  another pick has are disabled; Skip claims without one). A claim only
+  fills an empty role, never changes one.
 - **Discord**: when a draft completes (last step by hand in `lockChampion`,
   or by the clock in `resolveExpired`), `notifyDraftRecap` posts both
   sides' picks and bans in the match thread.
@@ -178,7 +188,12 @@ Aggregation is pure (`src/lib/champion-stats.ts`,
 - **`/seasons/[slug]/champions`** (LoL; "Champions" tab in `SeasonNav`,
   which now takes `game`): blue / red win rate, how often the RPS winner won
   game 1, and a per-champion table — presence (games picked or banned),
-  picks, bans, W–L, win %, blue / red picks. `?team=` narrows the table to
+  picks, bans, W–L, win %, blue / red picks. Column headers sort it
+  (`?sort=champion|presence|picks|bans|record|winrate&dir=asc|desc`,
+  `sortChampionRows`; default presence high → low; the team filter keeps
+  the sort). Ties go to more decided games, so 3–0 tops 1–0; by win rate,
+  champions with no result go last. No minimum-games filter on purpose:
+  fearless spreads picks thin, and 100% / 0% reads as "few games". `?team=` narrows the table to
   that team's picks and bans and adds "Banned against {team}" (scouting);
   the side cards stay season-wide.
 - **Profiles** (`/users/[username]`): "League champions" — champions the

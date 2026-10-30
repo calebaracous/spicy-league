@@ -34,7 +34,7 @@ Trivial shadcn primitives get a single entry at the bottom.
 - `tests/unit/season-schedule.test.ts` — `seasonSchedule` ordering, skipping unset dates, group stage range.
 - `tests/unit/draft-clock.test.ts` — draft clock: ready/countdown/steps, 60s bans / 2-minute picks, hover lock vs skipped ban vs paused pick on timeout, completion.
 - `tests/unit/champions.test.ts` — `resolveChampionKeys` (names/keys, punctuation, unknowns).
-- `tests/unit/champion-stats.test.ts` — champion/side/player aggregation, team filter, unrecorded results.
+- `tests/unit/champion-stats.test.ts` — champion/side/player aggregation, team filter, unrecorded results, table sorting.
 - `tests/unit/riot-player-stats.test.ts` — scoreboard opt-in gating and team totals, averages, KDA.
 - `tests/unit/riot-tournament-parse.test.ts` — callback body, Match-v5 winner/player lines, draft-vs-played mismatches.
 - `tests/unit/series.test.ts` — `bestOfFor`, `seriesScore`, `loserOf`.
@@ -102,7 +102,7 @@ Rendered by `src/app/page.tsx`:
 - `src/app/seasons/[slug]/matches/[matchId]/_components/match-day.tsx` — `MatchDayCard`: live RPS side select (ready up, throws + countdown, reveal/roast, blue/red pick). See [MATCH-DAY.md](MATCH-DAY.md).
 - `src/app/seasons/[slug]/champions/page.tsx` — season champion stats (side win rates, per-champion table, `?team=` scouting filter).
 - `src/app/seasons/[slug]/matches/[matchId]/games/[n]/page.tsx` — the match-day draft room for game n (snapshot + champion catalogue → `DraftRoom`).
-- `src/app/seasons/[slug]/matches/[matchId]/_components/draft-recap.tsx` — `DraftRecap`: a drafted game's picks (with players) and bans on the match-day card, plus the Assign players form and players' "I played…" claim.
+- `src/app/seasons/[slug]/matches/[matchId]/_components/draft-recap.tsx` — `DraftRecap`: a drafted game's picks (with players, top → support once roles are set) and bans on the match-day card, plus the Assign players form (role + player per champion) and players' "I played…" claim (asks the role if the pick has none).
 - `src/app/seasons/[slug]/matches/[matchId]/_components/riot-scoreboard.tsx` — `RiotScoreboard`: per-game Riot stats tables (opted-in players' numbers, team totals).
 - `src/app/seasons/[slug]/matches/[matchId]/_components/draft-room.tsx` — `DraftRoom`: ready boxes, countdown, step banner + timer, blue/red ban and pick slots, champion grid with search, Lock in / Skip ban, admin Undo / Skip / Restart.
 - `src/app/seasons/[slug]/matches/match-day-actions.ts` — `readyRps`, `unreadyRps`, `throwRps`, `pickSide`, `reportGameWinner` (auto-confirms a decided series; waits for the draft), `flagGameResult`, `readyDraft`, `hoverChampion`, `lockChampion`, `adminUndoDraftStep`, `adminSetDraft`, `assignPicks`, `claimPick`, `getLobbyCode`, `adminResetMatchDay` (return `{ error, snap }`, lock the match row, settle deadlines first).
@@ -215,7 +215,7 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/players.ts` — `getPlayerDirectory()`: onboarded users A–Z with career stats, from whole-table queries tallied in memory.
 - `src/lib/backdrop-clips.ts` — home-row backdrop clip registry (`backdropClip(game, index)`, `placeholderBackdrop(game)` for the still-art "Signups open" row, `otherGame`). LoL clips `lol-1..3` are live (`loopSources(id)` → WebM + MP4); CS2 clips still have `sources: []`.
 - `src/lib/live-season.ts` — `getLiveSeason`, `LIVE_STATE_COPY`, `liveSeasonHref`. Used by header pill + home hero.
-- `src/lib/champion-stats.ts` — pure: `championStats` (picks/bans/presence/W–L per champion, optional team filter + bans against), `sideStats` (blue/red, RPS winner game 1), `playerChampions`, `percent`.
+- `src/lib/champion-stats.ts` — pure: `championStats` (picks/bans/presence/W–L per champion, optional team filter + bans against), `sideStats` (blue/red, RPS winner game 1), `playerChampions`, `percent`, and the table's sort (`parseChampionSort`, `sortChampionRows`).
 - `src/lib/season-stats.ts` — loads completed drafts of confirmed matches for the stats pages (`loadSeasonDraftGames`, `loadPlayerDraftGames`), and Riot game lines (`loadMatchRiotStats`, `loadPlayerRiotLines`).
 - `src/lib/riot-player-stats.ts` — pure: Riot per-player lines → `scoreboard` (opt-in gated rows, team totals), `playerAverages`, `kdaRatio`.
 - `src/lib/match-day-results.ts` — `recordGameWinner` (next side pick or auto-confirm; shared by the captains' buttons and the Riot callback), `GameResultError`.
@@ -229,7 +229,7 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/live-match.ts` — pure: `liveMatchStatus` / `liveMatchLabel` ("Live · Game 2 · 1–0"; `awayView` flips the score for a card about the away team).
 - `src/lib/current-team.ts` — `getCurrentTeams(userId)`: a player's teams in seasons being played, with the live or next match (public profile).
 - `src/lib/draft-clock.ts` — pure draft clock: `advanceDraft` / `settleDraft` (ready → 3s countdown → 60s bans / 2-minute picks → complete; timeouts lock the hover, else skip a ban or pause on a pick), `afterStep`, `deadlineFor`, `draftPaused`.
-- `src/lib/draft-room.ts` — pure draft-room rules: `DRAFT_SEQUENCE`, availability incl. fearless, `resolveTimeout`, `draftBoard`, `championIconUrl`.
+- `src/lib/draft-room.ts` — pure draft-room rules: `DRAFT_SEQUENCE`, availability incl. fearless, `resolveTimeout`, `draftBoard`, `championIconUrl`, `LANE_ROLES` / `LANE_ROLE_LABEL`.
 - `src/lib/champions.ts` — Data Dragon champion catalogue (`getChampionCatalog`, `parseChampionJson`, `resolveChampionKeys` for the admin disabled-champions field), daily revalidate.
 - `src/lib/ten-man.ts` — `PICK_ORDER_C1_C2`, `getActiveTenMan`, `getTenManSnapshot`, `getRecentTenMans`, `electCaptains`. See [TEN-MAN.md](TEN-MAN.md).
 - `src/lib/riot-links.ts` — `hasRiotLink(userId)`: whether a user has a linked Riot account.

@@ -13,6 +13,17 @@ export type DraftAction = {
   championKey: string | null;
 };
 
+/** A pick's position, top to support — the draft recap's order (phase 4). */
+export const LANE_ROLES = ["top", "jungle", "mid", "bot", "support"] as const;
+export type LaneRole = (typeof LANE_ROLES)[number];
+export const LANE_ROLE_LABEL: Record<LaneRole, string> = {
+  top: "Top",
+  jungle: "Jungle",
+  mid: "Mid",
+  bot: "Bot",
+  support: "Support",
+};
+
 /** Why a champion can't be chosen right now; the grid greys and labels it. */
 export type UnavailableReason = "banned" | "picked" | "fearless" | "disabled";
 

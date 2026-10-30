@@ -289,7 +289,9 @@ export function MatchDayCard({
                   onAssign={(side, assignments) =>
                     run(() => assignPicks(slug, matchId, g.gameNumber, side, assignments))
                   }
-                  onClaim={(step) => run(() => claimPick(slug, matchId, g.gameNumber, step))}
+                  onClaim={(step, role) =>
+                    run(() => claimPick(slug, matchId, g.gameNumber, step, role))
+                  }
                 />
               ) : null
             }
