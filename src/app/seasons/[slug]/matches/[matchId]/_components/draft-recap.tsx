@@ -300,12 +300,16 @@ function AssignForm({
   };
   const duplicatePlayer = repeats(Object.values(values).map((v) => v.userId));
   const duplicateRole = repeats(Object.values(values).map((v) => v.role));
-  const select = "border-input h-8 min-w-0 flex-1 rounded-lg border bg-transparent px-2 text-sm";
+  const select = "border-input h-8 min-w-0 rounded-lg border bg-transparent px-2 text-sm";
   return (
     <div className="bg-muted/30 space-y-2 rounded-lg border p-2 text-sm">
       {picks.map((p) => (
-        <div key={p.step} className="flex items-center gap-2">
-          <span className="w-20 shrink-0 truncate sm:w-28">{p.champion}</span>
+        // Phones: the champion on its own line, the two selects side by side under it.
+        <div
+          key={p.step}
+          className="grid grid-cols-2 items-center gap-x-2 gap-y-1 sm:grid-cols-[7rem_1fr_1fr]"
+        >
+          <span className="col-span-2 truncate sm:col-span-1">{p.champion}</span>
           <select
             aria-label={`${p.champion}: role`}
             value={values[p.step]?.role ?? ""}
