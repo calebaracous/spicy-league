@@ -18,7 +18,7 @@ interface SignupSectionProps {
   topPlayers?: PlayerInfo[]; // LoL only
 }
 
-const SIGNUP_TARGET: Record<string, number> = { lol: 30, cs2: 20 };
+const SIGNUP_TARGET: Record<string, number> = { lol: 40, cs2: 20 };
 
 export function SignupSection({ season, signupCount, topPlayers }: SignupSectionProps) {
   const isLoL = season.game === "lol";
