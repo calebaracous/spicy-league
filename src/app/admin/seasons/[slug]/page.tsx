@@ -26,6 +26,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { formatPrizeSplit } from "@/lib/prize-pool";
 import { getChampionCatalog } from "@/lib/champions";
 import { FlashToast } from "@/components/flash-toast";
+import { PlayerLink } from "@/components/player-link";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { GAME_LABELS, SEASON_STATE_LABELS, nextStates } from "@/lib/seasons";
 import { GROUP_BEST_OF_OPTIONS, PLAYOFF_BEST_OF_OPTIONS } from "@/lib/match-format";
@@ -247,7 +248,14 @@ export default async function EditSeasonPage({
                 <tbody className="divide-y">
                   {discordRoster.map((p) => (
                     <tr key={p.id}>
-                      <td className="py-1.5 pr-4">{p.label}</td>
+                      <td className="py-1.5 pr-4">
+                        <PlayerLink
+                          username={p.username}
+                          className="underline-offset-2 hover:underline"
+                        >
+                          {p.label}
+                        </PlayerLink>
+                      </td>
                       <td className="text-muted-foreground py-1.5 pr-4">
                         {[
                           p.captain ? "Captain" : null,

@@ -73,6 +73,8 @@ export const emptyReport = (): DiscordSyncReport => ({
 export type Person = {
   id: string;
   label: string;
+  /** Site username, for linking to /users/[username]; null for deleted accounts. */
+  username: string | null;
   discordUsername: string | null;
   discordUserId: string | null;
 };
@@ -92,6 +94,7 @@ export async function loadPeople(userIds: string[]): Promise<Person[]> {
   return rows.map((r) => ({
     id: r.id,
     label: r.name ?? r.username ?? "?",
+    username: r.username,
     discordUsername: r.discordUsername,
     discordUserId: r.discordUserId,
   }));

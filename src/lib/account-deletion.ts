@@ -189,6 +189,7 @@ export async function deleteAccount(userId: string, actorId: string): Promise<De
   const person: Person = {
     id: userId,
     label: user.username ?? userId,
+    username: user.username,
     discordUsername: user.discordUsername,
     discordUserId: user.discordUserId,
   };
