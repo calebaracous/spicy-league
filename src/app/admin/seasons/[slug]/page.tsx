@@ -257,12 +257,9 @@ export default async function EditSeasonPage({
                         </PlayerLink>
                       </td>
                       <td className="text-muted-foreground py-1.5 pr-4">
-                        {[
-                          p.captain ? "Captain" : null,
-                          p.teamName ?? (p.sub ? "Sub list" : "Signed up"),
-                        ]
+                        {[p.captain ? "Captain" : null, p.teamName ?? (p.sub ? "Sub list" : null)]
                           .filter(Boolean)
-                          .join(" · ")}
+                          .join(" · ") || "—"}
                       </td>
                       <td className="py-1.5 pr-4 font-mono text-xs">{p.discordUsername ?? "—"}</td>
                       <td className={cn("py-1.5 text-xs", isLol && "pr-4")}>
