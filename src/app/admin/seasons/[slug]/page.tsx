@@ -26,13 +26,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { formatPrizeSplit } from "@/lib/prize-pool";
 import { getChampionCatalog } from "@/lib/champions";
 import { FlashToast } from "@/components/flash-toast";
-import { PlayerLink } from "@/components/player-link";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { GAME_LABELS, SEASON_STATE_LABELS, nextStates } from "@/lib/seasons";
 import { GROUP_BEST_OF_OPTIONS, PLAYOFF_BEST_OF_OPTIONS } from "@/lib/match-format";
 import { discordConfig } from "@/lib/discord-api";
 import { getDiscordRoster } from "@/lib/discord-admin";
 import { cn } from "@/lib/utils";
+
+import { PlayersTable } from "./_components/players-table";
 
 export const generateMetadata = seasonPageMetadata("Admin");
 
@@ -234,60 +235,10 @@ export default async function EditSeasonPage({
               Nobody has signed up yet, so there&apos;s no one to give roles to.
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-muted-foreground border-b text-left text-xs">
-                    <th className="pr-4 pb-2 font-medium">Player</th>
-                    <th className="pr-4 pb-2 font-medium">Role</th>
-                    <th className="pr-4 pb-2 font-medium">Discord</th>
-                    <th className={cn("pb-2 font-medium", isLol && "pr-4")}>Status</th>
-                    {isLol ? <th className="pb-2 font-medium">Public stats</th> : null}
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {discordRoster.map((p) => (
-                    <tr key={p.id}>
-                      <td className="py-1.5 pr-4">
-                        <PlayerLink
-                          username={p.username}
-                          className="underline-offset-2 hover:underline"
-                        >
-                          {p.label}
-                        </PlayerLink>
-                      </td>
-                      <td className="text-muted-foreground py-1.5 pr-4">
-                        {[
-                          p.captain ? "Captain" : null,
-                          p.teamName ?? (p.sub ? "Sub list" : "Signed up"),
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </td>
-                      <td className="py-1.5 pr-4 font-mono text-xs">{p.discordUsername ?? "—"}</td>
-                      <td className={cn("py-1.5 text-xs", isLol && "pr-4")}>
-                        {!p.discordUsername ? (
-                          <span style={{ color: "var(--accent-text)" }}>No username</span>
-                        ) : p.discordUserId ? (
-                          "Matched"
-                        ) : (
-                          <span className="text-muted-foreground">Not matched yet</span>
-                        )}
-                      </td>
-                      {isLol ? (
-                        <td className="py-1.5 text-xs whitespace-nowrap">
-                          {statsOptedIn.has(p.id) ? (
-                            <span className="text-muted-foreground">Opted in</span>
-                          ) : (
-                            <span className="text-destructive">Not opted in</span>
-                          )}
-                        </td>
-                      ) : null}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <PlayersTable
+              rows={discordRoster.map((p) => ({ ...p, statsOptedIn: statsOptedIn.has(p.id) }))}
+              isLol={isLol}
+            />
           )}
           <div className="flex flex-wrap gap-2">
             <form action={syncDiscordWithSlug}>
