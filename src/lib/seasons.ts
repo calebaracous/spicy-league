@@ -56,6 +56,17 @@ export const SUB_SIGNUP_STATES: readonly SeasonState[] = [
 ];
 
 /**
+ * States where a player signup can still leave the draft pool (self-serve
+ * `leaveSeason`, admin `removeSignup`). Both also refuse once the draft row
+ * has left "pending".
+ */
+export const PRE_DRAFT_STATES: readonly SeasonState[] = [
+  "signups_open",
+  "signups_closed",
+  "captains_selected",
+];
+
+/**
  * Which kind of signup a season accepts right now: "player" during the
  * signup window (draft pool), "sub" once regular signups have closed until
  * the season completes, otherwise null.

@@ -100,6 +100,16 @@ captains and don't count toward signup totals; they appear under
 A sub signup can leave the list (`leaveSubList`) unless they hold an
 approved slot in an unplayed match.
 
+**Leaving the season.** A draft-pool signup sees "Can't make this season?"
+→ **Leave season** (`leaveSeason`) while the season is in
+`PRE_DRAFT_STATES` (`signups_open`, `signups_closed`, `captains_selected`)
+and the draft row is still `pending` — the same window as the admin
+`removeSignup`. It deletes the signup, logs `signup.left` and resyncs
+Discord signup roles; they can sign up again while signups are open.
+Captains are refused (`?error=leave-captain`): their spot shapes the snake
+order, so an admin demotes them first. After the draft starts it's
+admin-only and refused there too.
+
 ### Home page
 
 `getHomepageData()` in `src/lib/homepage.ts` takes the newest season in a

@@ -5,7 +5,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/db/client";
 import { teams } from "@/db/schema/drafts";
 import { matches } from "@/db/schema/matches";
-import { seasons, seasonSignups, type SeasonState } from "@/db/schema/seasons";
+import { seasonCaptains, seasons, seasonSignups, type SeasonState } from "@/db/schema/seasons";
 import { auth } from "@/auth";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
@@ -15,12 +15,18 @@ import { LocalTime } from "@/components/ui/local-time";
 import { SeasonNav } from "@/components/season-nav";
 import { FlashToast } from "@/components/flash-toast";
 import { ConfirmSubmitButton } from "@/components/ui/confirm-submit-button";
-import { leaveSubList } from "./signup/actions";
+import { leaveSeason, leaveSubList } from "./signup/actions";
 import { FEARLESS_DRAFT_RULE, formatStructure, roundLabel } from "@/lib/match-format";
 import { formatUsd, prizePayouts } from "@/lib/prize-pool";
 import { seasonPageMetadata } from "@/lib/season-meta";
 import { getCaptainedTeamId, getTeamForCaptain } from "@/lib/schedule";
-import { GAME_LABELS, openSignupKind, SEASON_STATE_LABELS, seasonSchedule } from "@/lib/seasons";
+import {
+  GAME_LABELS,
+  openSignupKind,
+  PRE_DRAFT_STATES,
+  SEASON_STATE_LABELS,
+  seasonSchedule,
+} from "@/lib/seasons";
 import { signInHref } from "@/lib/safe-redirect";
 import { cn } from "@/lib/utils";
 import { loadLiveMatches, matchDayApplies } from "@/lib/match-day";
@@ -30,7 +36,12 @@ import { LiveMatchBadge } from "@/components/live-match-badge";
 export const generateMetadata = seasonPageMetadata(null);
 
 type Params = Promise<{ slug: string }>;
-type SearchParams = Promise<{ "signed-up"?: string; "left-subs"?: string; error?: string }>;
+type SearchParams = Promise<{
+  "signed-up"?: string;
+  "left-subs"?: string;
+  left?: string;
+  error?: string;
+}>;
 
 export const dynamic = "force-dynamic";
 
@@ -42,6 +53,9 @@ const SIGNUP_ERRORS: Record<string, string> = {
   banned: "Your account is suspended from Spicy League, so you can't sign up.",
   "sub-booked":
     "You're approved to sub in a match that hasn't been played yet. Ask the captain or an admin to release you first.",
+  "leave-too-late": "The draft has started, so you can't leave the season. Message an admin.",
+  "leave-captain":
+    "You're a captain, so an admin has to take you off the captain list before you can leave.",
 };
 
 function StatusPanel({
@@ -216,7 +230,7 @@ export default async function SeasonDetailPage({
   searchParams: SearchParams;
 }) {
   const { slug } = await params;
-  const { "signed-up": signedUp, "left-subs": leftSubs, error } = await searchParams;
+  const { "signed-up": signedUp, "left-subs": leftSubs, left, error } = await searchParams;
   const errorMessage = error ? (SIGNUP_ERRORS[error] ?? null) : null;
 
   const season = await db.query.seasons.findFirst({
@@ -234,6 +248,17 @@ export default async function SeasonDetailPage({
         columns: { kind: true },
       })
     : undefined;
+  // Captains can't leave on their own (their spot shapes the snake order).
+  const amCaptain =
+    mySignup?.kind === "player" && PRE_DRAFT_STATES.includes(season.state)
+      ? !!(await db.query.seasonCaptains.findFirst({
+          where: and(
+            eq(seasonCaptains.seasonId, season.id),
+            eq(seasonCaptains.userId, session!.user!.id),
+          ),
+          columns: { id: true },
+        }))
+      : false;
   // Late joiners can sign up as subs once regular signups have closed.
   const openKind = openSignupKind(season);
   const subSignupsOpen = openKind === "sub";
@@ -323,6 +348,7 @@ export default async function SeasonDetailPage({
       <SeasonNav slug={season.slug} state={season.state} game={season.game} current="overview" />
 
       {leftSubs ? <FlashToast param="left-subs" message="You've left the sub list." /> : null}
+      {left ? <FlashToast param="left" message={`You've left ${season.name}.`} /> : null}
       {signedUp ? (
         <FlashToast
           param="signed-up"
@@ -373,6 +399,30 @@ export default async function SeasonDetailPage({
               Leave sub list
             </ConfirmSubmitButton>
           </form>
+        </section>
+      ) : mySignup?.kind === "player" && PRE_DRAFT_STATES.includes(season.state) ? (
+        <section
+          aria-label="Your signup"
+          className="flex flex-wrap items-center justify-between gap-4 rounded-xl border p-5"
+        >
+          <div className="space-y-1">
+            <p className="font-medium">Can&apos;t make this season?</p>
+            <p className="text-muted-foreground text-sm">
+              {amCaptain
+                ? "You're a captain, so an admin has to take you off the captain list before you can leave."
+                : `You can leave until the draft starts.${playerSignupsOpen ? " You can sign up again while signups are open." : ""}`}
+            </p>
+          </div>
+          {amCaptain ? null : (
+            <form action={leaveSeason.bind(null, season.slug)}>
+              <ConfirmSubmitButton
+                variant="outline"
+                confirmMessage={`Leave ${season.name}? You'll be taken out of the draft pool.`}
+              >
+                Leave season
+              </ConfirmSubmitButton>
+            </form>
+          )}
         </section>
       ) : !mySignup && subSignupsOpen && !myTeam ? (
         <section

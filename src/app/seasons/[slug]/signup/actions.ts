@@ -7,16 +7,16 @@ import { z } from "zod";
 
 import { db } from "@/db/client";
 import { users } from "@/db/schema/auth";
+import { drafts } from "@/db/schema/drafts";
 import { matches, matchSubstitutions } from "@/db/schema/matches";
-import { seasons } from "@/db/schema/seasons";
-import { seasonSignups } from "@/db/schema/seasons";
+import { seasonCaptains, seasons, seasonSignups } from "@/db/schema/seasons";
 import { requireOnboarded } from "@/lib/auth-helpers";
 import { getActiveBan } from "@/lib/bans";
 import { updateSignupRolesForUser } from "@/lib/discord-ping-roles";
 import { syncInBackground } from "@/lib/discord-roles";
 import { logEvent } from "@/lib/events";
 import { missingSignupRequirements } from "@/lib/signup-gate";
-import { openSignupKind, resolveSignupKind } from "@/lib/seasons";
+import { openSignupKind, PRE_DRAFT_STATES, resolveSignupKind } from "@/lib/seasons";
 
 const LOL_ROLES = ["top", "jungle", "mid", "adc", "support", "fill"] as const;
 const CS2_MAPS = ["dust2", "mirage", "inferno", "nuke", "overpass", "anubis", "ancient"] as const;
@@ -215,4 +215,46 @@ export async function leaveSubList(slug: string) {
   revalidatePath(`/seasons/${slug}/teams`);
   revalidatePath(`/admin/seasons/${slug}/signups`);
   redirect(`/seasons/${slug}?left-subs=1`);
+}
+
+/**
+ * A player signup drops out of the season before the draft starts. Refused
+ * once a draft is running (rosters are being built from the pool) and for
+ * captains, whose spot shapes the snake order — an admin demotes them first.
+ */
+export async function leaveSeason(slug: string) {
+  const session = await requireOnboarded();
+  const season = await db.query.seasons.findFirst({ where: eq(seasons.slug, slug) });
+  if (!season) redirect("/seasons");
+
+  const signup = await db.query.seasonSignups.findFirst({
+    where: and(
+      eq(seasonSignups.seasonId, season.id),
+      eq(seasonSignups.userId, session.user.id),
+      eq(seasonSignups.kind, "player"),
+    ),
+  });
+  if (!signup) redirect(`/seasons/${slug}`);
+
+  if (!PRE_DRAFT_STATES.includes(season.state)) {
+    redirect(`/seasons/${slug}?error=leave-too-late`);
+  }
+  const draft = await db.query.drafts.findFirst({ where: eq(drafts.seasonId, season.id) });
+  if (draft && draft.state !== "pending") redirect(`/seasons/${slug}?error=leave-too-late`);
+
+  const captain = await db.query.seasonCaptains.findFirst({
+    where: and(eq(seasonCaptains.seasonId, season.id), eq(seasonCaptains.userId, session.user.id)),
+  });
+  if (captain) redirect(`/seasons/${slug}?error=leave-captain`);
+
+  await db.delete(seasonSignups).where(eq(seasonSignups.id, signup.id));
+  await logEvent("signup.left", { actorId: session.user.id, seasonId: season.id });
+  syncInBackground(`${slug} signup roles`, () =>
+    updateSignupRolesForUser(season.id, session.user.id),
+  );
+
+  revalidatePath(`/seasons/${slug}`);
+  revalidatePath(`/admin/seasons/${slug}/signups`);
+  revalidatePath("/admin");
+  redirect(`/seasons/${slug}?left=1`);
 }

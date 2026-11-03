@@ -13,6 +13,7 @@ import { requireAdmin } from "@/lib/auth-helpers";
 import { updateSignupRolesForUser } from "@/lib/discord-ping-roles";
 import { syncInBackground } from "@/lib/discord-roles";
 import { logEvent } from "@/lib/events";
+import { PRE_DRAFT_STATES } from "@/lib/seasons";
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
 
@@ -94,9 +95,6 @@ export async function promoteCaptain(slug: string, signupId: string) {
   redirect(`/admin/seasons/${slug}/signups?saved=1`);
 }
 
-/** States where a player can still be pulled from a season. */
-const REMOVABLE_STATES = ["signups_open", "signups_closed", "captains_selected"] as const;
-
 /**
  * Admin: remove a player from a season before the draft starts. Also drops
  * their captain spot (re-numbering the rest). Once a draft is running or
@@ -117,7 +115,7 @@ export async function removeSignup(slug: string, signupId: string) {
   // (An approved-but-unplayed sub slot fails its re-check on approval and
   // shows "not signed up" if it's ever re-requested.)
   if (signup.kind === "player") {
-    if (!(REMOVABLE_STATES as readonly string[]).includes(season.state)) {
+    if (!PRE_DRAFT_STATES.includes(season.state)) {
       redirect(`/admin/seasons/${slug}/signups?error=remove-too-late`);
     }
     const draft = await db.query.drafts.findFirst({ where: eq(drafts.seasonId, season.id) });

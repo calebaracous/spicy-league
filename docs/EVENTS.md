@@ -42,7 +42,7 @@ Where each type is logged:
 | | `profile.updated` / `opgg_updated` / `discord_updated` (with `changes`), `profile.ten_man_pings`, `profile.captain_interest` (also from `submitSignup`), `profile.stats_opt_in` (also from LoL `submitSignup`, opt-in only) — toggles log only when the value actually changes | `src/app/profile/page.tsx`, `src/app/seasons/[slug]/signup/actions.ts`; `discord_updated` via `src/lib/account-edits.ts` |
 | | `riot.linked/unlinked`, `cs2.linked/unlinked` | `src/app/profile/account-actions.ts` (Riot via `src/lib/account-edits.ts`) |
 | | `profile.discord_updated` (`changes.discordUsername` or `changes.discordUserId`), `riot.linked/unlinked` **by an admin** — actor is the admin, `subjectUserId` the player, and the sentence names the player | `src/app/users/[username]/admin-actions.ts` → `src/lib/account-edits.ts` |
-| Signups | `signup.created` (`kind`), `signup.left_subs` | `src/app/seasons/[slug]/signup/actions.ts` |
+| Signups | `signup.created` (`kind`), `signup.left` (player left pre-draft), `signup.left_subs` | `src/app/seasons/[slug]/signup/actions.ts` |
 | | `signup.removed` | admin signups actions |
 | Season admin | `season.created/updated/state_changed` | `src/app/admin/seasons/actions.ts` |
 | | `captain.promoted/demoted/moved/paired/split` | `src/app/admin/seasons/[slug]/signups/actions.ts` |

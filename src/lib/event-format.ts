@@ -35,6 +35,7 @@ export const EVENT_TYPES = {
   "cs2.unlinked": "accounts",
 
   "signup.created": "signups",
+  "signup.left": "signups",
   "signup.left_subs": "signups",
   "signup.removed": "signups",
 
@@ -252,6 +253,8 @@ export function describeEvent(e: EventView): Segment[] {
         d.kind === "sub" ? " joined the sub list for " : " signed up for ",
         seasonLink(e, "/signups"),
       ];
+    case "signup.left":
+      return [actor, " left ", seasonLink(e, "/signups")];
     case "signup.left_subs":
       return [actor, " left the sub list for ", seasonLink(e, "/signups")];
     case "signup.removed":
