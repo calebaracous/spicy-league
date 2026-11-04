@@ -32,6 +32,13 @@ additive) before the code ships.
    - run `node --env-file=.env.production.local
      scripts/riot-tournament-setup.mjs https://www.spicyleague.dev` and set
      the printed `RIOT_TOURNAMENT_PROVIDER_ID` in Vercel.
+   - right after the deploy picks up the key, run `node
+     --env-file=.env.production.local scripts/riot-reresolve-puuids.mjs`
+     (dry run), then again with `--apply`. Riot encrypts PUUIDs per key
+     (found 2026-11-04), and the tournament key becomes the key for every
+     Riot call, so stored links need the new key's PUUIDs. Until then the
+     callback still finds players by Riot ID. See
+     [RIOT-STATS-EXPANSION.md](RIOT-STATS-EXPANSION.md).
    Staging has a **stub** provider in `.env.development.local` only (local
    testing). Lobby codes are off on the staging deploy until the provider
    id + secret are added to its Preview env (stub key = the personal key).

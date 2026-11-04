@@ -36,7 +36,8 @@ Trivial shadcn primitives get a single entry at the bottom.
 - `tests/unit/champions.test.ts` — `resolveChampionKeys` (names/keys, punctuation, unknowns).
 - `tests/unit/champion-stats.test.ts` — champion/side/player aggregation, team filter, unrecorded results, table sorting.
 - `tests/unit/riot-player-stats.test.ts` — scoreboard opt-in gating and team totals, averages, KDA.
-- `tests/unit/riot-tournament-parse.test.ts` — callback body, Match-v5 winner/player lines, draft-vs-played mismatches.
+- `tests/unit/riot-tournament-parse.test.ts` — callback body, Match-v5 winner/player lines (incl. a real anonymized tournament game), PUUID → Riot ID player matching, draft-vs-played mismatches.
+- `tests/fixtures/riot/tourney-match.json` — a real Match-v5 tournament-code game (queue 3130), PUUIDs and Riot IDs replaced.
 - `tests/unit/series.test.ts` — `bestOfFor`, `seriesScore`, `loserOf`.
 - `tests/unit/rps.test.ts` — RPS outcomes and the lazy state machine (reveal, void replay, AFK reset, catch-up).
 - `tests/unit/draft-room.test.ts` — draft sequence, fearless availability, timeouts, Data Dragon parsing.
@@ -61,6 +62,7 @@ Trivial shadcn primitives get a single entry at the bottom.
 - `scripts/riot-tournament-setup.mjs` — registers a Riot tournament provider (stub without `RIOT_TOURNAMENT_API_KEY`) for `<site>/api/riot/tournament-callback?token=…` and prints `RIOT_TOURNAMENT_PROVIDER_ID`. See MATCH-DAY.md.
 - `scripts/season-12-setup.mjs` — one-off: deletes every season + 10-man and obvious test users (numbered bot usernames / test email domains, never admins), then creates Spicy League Season 12 (Bo2 group stage). Dry run unless `--apply`. Needs migrations 0005 and 0007.
 - `scripts/seed-rps-test.mjs` — staging only: two test captains + season `rps-test` (two Bo2 group matches, a Bo3 semi) for trying match day by hand; re-running resets them. See MATCH-DAY.md.
+- `scripts/riot-reresolve-puuids.mjs` — after a Riot key change: moves every riot `account_links` PUUID (and `match_game_player_stats.puuid`) to the current key's PUUIDs via each account's current Riot ID. Dry run unless `--apply`; idempotent.
 - `scripts/seed-riot-stats-test.mjs` — staging only: fake Riot player stats on the `rps-test` season's first match (Scoreboard / profile averages by hand).
 - `scripts/seed-test-season.ts` — refuses to run without `ALLOW_TEST_SEED=1` (guards against seeding production). Seeds `test-s1` LoL season with 4 captain + 16 bot accounts (re-runnable; cleans first). Run with `ALLOW_TEST_SEED=1 npx tsx --env-file=.env.development.local scripts/seed-test-season.ts` (staging). Credentials are in the file header.
 - `scripts/staging-scrub.mjs` — `npm run staging:scrub` (also the tail of `staging:reset`): rewrites real emails to Resend's test inbox, deletes sessions/verification tokens, clears OAuth tokens on the staging DB; refuses the production endpoint. See STAGING.md.
@@ -221,7 +223,7 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `src/lib/riot-player-stats.ts` — pure: Riot per-player lines → `scoreboard` (opt-in gated rows, team totals), `playerAverages`, `kdaRatio`.
 - `src/lib/match-day-results.ts` — `recordGameWinner` (next side pick or auto-confirm; shared by the captains' buttons and the Riot callback), `GameResultError`.
 - `src/lib/riot-tournament.ts` — Riot Tournament API client: `registerTournament`, `createLobbyCode` (blind pick, spectators on), `getMatch` (Match-v5); stub without `RIOT_TOURNAMENT_API_KEY`.
-- `src/lib/riot-tournament-parse.ts` — pure: `parseTournamentCallback`, `riotMatchId`, `parseMatchResult`, `draftMismatches`.
+- `src/lib/riot-tournament-parse.ts` — pure: `parseTournamentCallback`, `riotMatchId`, `parseMatchResult`, `matchPlayersToUsers` (PUUID, then Riot ID), `draftMismatches`.
 - `src/lib/riot-results.ts` — `applyTournamentCallback`: Match-v5 → winner by lineup, player stats, flags, `recordGameWinner`.
 - `src/lib/series.ts` — pure: `bestOfFor(season, stage)`, `seriesScore` (Bo2 plays both; odd lengths stop at a majority), `loserOf`.
 - `src/lib/match-results.ts` — `applyConfirmEffects` (final after both semis, re-teams an unplayed final, champion, Discord, revalidation) and `confirmWithResult` (set + confirm in one go); used by `confirmMatch`, match day's auto-confirm and `adminEditResult`.
@@ -254,7 +256,7 @@ Migrations: `drizzle/0000_baseline.sql` (full schema + partial index), `drizzle/
 - `scripts/discord-register-commands.mjs` — registers the slash commands in the league server (dry run unless `--apply`).
 - `src/lib/team-name.ts` — pure `normalizeTeamName` (3–32 chars, no `@`/`#`), `teamTextChannelName`, `TEAM_NAME_HELP`.
 - `src/lib/opgg.ts` — pure `opggUrlForRiotId(handle)`: NA OP.GG URL from a stored `gameName#tagLine`.
-- `src/lib/riot-api.ts` — Riot API client. `getAccountByRiotId`, `getRankEntries`, `getTopChampions`, `getChampionName` (Data Dragon).
+- `src/lib/riot-api.ts` — Riot API client. `riotApiKey` (the one key all Riot calls use), `getAccountByRiotId`, `getRankEntries`, `getTopChampions`, `getChampionName` (Data Dragon).
 - `src/lib/stat-refresh.ts` — `refreshRiotStats(userId)` (all of a user's Riot links), `refreshAllRiotStats` (every Riot link); per-link delete-then-insert, 1200ms sleep between links.
 - `src/lib/rate-limit.ts` — Upstash sliding-window. Specs: `magicLink` (unused), `statRefresh`, `subPing`. Fails open if Upstash env missing.
 - `src/lib/substitution-rules.ts` — pure sub eligibility rules (`evaluateSubRequest`, `MAX_SUBS_PER_TEAM`, error messages).

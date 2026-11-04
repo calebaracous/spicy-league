@@ -1,6 +1,6 @@
 import "server-only";
 
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 
 import { db } from "@/db/client";
 import { matchDraftActions, matchGamePlayerStats, matchGames } from "@/db/schema/match-day";
@@ -10,6 +10,7 @@ import { logEvent, matchEventData } from "@/lib/events";
 import { GameResultError, recordGameWinner } from "@/lib/match-day-results";
 import {
   draftMismatches,
+  matchPlayersToUsers,
   parseMatchResult,
   riotMatchId,
   type TournamentCallback,
@@ -42,12 +43,18 @@ export async function applyTournamentCallback(cb: TournamentCallback): Promise<C
   if (!parsed) return { status: "ignored", reason: "no winner in Match-v5" };
 
   // Who's who: linked Riot accounts → users → which team's lineup they're in.
-  const puuids = parsed.players.map((p) => p.puuid);
+  // By PUUID, falling back to Riot ID (PUUIDs differ per API key). All riot
+  // links (a few hundred rows): Riot IDs aren't ASCII-only, so matching them
+  // in SQL with lower() would depend on the database collation.
   const links = await db
-    .select({ userId: accountLinks.userId, puuid: accountLinks.externalId })
+    .select({
+      userId: accountLinks.userId,
+      puuid: accountLinks.externalId,
+      handle: accountLinks.externalHandle,
+    })
     .from(accountLinks)
-    .where(and(eq(accountLinks.provider, "riot"), inArray(accountLinks.externalId, puuids)));
-  const userOf = new Map(links.map((l) => [l.puuid, l.userId]));
+    .where(eq(accountLinks.provider, "riot"));
+  const { userOf, byRiotId } = matchPlayersToUsers(parsed.players, links);
   const lineups = await getMatchLineups(match);
   const teamOf = (userId: string | undefined) =>
     !userId
@@ -73,7 +80,11 @@ export async function applyTournamentCallback(cb: TournamentCallback): Promise<C
   await db
     .insert(matchGamePlayerStats)
     .values(
-      parsed.players.map((p) => ({ ...p, gameId: game.id, userId: userOf.get(p.puuid) ?? null })),
+      parsed.players.map(({ riotId: _riotId, ...p }) => ({
+        ...p,
+        gameId: game.id,
+        userId: userOf.get(p.puuid) ?? null,
+      })),
     )
     .onConflictDoNothing();
 
@@ -85,7 +96,9 @@ export async function applyTournamentCallback(cb: TournamentCallback): Promise<C
     .where(and(eq(matchDraftActions.gameId, game.id), eq(matchDraftActions.kind, "pick")));
   const mismatches = draftMismatches(picks, parsed.players);
   const unknown = parsed.players.filter((p) => !teamOf(userOf.get(p.puuid))).length;
-  if (mismatches.length || unknown) {
+  // byRiotId > 0 means links still hold PUUIDs from another key: run
+  // scripts/riot-reresolve-puuids.mjs.
+  if (mismatches.length || unknown || byRiotId) {
     await logEvent("match.riot_flag", {
       seasonId: match.seasonId,
       data: {
@@ -94,6 +107,7 @@ export async function applyTournamentCallback(cb: TournamentCallback): Promise<C
         riotMatchId: riotId,
         notDrafted: mismatches.map((m) => `${m.side} ${m.championKey}`).join(", ") || null,
         unknownPlayers: unknown || null,
+        matchedByRiotId: byRiotId || null,
       },
     });
   }

@@ -62,7 +62,7 @@ for real seasons, and delete it (`delete from users where username =
 - `champions.test.ts` — `resolveChampionKeys` for the admin disabled-champions field
 - `champion-stats.test.ts` — `championStats` (presence, W–L, blue/red, team filter + bans against), `sideStats`, `playerChampions`
 - `riot-player-stats.test.ts` — scoreboard hides non-opted-in players' numbers, team totals, per-game averages, KDA
-- `riot-tournament-parse.test.ts` — Riot callback body, Match-v5 → winner side + player lines, draft-vs-played mismatches (casing)
+- `riot-tournament-parse.test.ts` — Riot callback body, Match-v5 → winner side + player lines (also on a real anonymized game, `tests/fixtures/riot/`), PUUID → Riot ID player matching, draft-vs-played mismatches (casing)
 - `series.test.ts` — `bestOfFor` per stage, `seriesScore` (Bo1, Bo2 draw, Bo3/Bo5 majority), `loserOf`
 - `draft-room.test.ts` — 20-step draft order, fearless availability, timeout resolution, Data Dragon parsing
 

@@ -1,6 +1,7 @@
 import "server-only";
 
 import { env } from "@/lib/env";
+import { riotApiKey } from "@/lib/riot-api";
 
 // Riot Tournament API client (docs/MATCH-DAY.md, phase 6). With a
 // tournament-enabled key (RIOT_TOURNAMENT_API_KEY) it calls tournament-v5;
@@ -14,18 +15,12 @@ const AMERICAS = "https://americas.api.riotgames.com";
 export const tournamentIsStub = () => !env.RIOT_TOURNAMENT_API_KEY;
 export const lobbyCodesEnabled = () => !!env.RIOT_TOURNAMENT_PROVIDER_ID;
 
-function apiKey(): string | null {
-  return (
-    env.RIOT_TOURNAMENT_API_KEY ?? env.RIOT_PERSONAL_API_KEY ?? env.RIOT_DEVELOPER_API_KEY ?? null
-  );
-}
-
 const base = () => `${AMERICAS}/lol/tournament${tournamentIsStub() ? "-stub" : ""}/v5`;
 
 type Result<T> = { ok: true; data: T } | { ok: false; status: number; error: string };
 
 async function call<T>(method: "GET" | "POST", url: string, body?: unknown): Promise<Result<T>> {
-  const key = apiKey();
+  const key = riotApiKey(); // shared with riot-api.ts: PUUIDs are per key
   if (!key) return { ok: false, status: 0, error: "No Riot API key configured." };
   try {
     const res = await fetch(url, {

@@ -228,7 +228,9 @@ and codes, never any callbacks).
   doesn't sign callbacks) → our game by `shortCode` (unknown → 200,
   ignored) → Match-v5 `NA1_<gameId>` (not there yet → **503 so Riot
   retries**) → winner by **which lineup the winning players belong to**
-  (linked Riot accounts' PUUIDs), falling back to the side we recorded if
+  (linked Riot accounts: by PUUID, then by Riot ID —
+  `matchPlayersToUsers`, because PUUIDs are per API key and links may predate
+  a key change; ambiguous ones match nobody), falling back to the side we recorded if
   nobody's linked (teams sometimes join the wrong lobby side) →
   `riotMatchId`, `match_game_player_stats` rows (K/D/A, CS, gold, damage,
   vision per PUUID, `userId` when linked) → `recordGameWinner` (shared with
@@ -237,7 +239,9 @@ and codes, never any callbacks).
   stats and skips the result.
 - **Flags** (`match.riot_flag` in the events inbox): champions a side
   played but didn't draft (`draftMismatches`; ids compared case-insensitively
-  — Match-v5 says "FiddleSticks"), and players in neither lineup.
+  — Match-v5 says "FiddleSticks"), players in neither lineup, and players
+  matched by Riot ID rather than PUUID (`matchedByRiotId` → run
+  `scripts/riot-reresolve-puuids.mjs`).
 - **Display** (decision 20; shaping pure in `src/lib/riot-player-stats.ts`,
   `tests/unit/riot-player-stats.test.ts`; loaders `loadMatchRiotStats` /
   `loadPlayerRiotLines` in `src/lib/season-stats.ts`):

@@ -48,7 +48,13 @@ All in `src/lib/riot-api.ts`. Works out of the box with either a
 personal or developer key (personal preferred — developer keys expire
 every 24h).
 
-- **API key precedence**: `RIOT_PERSONAL_API_KEY ?? RIOT_DEVELOPER_API_KEY`.
+- **API key precedence**: `riotApiKey()` — `RIOT_TOURNAMENT_API_KEY ??
+  RIOT_PERSONAL_API_KEY ?? RIOT_DEVELOPER_API_KEY`, shared with
+  `riot-tournament.ts`. **One key for everything**: Riot encrypts PUUIDs per
+  key, so a PUUID stored under one key fails (`400 Exception decrypting`)
+  under another. After changing keys, run `scripts/riot-reresolve-puuids.mjs`
+  (dry run, then `--apply`) to move every link's PUUID to the new key. See
+  [design/RIOT-STATS-EXPANSION.md](design/RIOT-STATS-EXPANSION.md).
 - **Routing**: account lookups go to `americas.api.riotgames.com`; ranked +
   mastery go to `na1.api.riotgames.com`. Non-NA players are not supported.
 - **Endpoints in use**:

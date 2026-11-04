@@ -2,9 +2,17 @@ import "server-only";
 
 import { env } from "@/lib/env";
 
-// Prefer personal key (stable) over developer key (24h expiring)
-function getApiKey(): string | null {
-  return env.RIOT_PERSONAL_API_KEY ?? env.RIOT_DEVELOPER_API_KEY ?? null;
+/**
+ * The one Riot key every call uses: tournament key, else personal (stable),
+ * else developer (24h). One key for everything matters — Riot encrypts PUUIDs
+ * per key, so links stored under one key don't match Match-v5 fetched with
+ * another (docs/design/RIOT-STATS-EXPANSION.md). Switching keys means running
+ * scripts/riot-reresolve-puuids.mjs.
+ */
+export function riotApiKey(): string | null {
+  return (
+    env.RIOT_TOURNAMENT_API_KEY ?? env.RIOT_PERSONAL_API_KEY ?? env.RIOT_DEVELOPER_API_KEY ?? null
+  );
 }
 
 // NA routing: account lookups go through Americas, ranked data through na1
@@ -15,7 +23,7 @@ const NA1_HOST = "https://na1.api.riotgames.com";
 const DDRAGON_BASE = "https://ddragon.leagueoflegends.com";
 
 async function riotFetch<T>(url: string): Promise<T | null> {
-  const key = getApiKey();
+  const key = riotApiKey();
   if (!key) return null;
   try {
     const res = await fetch(url, {

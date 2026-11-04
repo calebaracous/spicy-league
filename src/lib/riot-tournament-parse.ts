@@ -34,6 +34,8 @@ export function riotMatchId(cb: Pick<TournamentCallback, "region" | "gameId">): 
 
 export type PlayerLine = {
   puuid: string;
+  /** "GameName#TAG" from Match-v5 (`riotIdGameName` / `riotIdTagline`), if present. */
+  riotId: string | null;
   side: DraftSide;
   championKey: string;
   kills: number;
@@ -62,8 +64,11 @@ export function parseMatchResult(
   for (const p of parts as Record<string, unknown>[]) {
     if (typeof p.puuid !== "string" || typeof p.championName !== "string") return null;
     if (p.teamId !== 100 && p.teamId !== 200) return null;
+    const gameName = typeof p.riotIdGameName === "string" ? p.riotIdGameName.trim() : "";
+    const tagLine = typeof p.riotIdTagline === "string" ? p.riotIdTagline.trim() : "";
     players.push({
       puuid: p.puuid,
+      riotId: gameName && tagLine ? `${gameName}#${tagLine}` : null,
       side: p.teamId === 100 ? "blue" : "red",
       championKey: p.championName,
       kills: num(p.kills),
@@ -80,6 +85,58 @@ export function parseMatchResult(
   const redWon = players.some((p) => p.side === "red" && p.win);
   if (blueWon === redWon) return null;
   return { winnerSide: blueWon ? "blue" : "red", players };
+}
+
+/** Riot IDs are case-insensitive; compare them normalized. */
+export const riotIdKey = (riotId: string) => riotId.trim().normalize("NFKC").toLowerCase();
+
+export type RiotLinkRow = { userId: string; puuid: string; handle: string | null };
+
+/**
+ * Which user each Match-v5 player is: by PUUID first, then by Riot ID against
+ * the link's stored handle. The fallback matters because Riot encrypts PUUIDs
+ * per API key — links stored under an older key never match by PUUID until
+ * scripts/riot-reresolve-puuids.mjs runs. A PUUID or Riot ID linked by more
+ * than one user is ambiguous and matches nobody; a user is matched at most
+ * once. Returns puuid → userId, plus how many were matched by Riot ID.
+ */
+export function matchPlayersToUsers(
+  players: readonly Pick<PlayerLine, "puuid" | "riotId">[],
+  links: readonly RiotLinkRow[],
+): { userOf: Map<string, string>; byRiotId: number } {
+  const unique = (pairs: [string, string][]) => {
+    const out = new Map<string, string | null>();
+    for (const [k, userId] of pairs) {
+      const seen = out.get(k);
+      out.set(k, seen === undefined || seen === userId ? userId : null);
+    }
+    return out;
+  };
+  const byPuuid = unique(links.map((l) => [l.puuid, l.userId]));
+  const byHandle = unique(
+    links.filter((l) => l.handle).map((l) => [riotIdKey(l.handle!), l.userId]),
+  );
+
+  const userOf = new Map<string, string>();
+  const used = new Set<string>();
+  for (const p of players) {
+    const userId = byPuuid.get(p.puuid);
+    if (userId && !used.has(userId)) {
+      userOf.set(p.puuid, userId);
+      used.add(userId);
+    }
+  }
+  let byRiotId = 0;
+  for (const p of players) {
+    if (userOf.has(p.puuid) || !p.riotId) continue;
+    const userId = byHandle.get(riotIdKey(p.riotId));
+    if (userId && !used.has(userId)) {
+      userOf.set(p.puuid, userId);
+      used.add(userId);
+      byRiotId++;
+    }
+  }
+  return { userOf, byRiotId };
 }
 
 // Match-v5 and Data Dragon disagree on a few ids' casing ("FiddleSticks" vs

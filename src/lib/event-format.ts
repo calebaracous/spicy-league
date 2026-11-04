@@ -403,6 +403,11 @@ export function describeDetails(e: EventView): string[] {
   if (e.type === "match.riot_flag") {
     if (d.notDrafted) lines.push(`Played but not drafted: ${String(d.notDrafted)}`);
     if (d.unknownPlayers) lines.push(`Players not in either lineup: ${String(d.unknownPlayers)}`);
+    if (d.matchedByRiotId) {
+      lines.push(
+        `${String(d.matchedByRiotId)} players matched by Riot ID, not PUUID: run scripts/riot-reresolve-puuids.mjs`,
+      );
+    }
   }
   if (e.type === "sub.requested" && d.reason) lines.push(`Reason: ${String(d.reason)}`);
   if (e.type.startsWith("discord.") && d.note) lines.push(String(d.note));

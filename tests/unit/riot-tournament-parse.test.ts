@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import { readFileSync } from "node:fs";
+
 import {
   draftMismatches,
+  matchPlayersToUsers,
   parseMatchResult,
   parseTournamentCallback,
   riotMatchId,
@@ -61,6 +64,7 @@ describe("parseMatchResult", () => {
     expect(out?.winnerSide).toBe("blue");
     expect(out?.players[0]).toEqual({
       puuid: "a",
+      riotId: null,
       side: "blue",
       championKey: "Garen",
       kills: 3,
@@ -115,5 +119,79 @@ describe("draftMismatches", () => {
 
   it("checks nothing when there was no draft", () => {
     expect(draftMismatches([], [{ side: "blue", championKey: "Lux" }])).toEqual([]);
+  });
+});
+
+describe("parseMatchResult on a real tournament-code game", () => {
+  // A real Match-v5 game (queue 3130, played on a tournament code), with
+  // PUUIDs and Riot IDs replaced. docs/design/RIOT-STATS-EXPANSION.md.
+  const real = JSON.parse(readFileSync("tests/fixtures/riot/tourney-match.json", "utf8"));
+
+  it("reads the winner, all ten lines, and Riot IDs", () => {
+    const out = parseMatchResult(real);
+    expect(out?.winnerSide).toBe("blue");
+    expect(out?.players).toHaveLength(10);
+    expect(out?.players.map((p) => p.side)).toEqual([
+      ...Array(5).fill("blue"),
+      ...Array(5).fill("red"),
+    ]);
+    expect(out?.players[0]).toMatchObject({
+      puuid: "puuid-1",
+      riotId: "Player 1#TST",
+      championKey: "Renekton",
+      kills: 7,
+      deaths: 6,
+      assists: 6,
+    });
+  });
+});
+
+describe("matchPlayersToUsers", () => {
+  const players = [
+    { puuid: "p1", riotId: "Alpha#NA1" },
+    { puuid: "p2", riotId: "Beta#NA1" },
+    { puuid: "p3", riotId: null },
+  ];
+
+  it("matches by PUUID", () => {
+    const { userOf, byRiotId } = matchPlayersToUsers(players, [
+      { userId: "u1", puuid: "p1", handle: "Alpha#NA1" },
+      { userId: "u3", puuid: "p3", handle: "Gamma#NA1" },
+    ]);
+    expect([...userOf]).toEqual([
+      ["p1", "u1"],
+      ["p3", "u3"],
+    ]);
+    expect(byRiotId).toBe(0);
+  });
+
+  it("falls back to Riot ID, ignoring case, when the PUUID is from another key", () => {
+    const { userOf, byRiotId } = matchPlayersToUsers(players, [
+      { userId: "u1", puuid: "old-key-p1", handle: "alpha#na1" },
+      { userId: "u2", puuid: "old-key-p2", handle: " Beta#NA1 " },
+    ]);
+    expect(userOf.get("p1")).toBe("u1");
+    expect(userOf.get("p2")).toBe("u2");
+    expect(byRiotId).toBe(2);
+  });
+
+  it("prefers a PUUID match and never matches a user twice", () => {
+    // u1's handle is stale (Beta was renamed into it): PUUID wins, and the
+    // Riot ID fallback can't hand u1 a second player.
+    const { userOf, byRiotId } = matchPlayersToUsers(players, [
+      { userId: "u1", puuid: "p1", handle: "Beta#NA1" },
+    ]);
+    expect([...userOf]).toEqual([["p1", "u1"]]);
+    expect(byRiotId).toBe(0);
+  });
+
+  it("skips a PUUID or Riot ID linked by more than one user", () => {
+    const { userOf } = matchPlayersToUsers(players, [
+      { userId: "u1", puuid: "p1", handle: null },
+      { userId: "u9", puuid: "p1", handle: null },
+      { userId: "u2", puuid: "x", handle: "Beta#NA1" },
+      { userId: "u8", puuid: "y", handle: "beta#na1" },
+    ]);
+    expect(userOf.size).toBe(0);
   });
 });
